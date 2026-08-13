@@ -3,6 +3,8 @@ package com.fiap.techchallenge.workorder.entities;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
@@ -32,13 +34,13 @@ public class WorkOrder {
     @Column(nullable = false, length = 25)
     private WorkOrderStatus status;
 
-    @Column(nullable = false, length = 36)
+    @Column(nullable = false)
     private UUID customerId;
 
-    @Column(nullable = false, length = 36)
+    @Column(nullable = false)
     private UUID vehicleId;
 
-    @Column(nullable = false, length = 36)
+    @Column
     private UUID assignedMechanicId;
 
     @Column(length = 2000)
@@ -60,22 +62,40 @@ public class WorkOrder {
 
     private BigDecimal partsTotal;
 
-    private BigDecimal discount;
-
-    private BigDecimal taxTotal;
-
     private BigDecimal grandTotal;
 
+    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @UpdateTimestamp
     private Instant updatedAt;
+
+    private Instant diagnosticRequestedAt;
+
+    private Instant diagnosticStartedAt;
+
+    private Instant diagnosticFinishedAt;
 
     private Instant approvedAt;
 
     private Instant refusedAt;
 
+    private Instant serviceStartedAt;
+
     private Instant finishedAt;
 
+    private Instant pickupReadyAt;
+
     private Instant deliveredAt;
+
+    public void addRow(WorkOrderRow row) {
+        rows.add(row);
+        row.setWorkOrder(this);
+    }
+
+    public void clearRows() {
+        rows.forEach(r -> r.setWorkOrder(null));
+        rows.clear();
+    }
 }

@@ -1,6 +1,5 @@
 package com.fiap.techchallenge.workorder.api.representation;
 
-import com.fiap.techchallenge.workorder.enums.RowType;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 
 import java.math.BigDecimal;
@@ -10,7 +9,7 @@ import java.util.UUID;
 
 public record WorkOrderInfo(
         UUID id,
-        String orderNumber,
+        String orderCode,
         WorkOrderStatus status,
         UUID customerId,
         UUID vehicleId,
@@ -21,23 +20,18 @@ public record WorkOrderInfo(
         List<WorkOrderRowInfo> rows,
         BigDecimal laborTotal,
         BigDecimal partsTotal,
-        BigDecimal discount,
-        BigDecimal taxTotal,
         BigDecimal grandTotal,
         Instant createdAt,
         Instant updatedAt,
+        Instant diagnosticRequestedAt,
+        Instant diagnosticStartedAt,
+        Instant diagnosticFinishedAt,
         Instant approvedAt,
         Instant refusedAt,
+        Instant serviceStartedAt,
         Instant finishedAt,
+        Instant pickupReadyAt,
         Instant deliveredAt
 ) {
-    public record WorkOrderRowInfo(
-            RowType type,
-            String description,
-            BigDecimal quantity,
-            BigDecimal unitPrice,
-            BigDecimal lineTotal,
-            UUID partId
-    ) {
-    }
+
 }

@@ -2,7 +2,10 @@ package com.fiap.techchallenge.workorder.entities;
 
 import com.fiap.techchallenge.workorder.enums.RowType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
@@ -11,7 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "order_rows", schema = "work_orders")
 @AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 @Getter
 @Setter
 public class WorkOrderRow {
@@ -36,8 +39,9 @@ public class WorkOrderRow {
 
     private BigDecimal unitPrice;
 
-    @Column(nullable = false, updatable = false)
-    private BigDecimal lineTotal;
-
     private UUID partId;
+
+    public BigDecimal getTotal() {
+        return quantity.multiply(unitPrice);
+    }
 }

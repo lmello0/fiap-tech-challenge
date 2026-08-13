@@ -16,3 +16,12 @@ spring:
 
   flyway:
     enabled: true
+
+  web:
+    error:
+      whitelabel:
+        enabled: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
