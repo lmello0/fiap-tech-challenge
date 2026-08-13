@@ -1,0 +1,11 @@
+package com.fiap.techchallenge.workorder.api.events;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record WorkOrderApprovedEvent(
+        UUID workOrderId,
+        UUID customerId,
+        BigDecimal grandTotal
+) {
+}
