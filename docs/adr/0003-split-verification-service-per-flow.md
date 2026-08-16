@@ -1,0 +1,5 @@
+# Split VerificationService per flow
+
+`VerificationService` bundled password reset, registration email verification, and email change into one class, each with its own repository, token entity, and (for password reset and email change) a call into `RefreshTokenService.revokeAllForUser`. The three flows don't otherwise interact — no method in one calls into another's state — so the class existed only as a grouping convenience, not because the flows share behavior beyond generation/hashing mechanics.
+
+We split it into `PasswordResetService`, `EmailVerificationService`, and `EmailChangeService`, one per flow, mirroring the per-flow entity split from ADR 0002. Each keeps its own copy of the `tokenGenerator`/`hash()` plumbing (as `RefreshTokenService` already does) rather than sharing it through a common helper, consistent with ADR 0002's tradeoff of accepting duplicated plumbing so each flow's code only has to make sense on its own terms. `VerificationProperties` remains a single shared configuration record (`app.auth.verification.*`) since TTL configuration, unlike flow logic, has no reason to diverge.

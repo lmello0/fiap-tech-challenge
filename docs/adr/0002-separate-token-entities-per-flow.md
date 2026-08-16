@@ -1,0 +1,5 @@
+# Separate token entities per verification flow
+
+Password reset, registration email verification, and email-change confirmation all need the same mechanics: a single-use, expiring, hashed token tied to a user. A single generic table (`userId`, `purpose`, `tokenHash`, `expiresAt`, `usedAt`) would have covered all three with one set of code.
+
+We modeled them as three separate entities (`PasswordResetToken`, `EmailVerificationToken`, `EmailChangeToken`) instead. The flows diverge in ways a shared `purpose` enum would obscure: an `EmailChangeToken` carries the pending new email address as payload and, on success, mutates `User.email`; a `PasswordResetToken` revokes every refresh token for the user on success; an `EmailVerificationToken` has no payload beyond proving the existing email. Keeping them separate means each table's columns and each token's consumption logic only need to make sense for one flow, at the cost of some duplicated plumbing (generation, hashing, expiry checks) across the three.

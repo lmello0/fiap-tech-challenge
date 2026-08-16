@@ -1,6 +1,7 @@
 package com.fiap.techchallenge.workorder.services;
 
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
+import com.fiap.techchallenge.workorder.exceptions.IllegalWorkOrderTransitionException;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumSet;
@@ -28,7 +29,7 @@ public class WorkOrderStateMachine {
 
     public WorkOrderStatus transition(WorkOrderStatus from, WorkOrderStatus to) {
         if (!canTransition(from, to)) {
-            throw new IllegalStateException("Illegal transition: " + from + " -> " + to);
+            throw new IllegalWorkOrderTransitionException(from, to);
         }
 
         return to;

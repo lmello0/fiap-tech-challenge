@@ -1,4 +1,4 @@
 @NamedInterface
-package com.fiap.techchallenge.workorder.api.exceptions;
+package com.fiap.techchallenge.shared.exceptions;
 
 import org.springframework.modulith.NamedInterface;

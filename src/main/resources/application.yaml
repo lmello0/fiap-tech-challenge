@@ -25,3 +25,33 @@ spring:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+app:
+  auth:
+    # daily cleanup of refresh tokens that are long past expiry
+    purge-expired-tokens-cron: "0 30 3 * * ?"
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER}
+      access-token-ttl: 5m
+      refresh-token-ttl: 1h
+    rate-limit:
+      max-attempts: 5
+      lock-duration: 15m
+    verification:
+      password-reset-ttl: 15m
+      email-verification-ttl: 24h
+      email-change-ttl: 24h
+    bootstrap-manager:
+      email: ${BOOTSTRAP_MANAGER_EMAIL:}
+      first-name: ${BOOTSTRAP_MANAGER_FIRST_NAME:}
+      last-name: ${BOOTSTRAP_MANAGER_LAST_NAME:}
+      document-type: ${BOOTSTRAP_MANAGER_DOCUMENT_TYPE:CPF}
+      document-code: ${BOOTSTRAP_MANAGER_DOCUMENT_CODE:}
+      phone: ${BOOTSTRAP_MANAGER_PHONE:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'

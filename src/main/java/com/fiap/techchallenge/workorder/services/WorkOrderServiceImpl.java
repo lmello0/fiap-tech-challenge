@@ -3,7 +3,7 @@ package com.fiap.techchallenge.workorder.services;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.*;
 import com.fiap.techchallenge.workorder.api.events.*;
-import com.fiap.techchallenge.workorder.api.exceptions.WorkOrderNotFoundException;
+import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotFoundException;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import com.fiap.techchallenge.workorder.entities.WorkOrder;
