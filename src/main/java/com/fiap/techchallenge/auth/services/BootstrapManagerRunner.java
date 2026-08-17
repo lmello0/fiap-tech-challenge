@@ -65,9 +65,15 @@ public class BootstrapManagerRunner implements ApplicationRunner {
         authService.registerWorker(new RegisterWorkerCommand(worker, rawPassword));
 
         log.warn(
-                "Bootstrap MANAGER created — email={} password={} — change this immediately via " +
-                        "POST /auth/password, then unset BOOTSTRAP_MANAGER_* env vars",
-                properties.email(), rawPassword
+                """
+                        
+                        {}
+                        
+                         Bootstrap MANAGER created — email={} password={} — change this immediately via \
+                        POST /auth/password/change, then unset BOOTSTRAP_MANAGER_* env vars\s
+                        
+                        {}""",
+                "=".repeat(30), properties.email(), rawPassword, "=".repeat(30)
         );
     }
 }
