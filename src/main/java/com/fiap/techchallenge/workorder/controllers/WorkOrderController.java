@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.workorder.controllers;
 
+import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
@@ -26,14 +27,14 @@ public class WorkOrderController {
     private final WorkOrderService service;
 
     @GetMapping
-    public ResponseEntity<Page<WorkOrderInfo>> getAll(
+    public ResponseEntity<PageResponse<WorkOrderInfo>> getAll(
             @PageableDefault Pageable pageable,
             @Valid WorkOrderFilterQuery filter
     ) {
         Page<WorkOrderInfo> page = service
                 .getAllWorkOrders(filter, pageable);
 
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(PageResponse.from(page));
     }
 
     @GetMapping("/{id}")

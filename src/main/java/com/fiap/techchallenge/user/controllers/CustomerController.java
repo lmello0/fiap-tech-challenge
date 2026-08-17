@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.user.controllers;
 
+import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.UpdateUserProfileCommand;
 import com.fiap.techchallenge.user.api.queries.UserFilterQuery;
@@ -23,8 +24,8 @@ public class CustomerController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
-    public ResponseEntity<Page<UserInfo>> list(UserFilterQuery filter, Pageable pageable) {
-        return ResponseEntity.ok(service.listCustomers(filter, pageable));
+    public ResponseEntity<PageResponse<UserInfo>> list(UserFilterQuery filter, Pageable pageable) {
+        return ResponseEntity.ok(PageResponse.from(service.listCustomers(filter, pageable)));
     }
 
     @GetMapping("/{id}")
