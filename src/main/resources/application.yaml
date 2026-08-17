@@ -22,13 +22,43 @@ spring:
       whitelabel:
         enabled: false
 
+  mail:
+    host: ${MAILPIT_HOST:localhost}
+    port: ${MAILPIT_PORT:1025}
+
+  modulith:
+    events:
+      # A single recovery path: RetryFailedEmails owns resubmission, so restart must not fire a
+      # second one that ignores the per-message expiry.
+      republish-outstanding-events-on-restart: false
+      staleness:
+        # Without `resubmitted`, a retry that fails again stays RESUBMITTED and is never retried
+        # a second time — the retry budget would silently be 1 instead of app.mail.max-attempts.
+        published: 2m
+        processing: 2m
+        resubmitted: 2m
+        check-interval: 30s
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
 app:
+  mail:
+    from: ${MAIL_FROM:no-reply@techchallenge.local}
+    from-name: ${MAIL_FROM_NAME:Tech Challenge}
+    max-attempts: 3
+    retry-delay: 1m
+
+  events:
+    retention: 30d
+    purge-cron: "0 45 3 * * ?"
+
   auth:
     purge-expired-tokens-cron: "0 30 3 * * ?"
+
+    email:
+      base-url: ${APP_BASE_URL:http://localhost:5173}
 
     jwt:
       secret: ${JWT_SECRET}

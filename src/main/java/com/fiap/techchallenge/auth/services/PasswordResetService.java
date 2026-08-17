@@ -4,7 +4,7 @@ import com.fiap.techchallenge.auth.entities.PasswordResetToken;
 import com.fiap.techchallenge.auth.entities.UserAuth;
 import com.fiap.techchallenge.auth.enums.AuthProvider;
 import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
-import com.fiap.techchallenge.shared.notifications.EmailSender;
+import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.PasswordResetTokenRepository;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
@@ -36,7 +36,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final UserAuthRepository userAuthRepository;
     private final UserService userService;
-    private final EmailSender emailSender;
+    private final AuthEmails authEmails;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final VerificationProperties properties;
@@ -54,7 +54,7 @@ public class PasswordResetService {
                     .expiresAt(now.plus(properties.passwordResetTTL()))
                     .build());
 
-            emailSender.sendPasswordReset(email, raw);
+            authEmails.passwordReset(email, raw);
         });
 
         log.info("Password reset requested");

@@ -2,8 +2,38 @@ spring:
   jpa:
     show-sql: false
 
+  # MailSenderAutoConfiguration is conditional on spring.mail.host, and EmailDispatcher needs the
+  # bean it creates. EmailDeliveryIT overrides these to point at its Mailpit container; every other
+  # test just needs the bean to exist.
+  mail:
+    host: localhost
+    port: 1025
+
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: false
+      staleness:
+        # Tightened from the 2m used in production so a recovery test does not have to wait it out.
+        published: 1s
+        processing: 1s
+        resubmitted: 1s
+        check-interval: 1s
+
 app:
+  mail:
+    from: no-reply@techchallenge.test
+    from-name: Tech Challenge Test
+    max-attempts: 3
+    # Effectively disables the scheduled pass; recovery tests invoke the job directly.
+    retry-delay: 1h
+
+  events:
+    retention: 30d
+    purge-cron: "0 45 3 * * ?"
+
   auth:
+    email:
+      base-url: http://localhost:5173
     jwt:
       secret: test-signing-secret-that-is-long-enough-for-hs256
       issuer: http://localhost/tech-challenge-test

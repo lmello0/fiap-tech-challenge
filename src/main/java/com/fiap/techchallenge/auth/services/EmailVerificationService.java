@@ -2,7 +2,7 @@ package com.fiap.techchallenge.auth.services;
 
 import com.fiap.techchallenge.auth.entities.EmailVerificationToken;
 import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
-import com.fiap.techchallenge.shared.notifications.EmailSender;
+import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.EmailVerificationTokenRepository;
 import com.fiap.techchallenge.user.api.UserService;
@@ -32,7 +32,7 @@ public class EmailVerificationService {
 
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final UserService userService;
-    private final EmailSender emailSender;
+    private final AuthEmails authEmails;
     private final VerificationProperties properties;
 
     @Transactional
@@ -47,7 +47,7 @@ public class EmailVerificationService {
                 .expiresAt(now.plus(properties.emailVerificationTTL()))
                 .build());
 
-        emailSender.sendEmailVerification(email, raw);
+        authEmails.emailVerification(email, raw);
     }
 
     @Transactional

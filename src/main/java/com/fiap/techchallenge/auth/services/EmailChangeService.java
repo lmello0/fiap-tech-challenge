@@ -2,7 +2,7 @@ package com.fiap.techchallenge.auth.services;
 
 import com.fiap.techchallenge.auth.entities.EmailChangeToken;
 import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
-import com.fiap.techchallenge.shared.notifications.EmailSender;
+import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.EmailChangeTokenRepository;
 import com.fiap.techchallenge.user.api.UserService;
@@ -32,7 +32,7 @@ public class EmailChangeService {
 
     private final EmailChangeTokenRepository emailChangeTokenRepository;
     private final UserService userService;
-    private final EmailSender emailSender;
+    private final AuthEmails authEmails;
     private final RefreshTokenService refreshTokenService;
     private final VerificationProperties properties;
 
@@ -49,7 +49,7 @@ public class EmailChangeService {
                 .expiresAt(now.plus(properties.emailChangeTTL()))
                 .build());
 
-        emailSender.sendEmailChange(newEmail, raw);
+        authEmails.emailChange(newEmail, raw);
     }
 
     @Transactional
