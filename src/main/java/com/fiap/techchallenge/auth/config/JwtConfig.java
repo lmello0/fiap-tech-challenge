@@ -18,6 +18,12 @@ public class JwtConfig {
     public static final String TOKEN_TYPE_CLAIM = "type";
     public static final String ACCESS_TOKEN_TYPE = "access";
 
+    /**
+     * Marks a token whose holder must rotate their password before the account does anything else.
+     * Enforced by {@link PasswordChangeRequiredFilter}.
+     */
+    public static final String PASSWORD_CHANGE_CLAIM = "pwd_change";
+
     @Bean
     SecretKey jwtSigningKey(JwtProperties properties) {
         return new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");

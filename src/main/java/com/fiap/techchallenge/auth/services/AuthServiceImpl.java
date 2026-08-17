@@ -73,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
             log.info("Local registration succeeded userId={}", user.id());
 
-            return issueFor(principalOf(user.id()));
+            return issueFor(principalOf(user.id()), false);
         } catch (DataIntegrityViolationException e) {
             log.warn("Registration conflict (race on a unique index)");
             throw new RegistrationConflictException();
@@ -86,7 +86,10 @@ public class AuthServiceImpl implements AuthService {
         try {
             UserInfo user = userService.createWorker(command.worker());
 
-            userAuthRepository.save(UserAuth.local(user.id(), passwordEncoder.encode(command.rawPassword())));
+            // Someone else picked this password — the manager onboarding them, or the bootstrap
+            // runner reading it out of the environment — so the worker must rotate it before use.
+            userAuthRepository.save(UserAuth.localWithTemporaryPassword(
+                    user.id(), passwordEncoder.encode(command.rawPassword())));
             emailVerificationService.issueEmailVerification(user.id(), user.email());
 
             log.info("Worker registration succeeded userId={}", user.id());
@@ -136,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
         credential.ifPresent(UserAuth::resetFailedAttempts);
 
         log.info("Login succeeded userId={}", user.id());
-        return issueFor(user);
+        return issueFor(user, credential.map(UserAuth::isNeedPasswordChange).orElse(false));
     }
 
     @Override
@@ -149,8 +152,15 @@ public class AuthServiceImpl implements AuthService {
 
         ensureActive(user);
 
+        // Re-read the flag rather than trusting the expiring token that asked for this one: without
+        // it, refreshing would be a way to trade a flagged token for a clean one.
+        boolean needPasswordChange = userAuthRepository
+                .findByUserIdAndProvider(user.id(), AuthProvider.LOCAL)
+                .map(UserAuth::isNeedPasswordChange)
+                .orElse(false);
+
         return new TokenResponse(
-                jwtService.issueAccessToken(user, authorities(user)),
+                jwtService.issueAccessToken(user, authorities(user), needPasswordChange),
                 rotation.newToken(),
                 jwtService.accessTokenTTL()
         );
@@ -221,9 +231,9 @@ public class AuthServiceImpl implements AuthService {
         emailChangeService.confirmEmailChange(command.token());
     }
 
-    private TokenResponse issueFor(UserPrincipal user) {
+    private TokenResponse issueFor(UserPrincipal user, boolean needPasswordChange) {
         return new TokenResponse(
-                jwtService.issueAccessToken(user, authorities(user)),
+                jwtService.issueAccessToken(user, authorities(user), needPasswordChange),
                 refreshTokenService.issue(user.id()),
                 jwtService.accessTokenTTL()
         );

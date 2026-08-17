@@ -47,19 +47,37 @@ public class UserAuth {
 
     private @Nullable Instant lockedUntil;
 
-    private UserAuth(UUID userId, AuthProvider provider, @Nullable String passwordHash) {
+    @Column(nullable = false)
+    private boolean needPasswordChange;
+
+    private UserAuth(UUID userId, AuthProvider provider, @Nullable String passwordHash, boolean needPasswordChange) {
         this.userId = userId;
         this.provider = provider;
         this.passwordHash = passwordHash;
+        this.needPasswordChange = needPasswordChange;
     }
 
     public static UserAuth local(UUID userId, String passwordHash) {
-        return new UserAuth(userId, AuthProvider.LOCAL, passwordHash);
+        return new UserAuth(userId, AuthProvider.LOCAL, passwordHash, false);
     }
 
+    /**
+     * For accounts whose first password was chosen by someone other than their holder — a manager
+     * onboarding a worker, or the bootstrap runner reading one out of the environment. The holder
+     * must rotate it before the account can be used for anything else.
+     */
+    public static UserAuth localWithTemporaryPassword(UUID userId, String passwordHash) {
+        return new UserAuth(userId, AuthProvider.LOCAL, passwordHash, true);
+    }
+
+    /**
+     * The single choke point that clears {@code needPasswordChange}: both the authenticated change
+     * and the emailed reset funnel through here, so neither can leave the flag standing.
+     */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.modifiedAt = Instant.now();
+        this.needPasswordChange = false;
         resetFailedAttempts();
     }
 

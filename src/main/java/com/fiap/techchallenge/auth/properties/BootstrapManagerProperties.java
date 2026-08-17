@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.auth.bootstrap-manager")
 public record BootstrapManagerProperties(
         String email,
+        String password,
         String firstName,
         String lastName,
         String documentType,

@@ -23,7 +23,7 @@ public class JwtService {
     private final JwtEncoder encoder;
     private final JwtProperties properties;
 
-    public String issueAccessToken(UserPrincipal user, List<String> roles) {
+    public String issueAccessToken(UserPrincipal user, List<String> roles, boolean needPasswordChange) {
         Instant now = Instant.now();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -34,6 +34,9 @@ public class JwtService {
                 .claim(JwtConfig.TOKEN_TYPE_CLAIM, JwtConfig.ACCESS_TOKEN_TYPE)
                 .claim("email", user.email())
                 .claim("roles", List.copyOf(roles))
+                // Always stamped, true or false: an absent claim and a false one would otherwise be
+                // the same thing at the filter, and "absent" is what a forged token looks like.
+                .claim(JwtConfig.PASSWORD_CHANGE_CLAIM, needPasswordChange)
                 .build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();

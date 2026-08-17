@@ -13,13 +13,28 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    /**
+     * All an account pending a forced password change may still reach: rotating the password, and
+     * getting out. Everything else answers 403 until the rotation lands — see
+     * {@link PasswordChangeRequiredFilter}.
+     */
+    private static final RequestMatcher PASSWORD_CHANGE_ALLOWLIST = new OrRequestMatcher(
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/password/change"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/logout"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/logout-all")
+    );
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -47,7 +62,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                // After the bearer filter, so the JWT it reads is already authenticated.
+                .addFilterAfter(
+                        new PasswordChangeRequiredFilter(PASSWORD_CHANGE_ALLOWLIST),
+                        BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }

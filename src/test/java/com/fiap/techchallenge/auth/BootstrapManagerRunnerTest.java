@@ -1,6 +1,9 @@
 package com.fiap.techchallenge.auth;
 
 import com.fiap.techchallenge.TestcontainersConfiguration;
+import com.fiap.techchallenge.auth.entities.UserAuth;
+import com.fiap.techchallenge.auth.enums.AuthProvider;
+import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
 import com.fiap.techchallenge.auth.services.BootstrapManagerRunner;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
@@ -20,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = {
         "app.auth.bootstrap-manager.email=bootstrap-manager@example.com",
+        "app.auth.bootstrap-manager.password=aBootstrapPassword1",
         "app.auth.bootstrap-manager.first-name=Boot",
         "app.auth.bootstrap-manager.last-name=Strap",
         "app.auth.bootstrap-manager.document-type=CPF",
@@ -32,6 +36,9 @@ class BootstrapManagerRunnerTest {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    UserAuthRepository userAuths;
 
     @Autowired
     BootstrapManagerRunner runner;
@@ -49,5 +56,19 @@ class BootstrapManagerRunnerTest {
 
         UserInfo stillTheSameUser = userService.findByEmail(EMAIL).orElseThrow();
         assertThat(stillTheSameUser.id()).isEqualTo(user.id());
+    }
+
+    /**
+     * The bootstrap password comes out of the environment and gets echoed into the startup log, so
+     * it is only ever good for one thing: logging in to replace itself.
+     */
+    @Test
+    void theBootstrapPasswordIsSingleUse() {
+        UserInfo user = userService.findByEmail(EMAIL).orElseThrow();
+
+        assertThat(userAuths.findByUserIdAndProvider(user.id(), AuthProvider.LOCAL))
+                .get()
+                .extracting(UserAuth::isNeedPasswordChange)
+                .isEqualTo(true);
     }
 }

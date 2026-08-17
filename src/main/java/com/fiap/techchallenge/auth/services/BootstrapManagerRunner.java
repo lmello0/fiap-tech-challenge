@@ -12,6 +12,7 @@ import com.fiap.techchallenge.user.enums.PhoneType;
 import com.fiap.techchallenge.user.enums.WorkerRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
@@ -34,7 +35,7 @@ public class BootstrapManagerRunner implements ApplicationRunner {
     private final AuthService authService;
 
     @Override
-    public void run(ApplicationArguments args) {
+    public void run(@Nullable ApplicationArguments args) {
         if (!StringUtils.hasText(properties.email())) {
             return;
         }
@@ -44,7 +45,9 @@ public class BootstrapManagerRunner implements ApplicationRunner {
             return;
         }
 
-        String rawPassword = passwordGenerator.generateKey();
+        String rawPassword = properties.password() == null
+                ? passwordGenerator.generateKey()
+                : properties.password();
 
         CreateUserCommand user = new CreateUserCommand(
                 properties.email(),
@@ -69,8 +72,9 @@ public class BootstrapManagerRunner implements ApplicationRunner {
                         
                         {}
                         
-                         Bootstrap MANAGER created — email={} password={} — change this immediately via \
-                        POST /auth/password/change, then unset BOOTSTRAP_MANAGER_* env vars\s
+                         Bootstrap MANAGER created — email={} password={} — this password is single-use: \
+                        the account can do nothing but POST /auth/password/change until it is rotated. \
+                        Unset the BOOTSTRAP_MANAGER_* env vars afterwards\s
                         
                         {}""",
                 "=".repeat(30), properties.email(), rawPassword, "=".repeat(30)

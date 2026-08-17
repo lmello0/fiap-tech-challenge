@@ -37,7 +37,6 @@ spring:
         published: 2m
         processing: 2m
         resubmitted: 2m
-        check-interval: 30s
 
 springdoc:
   swagger-ui:
@@ -79,6 +78,7 @@ app:
 
     bootstrap-manager:
       email: ${BOOTSTRAP_MANAGER_EMAIL:}
+      password: ${BOOTSTRAP_MANAGER_PASSWORD:}
       first-name: ${BOOTSTRAP_MANAGER_FIRST_NAME:}
       last-name: ${BOOTSTRAP_MANAGER_LAST_NAME:}
       document-type: ${BOOTSTRAP_MANAGER_DOCUMENT_TYPE:CPF}
