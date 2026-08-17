@@ -33,9 +33,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST,
-                                "/auth/register",
+                                "/auth/register/customer",
                                 "/auth/login",
-                                "/auth/refresh",
+                                "/auth/refresh-token",
                                 "/auth/logout",
                                 "/auth/password/reset",
                                 "/auth/password/reset/confirm",

@@ -7,8 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -85,9 +83,15 @@ public class AuthEmails {
     }
 
     private String link(String path, String rawToken) {
-        // Base64StringKeyGenerator emits standard Base64, so '+', '/' and '=' need escaping here.
-        return "%s%s?token=%s".formatted(
-                properties.baseUrl(), path, URLEncoder.encode(rawToken, StandardCharsets.UTF_8));
+        // Every path here is an SPA route, not an API one: baseUrl is the frontend's origin. The
+        // link only carries the token to a page, which then POSTs it to the matching /auth
+        // endpoint. That indirection is what keeps the token safe — a mail scanner or prefetcher
+        // following the link reaches a page, and no GET in this system can consume a single-use
+        // token.
+        //
+        // Tokens are URL-safe Base64 by construction, so the raw value is already a legal query
+        // parameter — and the copyable code below the link stays byte-identical to it.
+        return "%s%s?token=%s".formatted(properties.baseUrl(), path, rawToken);
     }
 
     private static String humanize(Duration ttl) {

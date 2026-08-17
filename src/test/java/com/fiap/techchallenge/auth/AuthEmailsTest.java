@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuthEmailsTest {
 
     private static final String EMAIL = "recipient@example.com";
-    private static final String TOKEN = "raw+token/with=base64";
+    private static final String TOKEN = "raw-token_with-urlsafe64";
 
     @Autowired
     AuthEmails authEmails;
@@ -49,9 +49,10 @@ class AuthEmailsTest {
         assertThat(event.subject()).isEqualTo("Reset your password");
         assertThat(event.html()).isNull();
 
-        // The link must survive Base64's '+', '/' and '=' as query parameters.
+        // The token rides the link verbatim: URL-safe Base64 needs no escaping, so the link and the
+        // copyable code below it carry the same bytes. Reintroducing standard Base64 breaks this.
         assertThat(event.plainText())
-                .contains("http://localhost:5173/reset-password?token=raw%2Btoken%2Fwith%3Dbase64")
+                .contains("http://localhost:4200/reset-password?token=" + TOKEN)
                 .contains(TOKEN);
 
         // The email dies with the token it carries: app.auth.verification.password-reset-ttl is 15m.
@@ -68,7 +69,10 @@ class AuthEmailsTest {
         EmailRequestedEvent event = published();
 
         assertThat(event.subject()).isEqualTo("Confirm your email address");
-        assertThat(event.plainText()).contains("/verify-email?token=");
+
+        // The full URL, not just the path: an API-shaped path under the SPA's origin is exactly
+        // the drift a bare-fragment assertion let through before.
+        assertThat(event.plainText()).contains("http://localhost:4200/verify-email?token=" + TOKEN);
         assertThat(event.expiresAt())
                 .isBetween(before.plus(Duration.ofHours(24)), Instant.now().plus(Duration.ofHours(24)));
     }
@@ -83,7 +87,7 @@ class AuthEmailsTest {
 
         assertThat(event.to()).containsExactly(EMAIL);
         assertThat(event.subject()).isEqualTo("Confirm your new email address");
-        assertThat(event.plainText()).contains("/confirm-email-change?token=");
+        assertThat(event.plainText()).contains("http://localhost:4200/confirm-email-change?token=" + TOKEN);
         assertThat(event.expiresAt())
                 .isBetween(before.plus(Duration.ofHours(24)), Instant.now().plus(Duration.ofHours(24)));
     }

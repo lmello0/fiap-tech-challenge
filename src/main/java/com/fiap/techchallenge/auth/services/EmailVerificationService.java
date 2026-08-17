@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -28,7 +29,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EmailVerificationService {
 
-    private final StringKeyGenerator tokenGenerator = new Base64StringKeyGenerator(32);
+    private final StringKeyGenerator tokenGenerator =
+            new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32);
 
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final UserService userService;

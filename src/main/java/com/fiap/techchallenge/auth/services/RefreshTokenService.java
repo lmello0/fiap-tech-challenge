@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -25,7 +26,8 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
-    private final StringKeyGenerator tokenGenerator = new Base64StringKeyGenerator(32);
+    private final StringKeyGenerator tokenGenerator =
+            new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32);
 
     private final RefreshTokenRepository repository;
     private final JwtProperties properties;

@@ -50,8 +50,8 @@ public class AuthController {
         UserInfo userInfo = service.registerWorker(command);
 
         URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}") // TODO: change
+                .fromCurrentContextPath()
+                .path("/users/{id}")
                 .buildAndExpand(userInfo.id())
                 .toUri();
 

@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HexFormat;
 
 /**
@@ -31,7 +32,8 @@ import java.util.HexFormat;
 @RequiredArgsConstructor
 public class PasswordResetService {
 
-    private final StringKeyGenerator tokenGenerator = new Base64StringKeyGenerator(32);
+    private final StringKeyGenerator tokenGenerator =
+            new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32);
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final UserAuthRepository userAuthRepository;

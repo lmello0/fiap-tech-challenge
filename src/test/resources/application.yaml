@@ -33,7 +33,7 @@ app:
 
   auth:
     email:
-      base-url: http://localhost:5173
+      base-url: http://localhost:4200
     jwt:
       secret: test-signing-secret-that-is-long-enough-for-hs256
       issuer: http://localhost/tech-challenge-test

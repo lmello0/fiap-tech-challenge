@@ -58,7 +58,9 @@ app:
     purge-expired-tokens-cron: "0 30 3 * * ?"
 
     email:
-      base-url: ${APP_BASE_URL:http://localhost:5173}
+      # The SPA's origin, not this API's: every link in an auth email points at a frontend route
+      # that reads ?token= and POSTs it back here. Defaults to the Angular dev server.
+      base-url: ${APP_BASE_URL:http://localhost:4200}
 
     jwt:
       secret: ${JWT_SECRET}
