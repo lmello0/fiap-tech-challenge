@@ -241,6 +241,10 @@ public class UserServiceImpl implements UserService {
             throw new MultiplePrimaryPhoneNumberException();
         }
 
+        if (!DocumentValidator.validate(command.documentType(), command.documentCode())) {
+            throw new InvalidDocumentException(command.documentType());
+        }
+
         if (userRepository.existsByEmail(command.email())) {
             throw new EmailAlreadyInUseException();
         }

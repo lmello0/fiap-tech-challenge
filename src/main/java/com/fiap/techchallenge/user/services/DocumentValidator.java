@@ -5,15 +5,11 @@ import com.fiap.techchallenge.user.exceptions.InvalidDocumentException;
 
 public class DocumentValidator {
 
-    public static void validate(DocumentType type, String code) {
-        boolean valid = switch (type) {
+    public static boolean validate(DocumentType type, String code) {
+        return switch (type) {
             case CPF -> isValidCpf(code);
             case CNPJ -> isValidCnpj(code);
         };
-
-        if (!valid) {
-            throw new InvalidDocumentException(type);
-        }
     }
 
     private static boolean isValidCpf(String code) {
