@@ -38,6 +38,12 @@ spring:
         processing: 2m
         resubmitted: 2m
 
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 20
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
