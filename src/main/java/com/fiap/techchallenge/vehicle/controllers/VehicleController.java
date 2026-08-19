@@ -1,0 +1,120 @@
+package com.fiap.techchallenge.vehicle.controllers;
+
+import com.fiap.techchallenge.shared.responses.PageResponse;
+import com.fiap.techchallenge.user.enums.WorkerRole;
+import com.fiap.techchallenge.vehicle.api.VehicleService;
+import com.fiap.techchallenge.vehicle.api.commands.CreateVehicleCommand;
+import com.fiap.techchallenge.vehicle.api.commands.UpdateVehicleCommand;
+import com.fiap.techchallenge.vehicle.api.queries.VehicleFilterQuery;
+import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("vehicles")
+@RequiredArgsConstructor
+public class VehicleController {
+
+    private final VehicleService vehicleService;
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    public ResponseEntity<PageResponse<VehicleInfo>> getAllVehicles(
+            VehicleFilterQuery filter,
+            Pageable pageable,
+            Authentication authentication
+    ) {
+        VehicleFilterQuery effectiveFilter = isStaff(authentication)
+                ? filter
+                : filter.withCustomerId(UUID.fromString(authentication.getName()));
+
+        return ResponseEntity.ok(PageResponse.from(vehicleService.listVehicles(effectiveFilter, pageable)));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    public ResponseEntity<VehicleInfo> getById(@PathVariable UUID id, Authentication authentication) {
+        VehicleInfo vehicle = vehicleService.getById(id);
+        requireOwnershipOrStaff(vehicle, authentication);
+
+        return ResponseEntity.ok(vehicle);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    public ResponseEntity<VehicleInfo> create(
+            @Valid @RequestBody CreateVehicleCommand command,
+            Authentication authentication
+    ) {
+        CreateVehicleCommand effectiveCommand = isStaff(authentication)
+                ? requireCustomerId(command)
+                : command.withCustomerId(UUID.fromString(authentication.getName()));
+
+        VehicleInfo vehicle = vehicleService.create(effectiveCommand);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(vehicle.id())
+                .toUri();
+
+        return ResponseEntity.created(location).body(vehicle);
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    public ResponseEntity<VehicleInfo> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateVehicleCommand command,
+            Authentication authentication
+    ) {
+        requireOwnershipOrStaff(vehicleService.getById(id), authentication);
+
+        return ResponseEntity.ok(vehicleService.update(id, command));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    public ResponseEntity<Void> deactivate(@PathVariable UUID id, Authentication authentication) {
+        requireOwnershipOrStaff(vehicleService.getById(id), authentication);
+        vehicleService.deactivate(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean isStaff(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_" + WorkerRole.ATTENDANT)
+                        || authority.equals("ROLE_" + WorkerRole.MANAGER));
+    }
+
+    private void requireOwnershipOrStaff(VehicleInfo vehicle, Authentication authentication) {
+        if (isStaff(authentication)) {
+            return;
+        }
+
+        if (!vehicle.customerId().toString().equals(authentication.getName())) {
+            throw new AccessDeniedException("Not allowed to access this vehicle");
+        }
+    }
+
+    private CreateVehicleCommand requireCustomerId(CreateVehicleCommand command) {
+        if (command.customerId() == null) {
+            throw new IllegalArgumentException("customerId is required");
+        }
+
+        return command;
+    }
+}
