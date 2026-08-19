@@ -1,11 +1,10 @@
-package com.fiap.techchallenge.shared.config;
+package com.fiap.techchallenge.email.config;
 
 import com.fiap.techchallenge.email.exceptions.EmailExpiredException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * Spring Modulith enables async execution on its own; this declares it explicitly so we can attach an
@@ -18,8 +17,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  */
 @Slf4j
 @Configuration
-@EnableAsync
-public class AsyncConfig implements AsyncConfigurer {
+public class EmailAsyncExceptionConfig implements AsyncConfigurer {
 
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
