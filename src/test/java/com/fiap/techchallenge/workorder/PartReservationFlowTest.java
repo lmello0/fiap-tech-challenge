@@ -1,0 +1,227 @@
+package com.fiap.techchallenge.workorder;
+
+import com.fiap.techchallenge.TestcontainersConfiguration;
+import com.fiap.techchallenge.inventory.api.PartCatalogService;
+import com.fiap.techchallenge.inventory.api.PartReservationService;
+import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
+import com.fiap.techchallenge.inventory.api.StockService;
+import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
+import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
+import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
+import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.inventory.entities.PartReservation;
+import com.fiap.techchallenge.inventory.enums.ReservationStatus;
+import com.fiap.techchallenge.inventory.enums.StockMovementType;
+import com.fiap.techchallenge.inventory.enums.UnitOfMeasure;
+import com.fiap.techchallenge.inventory.exceptions.InsufficientStockException;
+import com.fiap.techchallenge.inventory.repositories.PartReservationRepository;
+import com.fiap.techchallenge.inventory.repositories.StockMovementRepository;
+import com.fiap.techchallenge.workorder.api.WorkOrderService;
+import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderRowCommand;
+import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
+import com.fiap.techchallenge.workorder.entities.WorkOrder;
+import com.fiap.techchallenge.workorder.enums.RowType;
+import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
+import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * Exercises the reservation lifecycle wired into WorkOrderServiceImpl: best-effort reserve at
+ * finishDiagnostics, release at refuse, strict consume at startService, and the age-based expiry
+ * sweep. WorkOrder fixtures are seeded directly via the repository rather than through
+ * WorkOrderService.create() — that method never sets assignedMechanicId, which the DB requires
+ * NOT NULL (V2__CREATE_TABLE_WORK_ORDERS.sql), a pre-existing gap unrelated to this module.
+ */
+@Import(TestcontainersConfiguration.class)
+@SpringBootTest
+class PartReservationFlowTest {
+
+    @Autowired
+    WorkOrderService workOrderService;
+
+    @Autowired
+    WorkOrderRepository workOrderRepository;
+
+    @Autowired
+    PartCatalogService partCatalogService;
+
+    @Autowired
+    RepairServiceCatalogService repairServiceCatalogService;
+
+    @Autowired
+    StockService stockService;
+
+    @Autowired
+    PartReservationService reservationService;
+
+    @Autowired
+    PartReservationRepository reservationRepository;
+
+    @Autowired
+    StockMovementRepository movementRepository;
+
+    @Test
+    void quotingReservesWhatExistsAndRecordsAShortfall() {
+        PartInfo part = createPart("RES-SHORT-1", 2);
+        RepairServiceInfo service = createService("SVC-SHORT-1");
+        UUID workOrderId = seedWorkOrder();
+
+        advanceToInDiagnostics(workOrderId);
+        WorkOrderInfo afterQuote = finishDiagnosticsWith(workOrderId, part.id(), BigDecimal.valueOf(4), service.id());
+
+        assertThat(afterQuote.status()).isEqualTo(WorkOrderStatus.WAITING_APPROVAL);
+
+        PartInfo afterReserve = partCatalogService.getById(part.id());
+        assertThat(afterReserve.quantityReserved()).isEqualByComparingTo("2");
+        assertThat(afterReserve.available()).isEqualByComparingTo("0");
+
+        List<PartReservation> reservations =
+                reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.HELD);
+        assertThat(reservations).hasSize(1);
+        assertThat(reservations.get(0).getShortfall()).isEqualByComparingTo("2");
+
+        workOrderService.approve(workOrderId);
+
+        assertThatThrownBy(() -> workOrderService.startService(workOrderId))
+                .isInstanceOf(InsufficientStockException.class);
+    }
+
+    @Test
+    void refusalReleasesTheReservationAndWritesNoStockMovement() {
+        PartInfo part = createPart("RES-REFUSE-1", 5);
+        RepairServiceInfo service = createService("SVC-REFUSE-1");
+        UUID workOrderId = seedWorkOrder();
+
+        advanceToInDiagnostics(workOrderId);
+        finishDiagnosticsWith(workOrderId, part.id(), BigDecimal.valueOf(3), service.id());
+
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("3");
+
+        workOrderService.refuse(workOrderId, new RefuseWorkOrderCommand("Too expensive"));
+
+        PartInfo afterRefusal = partCatalogService.getById(part.id());
+        assertThat(afterRefusal.quantityReserved()).isEqualByComparingTo("0");
+        assertThat(afterRefusal.quantityOnHand()).isEqualByComparingTo("5");
+
+        List<PartReservation> released =
+                reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.RELEASED);
+        assertThat(released).hasSize(1);
+
+        boolean anyConsumptionForThisOrder = movementRepository.findByPartIdOrderByOccurredAtDesc(part.id(), Pageable.unpaged())
+                .stream()
+                .noneMatch(m -> m.getType() == StockMovementType.CONSUMPTION);
+        assertThat(anyConsumptionForThisOrder).isTrue();
+    }
+
+    @Test
+    void startingServiceConsumesTheReservationAndWritesAConsumptionMovement() {
+        PartInfo part = createPart("RES-CONSUME-1", 5);
+        RepairServiceInfo service = createService("SVC-CONSUME-1");
+        UUID workOrderId = seedWorkOrder();
+
+        advanceToInDiagnostics(workOrderId);
+        finishDiagnosticsWith(workOrderId, part.id(), BigDecimal.valueOf(3), service.id());
+        workOrderService.approve(workOrderId);
+
+        WorkOrderInfo started = workOrderService.startService(workOrderId);
+        assertThat(started.status()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
+
+        PartInfo afterConsume = partCatalogService.getById(part.id());
+        assertThat(afterConsume.quantityOnHand()).isEqualByComparingTo("2");
+        assertThat(afterConsume.quantityReserved()).isEqualByComparingTo("0");
+
+        List<PartReservation> consumed =
+                reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.CONSUMED);
+        assertThat(consumed).hasSize(1);
+
+        boolean hasConsumptionMovement = movementRepository.findByPartIdOrderByOccurredAtDesc(part.id(), Pageable.unpaged())
+                .stream()
+                .anyMatch(m -> m.getType() == StockMovementType.CONSUMPTION
+                        && m.getQuantity().compareTo(BigDecimal.valueOf(-3)) == 0
+                        && workOrderId.equals(m.getReferenceId()));
+        assertThat(hasConsumptionMovement).isTrue();
+    }
+
+    @Test
+    void expirySweepReleasesReservationsPastTheirTtlAndSkipsRecentOnes() {
+        PartInfo part = createPart("RES-EXPIRE-1", 5);
+        RepairServiceInfo service = createService("SVC-EXPIRE-1");
+        UUID workOrderId = seedWorkOrder();
+
+        advanceToInDiagnostics(workOrderId);
+        finishDiagnosticsWith(workOrderId, part.id(), BigDecimal.valueOf(3), service.id());
+
+        PartReservation reservation =
+                reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.HELD).get(0);
+        reservation.setReservedAt(Instant.now().minus(Duration.ofDays(10)));
+        reservationRepository.save(reservation);
+
+        int expired = reservationService.expireStaleReservations(Instant.now().minus(Duration.ofDays(7)));
+
+        assertThat(expired).isEqualTo(1);
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("0");
+        assertThat(reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.EXPIRED))
+                .hasSize(1);
+    }
+
+    // --- fixtures -----------------------------------------------------------------------------
+
+    private PartInfo createPart(String sku, int onHand) {
+        PartInfo part = partCatalogService.create(new CreatePartCommand(
+                sku, "Test Part " + sku, null, null, UnitOfMeasure.UNIT, BigDecimal.valueOf(50)));
+
+        if (onHand > 0) {
+            stockService.adjust(part.id(), new AdjustStockCommand(BigDecimal.valueOf(onHand), "Seed"));
+        }
+
+        return partCatalogService.getById(part.id());
+    }
+
+    private RepairServiceInfo createService(String code) {
+        return repairServiceCatalogService.create(new CreateRepairServiceCommand(
+                code, "Test Service " + code, null, BigDecimal.valueOf(100), 1800));
+    }
+
+    private UUID seedWorkOrder() {
+        WorkOrder wo = new WorkOrder();
+        wo.setOrderCode("WO-TEST-" + UUID.randomUUID());
+        wo.setStatus(WorkOrderStatus.RECEIVED);
+        wo.setCustomerId(UUID.randomUUID());
+        wo.setVehicleId(UUID.randomUUID());
+        wo.setAssignedMechanicId(UUID.randomUUID());
+
+        return workOrderRepository.save(wo).getId();
+    }
+
+    private void advanceToInDiagnostics(UUID workOrderId) {
+        workOrderService.requestDiagnostics(workOrderId);
+        workOrderService.startDiagnostics(workOrderId, new StartDiagnosticsCommand(UUID.randomUUID()));
+    }
+
+    private WorkOrderInfo finishDiagnosticsWith(UUID workOrderId, UUID partId, BigDecimal partQuantity, UUID serviceId) {
+        return workOrderService.finishDiagnostics(workOrderId, new FinishDiagnosticsCommand(
+                "Diagnosed",
+                List.of(
+                        new CreateWorkOrderRowCommand(RowType.PART, partQuantity, partId, null),
+                        new CreateWorkOrderRowCommand(RowType.SERVICE, BigDecimal.ONE, null, serviceId)
+                )
+        ));
+    }
+}

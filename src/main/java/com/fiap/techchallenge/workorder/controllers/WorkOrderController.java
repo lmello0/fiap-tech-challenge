@@ -3,6 +3,7 @@ package com.fiap.techchallenge.workorder.controllers;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -76,6 +78,16 @@ public class WorkOrderController {
         return ResponseEntity.ok(wo);
     }
 
+    @PostMapping("/{id}/diagnostics/finish")
+    public ResponseEntity<WorkOrderInfo> finishDiagnostics(
+            @PathVariable UUID id,
+            @Valid @RequestBody FinishDiagnosticsCommand command
+    ) {
+        WorkOrderInfo wo = service.finishDiagnostics(id, command);
+
+        return ResponseEntity.ok(wo);
+    }
+
     @PostMapping("/{id}/approval")
     public ResponseEntity<WorkOrderInfo> approve(@PathVariable UUID id) {
         WorkOrderInfo wo = service.approve(id);
@@ -103,6 +115,25 @@ public class WorkOrderController {
     @PostMapping("/{id}/service/finish")
     public ResponseEntity<WorkOrderInfo> finish(@PathVariable UUID id) {
         WorkOrderInfo wo = service.finish(id);
+
+        return ResponseEntity.ok(wo);
+    }
+
+    // The rest of this controller has no role gating yet (a pre-existing gap, not introduced here —
+    // see the inventory module's write-up). These two are gated because the plan for per-service
+    // timing calls for it explicitly: only a MECHANIC actually performs the row's work.
+    @PostMapping("/{id}/rows/{rowId}/start")
+    @PreAuthorize("hasRole('MECHANIC')")
+    public ResponseEntity<WorkOrderInfo> startRow(@PathVariable UUID id, @PathVariable UUID rowId) {
+        WorkOrderInfo wo = service.startRow(id, rowId);
+
+        return ResponseEntity.ok(wo);
+    }
+
+    @PostMapping("/{id}/rows/{rowId}/finish")
+    @PreAuthorize("hasRole('MECHANIC')")
+    public ResponseEntity<WorkOrderInfo> finishRow(@PathVariable UUID id, @PathVariable UUID rowId) {
+        WorkOrderInfo wo = service.finishRow(id, rowId);
 
         return ResponseEntity.ok(wo);
     }

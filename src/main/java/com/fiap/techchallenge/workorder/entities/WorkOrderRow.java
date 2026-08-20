@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -40,6 +41,13 @@ public class WorkOrderRow {
     private BigDecimal unitPrice;
 
     private UUID partId;
+
+    private UUID serviceId;
+
+    /** Only ever set on a SERVICE row, and only while the work order is IN_PROGRESS. */
+    private Instant startedAt;
+
+    private Instant finishedAt;
 
     public BigDecimal getTotal() {
         return quantity.multiply(unitPrice);

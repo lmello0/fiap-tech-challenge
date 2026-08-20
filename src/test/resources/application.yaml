@@ -31,6 +31,16 @@ app:
     retention: 30d
     purge-cron: "0 45 3 * * ?"
 
+  inventory:
+    # Effectively disables the scheduled sweep; expiry tests invoke the service method directly.
+    reservation-ttl: 7d
+    reservation-expiry-cron: "0 15 3 * * ?"
+    reorder-sweep-cron: "0 0 4 * * ?"
+    average-window: 20
+    vendor:
+      mock:
+        lead-time-days: 3
+
   auth:
     email:
       base-url: http://localhost:4200
