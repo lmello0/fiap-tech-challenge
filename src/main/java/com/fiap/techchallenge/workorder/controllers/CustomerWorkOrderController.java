@@ -1,12 +1,20 @@
 package com.fiap.techchallenge.workorder.controllers;
 
+import com.fiap.techchallenge.history.api.HistoryQueryService;
+import com.fiap.techchallenge.history.api.representation.HistoryEntryInfo;
+import com.fiap.techchallenge.history.api.representation.HistorySnapshotInfo;
+import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.BudgetService;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.events.WorkOrderAggregate;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -26,6 +34,7 @@ public class CustomerWorkOrderController {
 
     private final WorkOrderService workOrderService;
     private final BudgetService budgetService;
+    private final HistoryQueryService historyQueryService;
 
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -61,5 +70,36 @@ public class CustomerWorkOrderController {
         BudgetInfo budget = budgetService.refuse(budgetId, UUID.fromString(authentication.getName()), command);
 
         return ResponseEntity.ok(budget);
+    }
+
+    /** Only entries the owning module marked customer-visible (CONTEXT.md), and only for a work
+     * order this customer actually owns — {@code getForCustomer} throws 404 otherwise. */
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<PageResponse<HistoryEntryInfo>> history(
+            @PathVariable UUID id,
+            @PageableDefault Pageable pageable,
+            Authentication authentication
+    ) {
+        workOrderService.getForCustomer(id, UUID.fromString(authentication.getName()));
+
+        Page<HistoryEntryInfo> page = historyQueryService.customerVisibleTimeline(WorkOrderAggregate.TYPE, id, pageable);
+
+        return ResponseEntity.ok(PageResponse.from(page));
+    }
+
+    @GetMapping("/history/{entryId}")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<HistorySnapshotInfo> historyEntry(
+            @PathVariable UUID id,
+            @PathVariable UUID entryId,
+            Authentication authentication
+    ) {
+        workOrderService.getForCustomer(id, UUID.fromString(authentication.getName()));
+
+        return historyQueryService
+                .customerVisibleSnapshot(entryId, WorkOrderAggregate.TYPE, id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

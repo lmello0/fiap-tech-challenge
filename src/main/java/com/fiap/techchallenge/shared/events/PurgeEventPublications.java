@@ -24,6 +24,11 @@ import java.time.Instant;
  * {@code EventPublicationRepository}, which ships runtime-scoped and so cannot be compiled against;
  * they are deleted with SQL instead, against the same schema this project already owns in
  * {@code V1__CREATE_SPRING_EVENTS_TABLE.sql}.
+ *
+ * <p>{@code history}'s own listener is excluded from that delete (ADR 0011): {@code history} never
+ * deletes what it has already written, but a FAILED publication is a row it never got to write in
+ * the first place — deleting the publication here would erase the only trace that an event was ever
+ * supposed to become a history entry, with no compensating record anywhere.
  */
 @Slf4j
 @Component
@@ -34,6 +39,7 @@ public class PurgeEventPublications {
             DELETE FROM event_publication
              WHERE status = 'FAILED'
                AND publication_date < ?
+               AND listener_id NOT LIKE 'com.fiap.techchallenge.history.%'
             """;
 
     private final CompletedEventPublications completedEventPublications;

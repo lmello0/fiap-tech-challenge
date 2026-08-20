@@ -1,8 +1,12 @@
 package com.fiap.techchallenge.vehicle.services;
 
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.commands.CreateVehicleCommand;
 import com.fiap.techchallenge.vehicle.api.commands.UpdateVehicleCommand;
+import com.fiap.techchallenge.vehicle.api.events.VehicleDeactivatedEvent;
+import com.fiap.techchallenge.vehicle.api.events.VehicleRegisteredEvent;
+import com.fiap.techchallenge.vehicle.api.events.VehicleUpdatedEvent;
 import com.fiap.techchallenge.vehicle.api.queries.VehicleFilterQuery;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import com.fiap.techchallenge.vehicle.entities.Vehicle;
@@ -12,6 +16,7 @@ import com.fiap.techchallenge.vehicle.repositories.VehicleRepository;
 import com.fiap.techchallenge.vehicle.repositories.specifications.VehicleSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,6 +33,8 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleRepository vehicleRepository;
 
     private final VehicleMapper vehicleMapper;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -78,7 +85,10 @@ public class VehicleServiceImpl implements VehicleService {
 
         vehicleRepository.save(vehicle);
 
-        return vehicleMapper.toInfo(vehicle);
+        VehicleInfo info = vehicleMapper.toInfo(vehicle);
+        events.publishEvent(new VehicleRegisteredEvent(vehicle.getId(), actorResolver.forCurrentUser(true), info));
+
+        return info;
     }
 
     @Override
@@ -97,7 +107,10 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setFuelType(command.fuelType());
         vehicle.setTransmissionType(command.transmissionType());
 
-        return vehicleMapper.toInfo(vehicle);
+        VehicleInfo info = vehicleMapper.toInfo(vehicle);
+        events.publishEvent(new VehicleUpdatedEvent(vehicle.getId(), actorResolver.forCurrentUser(true), info));
+
+        return info;
     }
 
     @Override
@@ -106,6 +119,9 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = load(id);
 
         vehicle.deactivate();
+
+        events.publishEvent(new VehicleDeactivatedEvent(
+                vehicle.getId(), actorResolver.forCurrentUser(true), vehicleMapper.toInfo(vehicle)));
     }
 
     private Vehicle load(UUID id) {

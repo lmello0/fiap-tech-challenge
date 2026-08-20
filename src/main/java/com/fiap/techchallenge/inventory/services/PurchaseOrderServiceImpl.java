@@ -32,6 +32,7 @@ import com.fiap.techchallenge.inventory.vendor.PartVendorClient;
 import com.fiap.techchallenge.inventory.vendor.VendorOrderConfirmation;
 import com.fiap.techchallenge.inventory.vendor.VendorOrderLine;
 import com.fiap.techchallenge.inventory.vendor.VendorOrderRequest;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -66,6 +67,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final PurchaseOrderMapper mapper;
     private final ApplicationEventPublisher events;
     private final PurchaseOrderStateMachine stateMachine;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -127,7 +129,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         purchaseOrderRepository.save(po);
 
-        events.publishEvent(new PurchaseOrderPlacedEvent(po.getId(), po.getCode(), vendor.getId()));
+        events.publishEvent(new PurchaseOrderPlacedEvent(
+                po.getId(), po.getCode(), vendor.getId(), actorResolver.forCurrentUser(false), mapper.toInfo(po)));
 
         return mapper.toInfo(po);
     }
@@ -162,7 +165,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             receiveLine(po, linesById.get(lineCommand.lineId()), lineCommand.quantityReceived(), lineCommand.unitCost());
         }
 
-        events.publishEvent(new PurchaseOrderReceivedEvent(po.getId(), po.getCode(), po.getStatus()));
+        events.publishEvent(new PurchaseOrderReceivedEvent(
+                po.getId(), po.getCode(), po.getStatus(), actorResolver.forCurrentUser(false), mapper.toInfo(po)));
 
         // A receipt alone leaves position unchanged (available rises by exactly what inbound falls
         // by), but the shortfall top-up receiveLine() triggers reallocates available stock into

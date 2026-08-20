@@ -3,15 +3,21 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.PartCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
 import com.fiap.techchallenge.inventory.api.commands.UpdatePartCommand;
+import com.fiap.techchallenge.inventory.api.events.PartCreatedEvent;
+import com.fiap.techchallenge.inventory.api.events.PartDeactivatedEvent;
+import com.fiap.techchallenge.inventory.api.events.PartUpdatedEvent;
 import com.fiap.techchallenge.inventory.api.queries.PartFilterQuery;
+import com.fiap.techchallenge.inventory.api.representation.PartCatalogSnapshot;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.entities.Part;
 import com.fiap.techchallenge.inventory.exceptions.PartNotFoundException;
 import com.fiap.techchallenge.inventory.mappers.PartMapper;
 import com.fiap.techchallenge.inventory.repositories.PartRepository;
 import com.fiap.techchallenge.inventory.repositories.specifications.PartSpecifications;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +33,8 @@ public class PartCatalogServiceImpl implements PartCatalogService {
 
     private final PartRepository partRepository;
     private final PartMapper partMapper;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,6 +74,8 @@ public class PartCatalogServiceImpl implements PartCatalogService {
 
         partRepository.save(part);
 
+        events.publishEvent(new PartCreatedEvent(part.getId(), actorResolver.forCurrentUser(false), snapshot(part)));
+
         return partMapper.toInfo(part);
     }
 
@@ -80,6 +90,8 @@ public class PartCatalogServiceImpl implements PartCatalogService {
         part.setUnitOfMeasure(command.unitOfMeasure());
         part.setSalePrice(command.salePrice());
 
+        events.publishEvent(new PartUpdatedEvent(part.getId(), actorResolver.forCurrentUser(false), snapshot(part)));
+
         return partMapper.toInfo(part);
     }
 
@@ -89,11 +101,17 @@ public class PartCatalogServiceImpl implements PartCatalogService {
         Part part = load(id);
 
         part.deactivate();
+
+        events.publishEvent(new PartDeactivatedEvent(part.getId(), actorResolver.forCurrentUser(false), snapshot(part)));
     }
 
     private Part load(UUID id) {
         return partRepository
                 .findById(id)
                 .orElseThrow(() -> new PartNotFoundException(id));
+    }
+
+    private PartCatalogSnapshot snapshot(Part part) {
+        return PartCatalogSnapshot.from(partMapper.toInfo(part));
     }
 }

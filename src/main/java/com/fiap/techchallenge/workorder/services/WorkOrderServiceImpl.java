@@ -6,6 +6,7 @@ import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
@@ -14,6 +15,7 @@ import com.fiap.techchallenge.workorder.api.events.*;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderSnapshot;
 import com.fiap.techchallenge.workorder.entities.Budget;
 import com.fiap.techchallenge.workorder.entities.BudgetLine;
 import com.fiap.techchallenge.workorder.entities.WorkOrder;
@@ -51,6 +53,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final BudgetRepository budgetRepository;
     private final WorkOrderStateMachine stateMachine;
     private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     private final WorkOrderMapper woMapper;
     private final BudgetMapper budgetMapper;
@@ -91,7 +94,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             throw new WorkOrderNotFoundException(workOrderId);
         }
 
-        Budget budget = wo.getBudgetId() == null ? null : budgetRepository.findById(wo.getBudgetId()).orElse(null);
+        Budget budget = wo.getCurrentBudget();
 
         return new CustomerWorkOrderView(
                 wo.getId(),
@@ -123,7 +126,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 wo.getOrderCode(),
                 command.customerId(),
                 command.vehicleId(),
-                Instant.now()
+                Instant.now(),
+                actorResolver.forCurrentUser(true),
+                snapshot(wo)
         ));
 
         return woMapper.toInfo(wo);
@@ -136,7 +141,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_DIAGNOSTICS));
         wo.setDiagnosticRequestedAt(Instant.now());
 
-        events.publishEvent(new WorkOrderDiagnosticsRequestedEvent(wo.getId(), wo.getVehicleId()));
+        events.publishEvent(new WorkOrderDiagnosticsRequestedEvent(
+                wo.getId(), wo.getVehicleId(), actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -149,7 +155,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setAssignedMechanicId(command.mechanicId());
         wo.setDiagnosticStartedAt(Instant.now());
 
-        events.publishEvent(new WorkOrderDiagnosticsStartedEvent(wo.getId(), wo.getVehicleId(), command.mechanicId()));
+        events.publishEvent(new WorkOrderDiagnosticsStartedEvent(
+                wo.getId(), wo.getVehicleId(), command.mechanicId(), actorResolver.forCurrentUser(false), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -163,19 +170,19 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setDiagnosticFinishedAt(Instant.now());
 
         Budget budget = new Budget();
-        budget.setWorkOrderId(wo.getId());
         budget.setStatus(BudgetStatus.DRAFT);
+        wo.addBudget(budget);
 
         command.lines().forEach(lineCommand -> budget.addLine(buildLine(lineCommand)));
 
         budgetRepository.save(budget);
-        wo.setBudgetId(budget.getId());
 
         // Best-effort: claims what stock exists now, records the rest as a shortfall, and still lets
         // the quote go out. The physical constraint is enforced later, strictly, at startService.
         partReservationService.reserveForWorkOrder(wo.getId(), partReservationRequests(budget));
 
-        events.publishEvent(new BudgetDraftedEvent(wo.getId(), budget.getId()));
+        events.publishEvent(new BudgetDraftedEvent(
+                wo.getId(), budget.getId(), actorResolver.forCurrentUser(false), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -192,7 +199,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         wo.setServiceStartedAt(Instant.now());
 
-        events.publishEvent(new WorkOrderInProgressEvent(wo.getId()));
+        events.publishEvent(new WorkOrderInProgressEvent(wo.getId(), actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -210,7 +217,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         line.setStartedAt(Instant.now());
 
-        events.publishEvent(new BudgetLineStartedEvent(wo.getId(), line.getId()));
+        events.publishEvent(new BudgetLineStartedEvent(
+                wo.getId(), line.getId(), actorResolver.forCurrentUser(false), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -239,7 +247,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         repairServiceCatalogService.recordExecution(line.getServiceId(), wo.getId(), line.getId(), durationSeconds);
 
-        events.publishEvent(new BudgetLineFinishedEvent(wo.getId(), line.getId()));
+        events.publishEvent(new BudgetLineFinishedEvent(
+                wo.getId(), line.getId(), actorResolver.forCurrentUser(false), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -251,7 +260,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.FINISHED));
         wo.setFinishedAt(Instant.now());
 
-        events.publishEvent(new WorkOrderFinishedEvent(wo.getId(), wo.getCustomerId()));
+        events.publishEvent(new WorkOrderFinishedEvent(
+                wo.getId(), wo.getCustomerId(), actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -263,7 +273,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_PICKUP));
         wo.setPickupReadyAt(Instant.now());
 
-        events.publishEvent(new WorkOrderWaitingPickupEvent(wo.getId()));
+        events.publishEvent(new WorkOrderWaitingPickupEvent(wo.getId(), actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -275,7 +285,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.DELIVERED));
         wo.setDeliveredAt(Instant.now());
 
-        events.publishEvent(new WorkOrderDeliveredEvent(wo.getId(), wo.getCustomerId()));
+        events.publishEvent(new WorkOrderDeliveredEvent(
+                wo.getId(), wo.getCustomerId(), actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }
@@ -302,8 +313,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     private BudgetLine findServiceLine(WorkOrder wo, UUID lineId) {
-        Budget budget = budgetRepository.findById(wo.getBudgetId())
-                .orElseThrow(() -> new BudgetNotFoundException(wo.getBudgetId()));
+        Budget budget = wo.getCurrentBudget();
+
+        if (budget == null) {
+            throw new BudgetLineNotFoundException(lineId);
+        }
 
         BudgetLine line = budget.getLines().stream()
                 .filter(l -> l.getId().equals(lineId))
@@ -355,5 +369,10 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .filter(l -> l.getType() == RowType.PART)
                 .map(l -> new ReservePartCommand(l.getPartId(), l.getQuantity()))
                 .toList();
+    }
+
+    private WorkOrderSnapshot snapshot(WorkOrder wo) {
+        Budget current = wo.getCurrentBudget();
+        return new WorkOrderSnapshot(woMapper.toInfo(wo), current != null ? budgetMapper.toInfo(current) : null);
     }
 }

@@ -9,16 +9,21 @@ import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 import com.fiap.techchallenge.workorder.api.BudgetService;
 import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
 import com.fiap.techchallenge.workorder.api.commands.ChangeBudgetLineQuantityCommand;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.events.BudgetLineAddedEvent;
+import com.fiap.techchallenge.workorder.api.events.BudgetLineQuantityChangedEvent;
+import com.fiap.techchallenge.workorder.api.events.BudgetLineRemovedEvent;
 import com.fiap.techchallenge.workorder.api.events.BudgetSentEvent;
 import com.fiap.techchallenge.workorder.api.events.WorkOrderApprovedEvent;
 import com.fiap.techchallenge.workorder.api.events.WorkOrderRefusedEvent;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderSnapshot;
 import com.fiap.techchallenge.workorder.entities.Budget;
 import com.fiap.techchallenge.workorder.entities.BudgetLine;
 import com.fiap.techchallenge.workorder.entities.WorkOrder;
@@ -27,6 +32,7 @@ import com.fiap.techchallenge.workorder.enums.RowType;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import com.fiap.techchallenge.workorder.exceptions.*;
 import com.fiap.techchallenge.workorder.mappers.BudgetMapper;
+import com.fiap.techchallenge.workorder.mappers.WorkOrderMapper;
 import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
 import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -51,7 +57,9 @@ public class BudgetServiceImpl implements BudgetService {
     private final BudgetStateMachine budgetStateMachine;
     private final WorkOrderStateMachine workOrderStateMachine;
     private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
     private final BudgetMapper budgetMapper;
+    private final WorkOrderMapper workOrderMapper;
 
     private final PartCatalogService partCatalogService;
     private final RepairServiceCatalogService repairServiceCatalogService;
@@ -76,6 +84,10 @@ public class BudgetServiceImpl implements BudgetService {
                     budget.getWorkOrderId(), List.of(new ReservePartCommand(line.getPartId(), line.getQuantity())));
         }
 
+        events.publishEvent(new BudgetLineAddedEvent(
+                budget.getWorkOrderId(), budget.getId(), line.getId(),
+                actorResolver.forCurrentUser(false), snapshot(budget)));
+
         return budgetMapper.toInfo(budget);
     }
 
@@ -90,6 +102,10 @@ public class BudgetServiceImpl implements BudgetService {
         if (line.getType() == RowType.PART) {
             partReservationService.releasePartial(budget.getWorkOrderId(), line.getPartId(), line.getQuantity());
         }
+
+        events.publishEvent(new BudgetLineRemovedEvent(
+                budget.getWorkOrderId(), budget.getId(), lineId,
+                actorResolver.forCurrentUser(false), snapshot(budget)));
 
         return budgetMapper.toInfo(budget);
     }
@@ -114,6 +130,10 @@ public class BudgetServiceImpl implements BudgetService {
                 partReservationService.releasePartial(budget.getWorkOrderId(), line.getPartId(), delta.negate());
             }
         }
+
+        events.publishEvent(new BudgetLineQuantityChangedEvent(
+                budget.getWorkOrderId(), budget.getId(), lineId, oldQuantity, newQuantity,
+                actorResolver.forCurrentUser(false), snapshot(budget)));
 
         return budgetMapper.toInfo(budget);
     }
@@ -154,7 +174,9 @@ public class BudgetServiceImpl implements BudgetService {
         wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.APPROVED));
         wo.setApprovedAt(Instant.now());
 
-        events.publishEvent(new WorkOrderApprovedEvent(wo.getId(), wo.getCustomerId(), budget.getGrandTotal()));
+        events.publishEvent(new WorkOrderApprovedEvent(
+                wo.getId(), wo.getCustomerId(), budget.getGrandTotal(),
+                actorResolver.forCurrentUser(true), snapshot(wo, budget)));
 
         return budgetMapper.toInfo(budget);
     }
@@ -176,7 +198,9 @@ public class BudgetServiceImpl implements BudgetService {
         // no stock movement is written since nothing physical happened (ADR 0007).
         partReservationService.releaseForWorkOrder(wo.getId());
 
-        events.publishEvent(new WorkOrderRefusedEvent(wo.getId(), wo.getCustomerId(), command.reason()));
+        events.publishEvent(new WorkOrderRefusedEvent(
+                wo.getId(), wo.getCustomerId(), command.reason(),
+                actorResolver.forCurrentUser(true), snapshot(wo, budget)));
 
         return budgetMapper.toInfo(budget);
     }
@@ -196,7 +220,9 @@ public class BudgetServiceImpl implements BudgetService {
             wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_APPROVAL));
             workOrderRepository.save(wo);
 
-            events.publishEvent(new BudgetSentEvent(wo.getId(), budget.getId(), wo.getCustomerId(), budget.getGrandTotal()));
+            events.publishEvent(new BudgetSentEvent(
+                    wo.getId(), budget.getId(), wo.getCustomerId(), budget.getGrandTotal(),
+                    actorResolver.forSystem("EmailDispatcher", true), snapshot(wo, budget)));
         });
     }
 
@@ -275,5 +301,13 @@ public class BudgetServiceImpl implements BudgetService {
         }
 
         return line;
+    }
+
+    private WorkOrderSnapshot snapshot(Budget budget) {
+        return snapshot(loadWorkOrder(budget.getWorkOrderId()), budget);
+    }
+
+    private WorkOrderSnapshot snapshot(WorkOrder wo, Budget budget) {
+        return new WorkOrderSnapshot(workOrderMapper.toInfo(wo), budgetMapper.toInfo(budget));
     }
 }

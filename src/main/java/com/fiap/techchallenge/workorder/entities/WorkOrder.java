@@ -8,6 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -49,10 +52,10 @@ public class WorkOrder {
     @Column(length = 2000)
     private String refusalReason;
 
-    /** The Budget currently attached to this work order. There is no requoting, so a single reference
-     * is enough — no historical collection is kept (ADR 0008/0009). */
-    @Column
-    private UUID budgetId;
+    /** Budget owns the join (ADR 0013); "exactly one live Budget" is enforced only in the
+     * application, not the database, so a future requoting flow costs no migration. */
+    @OneToMany(mappedBy = "workOrder")
+    private List<Budget> budgets = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -78,4 +81,16 @@ public class WorkOrder {
     private Instant pickupReadyAt;
 
     private Instant deliveredAt;
+
+    public void addBudget(Budget budget) {
+        budgets.add(budget);
+        budget.setWorkOrder(this);
+    }
+
+    /** The most recently created Budget — today that's always the only one (ADR 0013). */
+    public Budget getCurrentBudget() {
+        return budgets.stream()
+                .max(Comparator.comparing(Budget::getCreatedAt))
+                .orElse(null);
+    }
 }

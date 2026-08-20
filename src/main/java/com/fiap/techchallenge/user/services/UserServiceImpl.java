@@ -1,10 +1,19 @@
 package com.fiap.techchallenge.user.services;
 
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
 import com.fiap.techchallenge.user.api.commands.RegisterPhoneNumberCommand;
 import com.fiap.techchallenge.user.api.commands.UpdateUserProfileCommand;
+import com.fiap.techchallenge.user.api.events.CustomerDeactivatedEvent;
+import com.fiap.techchallenge.user.api.events.CustomerReactivatedEvent;
+import com.fiap.techchallenge.user.api.events.CustomerRegisteredEvent;
+import com.fiap.techchallenge.user.api.events.UserEmailChangedEvent;
+import com.fiap.techchallenge.user.api.events.UserEmailVerifiedEvent;
+import com.fiap.techchallenge.user.api.events.UserProfileUpdatedEvent;
+import com.fiap.techchallenge.user.api.events.WorkerRegisteredEvent;
+import com.fiap.techchallenge.user.api.events.WorkerTerminatedEvent;
 import com.fiap.techchallenge.user.api.queries.UserFilterQuery;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 import com.fiap.techchallenge.user.api.representation.UserPrincipal;
@@ -18,6 +27,7 @@ import com.fiap.techchallenge.user.repositories.WorkerRepository;
 import com.fiap.techchallenge.user.repositories.specifications.UserSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,6 +46,8 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WorkerRepository workerRepository;
     private final UserMapper userMapper;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional
@@ -46,7 +58,10 @@ public class UserServiceImpl implements UserService {
         User saved = userRepository.save(user);
         log.info("Customer created userId={}", saved.getId());
 
-        return userMapper.toInfo(saved);
+        UserInfo info = userMapper.toInfo(saved);
+        events.publishEvent(new CustomerRegisteredEvent(saved.getId(), actorResolver.forSelf(saved.getId(), true), info));
+
+        return info;
     }
 
     @Override
@@ -70,7 +85,11 @@ public class UserServiceImpl implements UserService {
         User saved = userRepository.save(user);
         log.info("Worker created userId={} role={}", saved.getId(), command.role());
 
-        return userMapper.toInfo(saved);
+        UserInfo info = userMapper.toInfo(saved);
+        events.publishEvent(new WorkerRegisteredEvent(
+                saved.getId(), command.role(), actorResolver.forCurrentUser(false), info));
+
+        return info;
     }
 
     @Override
@@ -85,6 +104,9 @@ public class UserServiceImpl implements UserService {
 
         user.getWorker().terminate(on);
         log.info("Terminated worker userId={} on={}", userId, on);
+
+        events.publishEvent(new WorkerTerminatedEvent(
+                userId, on, actorResolver.forCurrentUser(false), userMapper.toInfo(user)));
     }
 
     @Override
@@ -117,7 +139,10 @@ public class UserServiceImpl implements UserService {
         User saved = userRepository.save(user);
         log.info("Profile updated userId={}", userId);
 
-        return userMapper.toInfo(saved);
+        UserInfo info = userMapper.toInfo(saved);
+        events.publishEvent(new UserProfileUpdatedEvent(userId, actorResolver.forCurrentUser(true), info));
+
+        return info;
     }
 
     @Override
@@ -132,6 +157,8 @@ public class UserServiceImpl implements UserService {
 
         user.getCustomer().deactivate();
         log.info("Customer deactivated userId={}", userId);
+
+        events.publishEvent(new CustomerDeactivatedEvent(userId, actorResolver.forCurrentUser(true), userMapper.toInfo(user)));
     }
 
     @Override
@@ -146,6 +173,8 @@ public class UserServiceImpl implements UserService {
 
         user.getCustomer().reactivate();
         log.info("Customer reactivated userId={}", userId);
+
+        events.publishEvent(new CustomerReactivatedEvent(userId, actorResolver.forCurrentUser(true), userMapper.toInfo(user)));
     }
 
     @Override
@@ -156,6 +185,8 @@ public class UserServiceImpl implements UserService {
 
         user.verifyEmail();
         log.info("Email verified userId={}", userId);
+
+        events.publishEvent(new UserEmailVerifiedEvent(userId, actorResolver.forSelf(userId, true), userMapper.toInfo(user)));
     }
 
     @Override
@@ -170,6 +201,8 @@ public class UserServiceImpl implements UserService {
 
         user.changeEmail(newEmail);
         log.info("Email changed userId={}", userId);
+
+        events.publishEvent(new UserEmailChangedEvent(userId, actorResolver.forSelf(userId, true), userMapper.toInfo(user)));
     }
 
     @Override

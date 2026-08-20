@@ -3,6 +3,9 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.VendorService;
 import com.fiap.techchallenge.inventory.api.commands.CreateVendorCommand;
 import com.fiap.techchallenge.inventory.api.commands.UpdateVendorCommand;
+import com.fiap.techchallenge.inventory.api.events.VendorCreatedEvent;
+import com.fiap.techchallenge.inventory.api.events.VendorDeactivatedEvent;
+import com.fiap.techchallenge.inventory.api.events.VendorUpdatedEvent;
 import com.fiap.techchallenge.inventory.api.queries.VendorFilterQuery;
 import com.fiap.techchallenge.inventory.api.representation.VendorInfo;
 import com.fiap.techchallenge.inventory.entities.Vendor;
@@ -10,8 +13,10 @@ import com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException;
 import com.fiap.techchallenge.inventory.mappers.VendorMapper;
 import com.fiap.techchallenge.inventory.repositories.VendorRepository;
 import com.fiap.techchallenge.inventory.repositories.specifications.VendorSpecifications;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +32,8 @@ public class VendorServiceImpl implements VendorService {
 
     private final VendorRepository vendorRepository;
     private final VendorMapper vendorMapper;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -59,6 +66,8 @@ public class VendorServiceImpl implements VendorService {
 
         vendorRepository.save(vendor);
 
+        events.publishEvent(new VendorCreatedEvent(vendor.getId(), actorResolver.forCurrentUser(false), vendorMapper.toInfo(vendor)));
+
         return vendorMapper.toInfo(vendor);
     }
 
@@ -70,6 +79,8 @@ public class VendorServiceImpl implements VendorService {
         vendor.setName(command.name());
         vendor.setContactEmail(command.contactEmail());
 
+        events.publishEvent(new VendorUpdatedEvent(vendor.getId(), actorResolver.forCurrentUser(false), vendorMapper.toInfo(vendor)));
+
         return vendorMapper.toInfo(vendor);
     }
 
@@ -79,6 +90,8 @@ public class VendorServiceImpl implements VendorService {
         Vendor vendor = load(id);
 
         vendor.deactivate();
+
+        events.publishEvent(new VendorDeactivatedEvent(vendor.getId(), actorResolver.forCurrentUser(false), vendorMapper.toInfo(vendor)));
     }
 
     private Vendor load(UUID id) {

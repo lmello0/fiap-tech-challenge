@@ -1,10 +1,14 @@
 package com.fiap.techchallenge.workorder.controllers;
 
+import com.fiap.techchallenge.history.api.HistoryQueryService;
+import com.fiap.techchallenge.history.api.representation.HistoryEntryInfo;
+import com.fiap.techchallenge.history.api.representation.HistorySnapshotInfo;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.events.WorkOrderAggregate;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
@@ -34,6 +38,7 @@ public class WorkOrderController {
     private static final String STAFF = "hasAnyRole('ATTENDANT', 'MECHANIC', 'MANAGER')";
 
     private final WorkOrderService service;
+    private final HistoryQueryService historyQueryService;
 
     @GetMapping
     @PreAuthorize(STAFF)
@@ -147,5 +152,28 @@ public class WorkOrderController {
         WorkOrderInfo wo = service.deliver(id);
 
         return ResponseEntity.ok(wo);
+    }
+
+    /** The Timeline behind the work orders screen's history button — every recorded milestone,
+     * each carrying enough to open its own Snapshot via {@link #historyEntry}. */
+    @GetMapping("/{id}/history")
+    @PreAuthorize(STAFF)
+    public ResponseEntity<PageResponse<HistoryEntryInfo>> history(
+            @PathVariable UUID id,
+            @PageableDefault Pageable pageable
+    ) {
+        Page<HistoryEntryInfo> page = historyQueryService.timeline(WorkOrderAggregate.TYPE, id, pageable);
+
+        return ResponseEntity.ok(PageResponse.from(page));
+    }
+
+    /** The work order's state at the moment one Timeline entry was recorded. */
+    @GetMapping("/{id}/history/{entryId}")
+    @PreAuthorize(STAFF)
+    public ResponseEntity<HistorySnapshotInfo> historyEntry(@PathVariable UUID id, @PathVariable UUID entryId) {
+        return historyQueryService
+                .snapshot(entryId, WorkOrderAggregate.TYPE, id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

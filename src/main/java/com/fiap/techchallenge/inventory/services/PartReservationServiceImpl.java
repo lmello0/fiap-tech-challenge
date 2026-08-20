@@ -3,6 +3,7 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.PartReservationService;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.events.PartReservationExpiredEvent;
+import com.fiap.techchallenge.inventory.api.representation.PartReservationSnapshot;
 import com.fiap.techchallenge.inventory.entities.Part;
 import com.fiap.techchallenge.inventory.entities.PartReservation;
 import com.fiap.techchallenge.inventory.entities.StockMovement;
@@ -13,6 +14,7 @@ import com.fiap.techchallenge.inventory.exceptions.PartNotFoundException;
 import com.fiap.techchallenge.inventory.repositories.PartRepository;
 import com.fiap.techchallenge.inventory.repositories.PartReservationRepository;
 import com.fiap.techchallenge.inventory.repositories.StockMovementRepository;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,6 +38,7 @@ public class PartReservationServiceImpl implements PartReservationService {
     private final StockMovementRepository movementRepository;
     private final ApplicationEventPublisher events;
     private final ReservationStateMachine stateMachine;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional
@@ -150,7 +153,10 @@ public class PartReservationServiceImpl implements PartReservationService {
             resolve(reservation, ReservationStatus.EXPIRED);
 
             if (released.signum() > 0) {
-                events.publishEvent(new PartReservationExpiredEvent(workOrderId, partId, released));
+                events.publishEvent(new PartReservationExpiredEvent(
+                        workOrderId, partId, released,
+                        actorResolver.forSystem("ExpireStaleReservations", false),
+                        new PartReservationSnapshot(workOrderId, partId, released)));
             }
         }
 

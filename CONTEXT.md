@@ -151,3 +151,41 @@ _Avoid_: Submit, Publish
 The mechanic's inspection of the vehicle, which produces the Work Order's first Budget Draft. Distinct
 from executing a Budget's lines (the repair itself), which only ever happens after that Budget has been
 approved.
+
+## History
+
+An append-only, query-only account of what happened to the things the shop tracks — Work Orders,
+Users, Vehicles, and the Inventory catalog. Every entry is written by reacting to a domain event;
+nothing writes to it directly, and nothing — including History itself — ever changes or removes what
+it has written. It deliberately does not record authentication activity, which is security telemetry
+rather than the life of a business entity.
+
+### Language
+
+**History Entry**:
+One immutable record of a single thing that happened to one aggregate, carrying when it happened, the
+`Actor` behind it, and a `Snapshot`.
+_Avoid_: Audit record, Log line, Revision
+
+**Timeline**:
+The ordered sequence of `History Entry` rows belonging to one aggregate — the answer to "what happened
+to this Work Order". An entry about a `Budget` or a `Budget Line` belongs to its Work Order's Timeline
+rather than to one of its own.
+_Avoid_: Feed, Trail, Audit log
+
+**Snapshot**:
+The state of an aggregate frozen at the moment a `History Entry` was recorded — for a Work Order that
+means the order together with its Budgets and their lines; for a `Part`, its catalog fields only, since
+`Stock Movement` already accounts for stock levels. Captured by the module that owns the aggregate,
+never derived by replaying earlier entries.
+_Avoid_: Revision, Version, Diff
+
+**Actor**:
+Who or what caused the event behind a `History Entry` — either a `User`, or the system itself when a
+scheduled job or a startup task is responsible. "The system did it" and "we do not know who did it" are
+different things, and History distinguishes them.
+_Avoid_: Author, Owner, Creator
+
+**Customer-visible**:
+A property of an event type deciding whether its entries reach a customer's `Timeline`. An event is not
+customer-visible unless the module publishing it says so.

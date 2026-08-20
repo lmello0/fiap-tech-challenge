@@ -11,4 +11,6 @@ public interface BudgetRepository extends JpaRepository<Budget, UUID> {
 
     @Query("select b from Budget b left join fetch b.lines where b.id = :id")
     Optional<Budget> findWithLinesById(UUID id);
+
+    Optional<Budget> findTopByWorkOrder_IdOrderByCreatedAtDesc(UUID workOrderId);
 }

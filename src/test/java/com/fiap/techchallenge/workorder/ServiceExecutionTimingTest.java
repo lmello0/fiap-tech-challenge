@@ -150,15 +150,15 @@ class ServiceExecutionTimingTest {
     }
 
     private UUID firstLineId(UUID workOrderId) {
-        WorkOrder wo = workOrderRepository.findById(workOrderId).orElseThrow();
-        Budget budget = budgetRepository.findWithLinesById(wo.getBudgetId()).orElseThrow();
+        UUID budgetId = budgetRepository.findTopByWorkOrder_IdOrderByCreatedAtDesc(workOrderId).orElseThrow().getId();
+        Budget budget = budgetRepository.findWithLinesById(budgetId).orElseThrow();
 
         return budget.getLines().get(0).getId();
     }
 
     private void backdateLineStart(UUID workOrderId, UUID lineId, int durationSeconds) {
-        WorkOrder wo = workOrderRepository.findById(workOrderId).orElseThrow();
-        Budget budget = budgetRepository.findWithLinesById(wo.getBudgetId()).orElseThrow();
+        UUID budgetId = budgetRepository.findTopByWorkOrder_IdOrderByCreatedAtDesc(workOrderId).orElseThrow().getId();
+        Budget budget = budgetRepository.findWithLinesById(budgetId).orElseThrow();
         BudgetLine line = budget.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst().orElseThrow();
         line.setStartedAt(Instant.now().minusSeconds(durationSeconds));
         budgetRepository.save(budget);

@@ -3,6 +3,9 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.ReorderRuleService;
 import com.fiap.techchallenge.inventory.api.commands.CreateReorderRuleCommand;
 import com.fiap.techchallenge.inventory.api.commands.UpdateReorderRuleCommand;
+import com.fiap.techchallenge.inventory.api.events.ReorderRuleCreatedEvent;
+import com.fiap.techchallenge.inventory.api.events.ReorderRuleDeletedEvent;
+import com.fiap.techchallenge.inventory.api.events.ReorderRuleUpdatedEvent;
 import com.fiap.techchallenge.inventory.api.queries.ReorderRuleFilterQuery;
 import com.fiap.techchallenge.inventory.api.representation.ReorderRuleInfo;
 import com.fiap.techchallenge.inventory.entities.Part;
@@ -16,8 +19,10 @@ import com.fiap.techchallenge.inventory.repositories.PartRepository;
 import com.fiap.techchallenge.inventory.repositories.ReorderRuleRepository;
 import com.fiap.techchallenge.inventory.repositories.VendorRepository;
 import com.fiap.techchallenge.inventory.repositories.specifications.ReorderRuleSpecifications;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,6 +41,8 @@ public class ReorderRuleServiceImpl implements ReorderRuleService {
     private final VendorRepository vendorRepository;
     private final ReorderRuleMapper mapper;
     private final ReorderRuleEvaluator evaluator;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -79,6 +86,9 @@ public class ReorderRuleServiceImpl implements ReorderRuleService {
 
         reorderRuleRepository.save(rule);
 
+        events.publishEvent(new ReorderRuleCreatedEvent(
+                part.getId(), rule.getId(), actorResolver.forCurrentUser(false), mapper.toInfo(rule)));
+
         // A rule can be created for a part that's already below its own minimum; evaluate right away
         // rather than leaving it dormant until the next stock-moving event or the nightly sweep.
         evaluator.evaluate(part.getId());
@@ -100,6 +110,9 @@ public class ReorderRuleServiceImpl implements ReorderRuleService {
         rule.setVendor(vendor);
         rule.setEnabled(command.enabled());
 
+        events.publishEvent(new ReorderRuleUpdatedEvent(
+                rule.getPart().getId(), rule.getId(), actorResolver.forCurrentUser(false), mapper.toInfo(rule)));
+
         evaluator.evaluate(rule.getPart().getId());
 
         return mapper.toInfo(rule);
@@ -109,6 +122,9 @@ public class ReorderRuleServiceImpl implements ReorderRuleService {
     @Transactional
     public void delete(UUID id) {
         ReorderRule rule = load(id);
+
+        events.publishEvent(new ReorderRuleDeletedEvent(
+                rule.getPart().getId(), rule.getId(), actorResolver.forCurrentUser(false), mapper.toInfo(rule)));
 
         reorderRuleRepository.delete(rule);
     }

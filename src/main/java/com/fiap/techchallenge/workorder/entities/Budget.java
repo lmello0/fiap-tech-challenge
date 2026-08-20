@@ -34,8 +34,9 @@ public class Budget {
     @Column(nullable = false, updatable = false)
     private UUID id;
 
-    @Column(nullable = false)
-    private UUID workOrderId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "work_order_id", nullable = false, updatable = false)
+    private WorkOrder workOrder;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
@@ -51,6 +52,10 @@ public class Budget {
     private Instant sentAt;
 
     private Instant resolvedAt;
+
+    public UUID getWorkOrderId() {
+        return workOrder != null ? workOrder.getId() : null;
+    }
 
     public void addLine(BudgetLine line) {
         lines.add(line);

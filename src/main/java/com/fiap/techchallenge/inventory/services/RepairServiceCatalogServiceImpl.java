@@ -3,6 +3,9 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
 import com.fiap.techchallenge.inventory.api.commands.UpdateRepairServiceCommand;
+import com.fiap.techchallenge.inventory.api.events.RepairServiceCreatedEvent;
+import com.fiap.techchallenge.inventory.api.events.RepairServiceDeactivatedEvent;
+import com.fiap.techchallenge.inventory.api.events.RepairServiceUpdatedEvent;
 import com.fiap.techchallenge.inventory.api.queries.RepairServiceFilterQuery;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
 import com.fiap.techchallenge.inventory.entities.RepairService;
@@ -13,8 +16,10 @@ import com.fiap.techchallenge.inventory.properties.InventoryProperties;
 import com.fiap.techchallenge.inventory.repositories.RepairServiceRepository;
 import com.fiap.techchallenge.inventory.repositories.ServiceExecutionRepository;
 import com.fiap.techchallenge.inventory.repositories.specifications.RepairServiceSpecifications;
+import com.fiap.techchallenge.shared.audit.ActorResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +39,8 @@ public class RepairServiceCatalogServiceImpl implements RepairServiceCatalogServ
     private final ServiceExecutionRepository executionRepository;
     private final RepairServiceMapper repairServiceMapper;
     private final InventoryProperties properties;
+    private final ApplicationEventPublisher events;
+    private final ActorResolver actorResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -70,6 +77,9 @@ public class RepairServiceCatalogServiceImpl implements RepairServiceCatalogServ
 
         repairServiceRepository.save(repairService);
 
+        events.publishEvent(new RepairServiceCreatedEvent(
+                repairService.getId(), actorResolver.forCurrentUser(false), repairServiceMapper.toInfo(repairService)));
+
         return repairServiceMapper.toInfo(repairService);
     }
 
@@ -83,6 +93,9 @@ public class RepairServiceCatalogServiceImpl implements RepairServiceCatalogServ
         repairService.setPrice(command.price());
         repairService.setEstimatedSeconds(command.estimatedSeconds());
 
+        events.publishEvent(new RepairServiceUpdatedEvent(
+                repairService.getId(), actorResolver.forCurrentUser(false), repairServiceMapper.toInfo(repairService)));
+
         return repairServiceMapper.toInfo(repairService);
     }
 
@@ -92,6 +105,9 @@ public class RepairServiceCatalogServiceImpl implements RepairServiceCatalogServ
         RepairService repairService = load(id);
 
         repairService.deactivate();
+
+        events.publishEvent(new RepairServiceDeactivatedEvent(
+                repairService.getId(), actorResolver.forCurrentUser(false), repairServiceMapper.toInfo(repairService)));
     }
 
     @Override
