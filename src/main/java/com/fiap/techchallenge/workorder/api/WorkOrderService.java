@@ -2,9 +2,9 @@ package com.fiap.techchallenge.workorder.api;
 
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
-import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,28 +17,28 @@ public interface WorkOrderService {
 
     WorkOrderInfo getWorkOrderById(UUID id);
 
+    /** Narrow, customer-scoped read: high-level status plus the current Budget, nothing internal. */
+    CustomerWorkOrderView getForCustomer(UUID workOrderId, UUID customerId);
+
     WorkOrderInfo create(CreateWorkOrderCommand command);
 
     WorkOrderInfo requestDiagnostics(UUID id);
 
     WorkOrderInfo startDiagnostics(UUID workOrderId, StartDiagnosticsCommand command);
 
+    /** Atomically transitions to BUDGET_IN_DRAFT and creates the Budget draft seeded with these lines. */
     WorkOrderInfo finishDiagnostics(UUID workOrderId, FinishDiagnosticsCommand command);
-
-    WorkOrderInfo approve(UUID id);
-
-    WorkOrderInfo refuse(UUID id, RefuseWorkOrderCommand command);
 
     WorkOrderInfo startService(UUID id);
 
-    /** Marks a SERVICE row as started. Only valid while the work order is IN_PROGRESS. */
-    WorkOrderInfo startRow(UUID workOrderId, UUID rowId);
+    /** Marks a budget line as started execution. Only valid while the work order is IN_PROGRESS. */
+    WorkOrderInfo startLine(UUID workOrderId, UUID lineId);
 
     /**
-     * Marks a SERVICE row as finished and records how long it took against the row's service in the
+     * Marks a budget line as finished and records how long it took against its service in the
      * inventory catalog, feeding that service's rolling average execution time.
      */
-    WorkOrderInfo finishRow(UUID workOrderId, UUID rowId);
+    WorkOrderInfo finishLine(UUID workOrderId, UUID lineId);
 
     WorkOrderInfo finish(UUID id);
 

@@ -6,20 +6,24 @@ import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.vehicle.api.VehicleService;
+import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.*;
 import com.fiap.techchallenge.workorder.api.events.*;
-import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotFoundException;
-import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotInProgressException;
-import com.fiap.techchallenge.workorder.exceptions.WorkOrderRowNotFoundException;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
+import com.fiap.techchallenge.workorder.entities.Budget;
+import com.fiap.techchallenge.workorder.entities.BudgetLine;
 import com.fiap.techchallenge.workorder.entities.WorkOrder;
-import com.fiap.techchallenge.workorder.entities.WorkOrderRow;
+import com.fiap.techchallenge.workorder.enums.BudgetStatus;
 import com.fiap.techchallenge.workorder.enums.RowType;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
+import com.fiap.techchallenge.workorder.exceptions.*;
+import com.fiap.techchallenge.workorder.mappers.BudgetMapper;
 import com.fiap.techchallenge.workorder.mappers.WorkOrderMapper;
-import com.fiap.techchallenge.workorder.mappers.WorkOrderRowMapper;
+import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
 import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
 import com.fiap.techchallenge.workorder.repositories.specifications.WorkOrderSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +35,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -45,15 +48,17 @@ import java.util.UUID;
 public class WorkOrderServiceImpl implements WorkOrderService {
 
     private final WorkOrderRepository repository;
+    private final BudgetRepository budgetRepository;
     private final WorkOrderStateMachine stateMachine;
     private final ApplicationEventPublisher events;
 
     private final WorkOrderMapper woMapper;
-    private final WorkOrderRowMapper worMapper;
+    private final BudgetMapper budgetMapper;
 
     private final PartCatalogService partCatalogService;
     private final RepairServiceCatalogService repairServiceCatalogService;
     private final PartReservationService partReservationService;
+    private final VehicleService vehicleService;
 
     @Transactional(readOnly = true)
     public Page<WorkOrderInfo> getAllWorkOrders(WorkOrderFilterQuery filter, Pageable pageable) {
@@ -78,8 +83,32 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .orElseThrow(() -> new WorkOrderNotFoundException(id));
     }
 
+    @Transactional(readOnly = true)
+    public CustomerWorkOrderView getForCustomer(UUID workOrderId, UUID customerId) {
+        WorkOrder wo = load(workOrderId);
+
+        if (!wo.getCustomerId().equals(customerId)) {
+            throw new WorkOrderNotFoundException(workOrderId);
+        }
+
+        Budget budget = wo.getBudgetId() == null ? null : budgetRepository.findById(wo.getBudgetId()).orElse(null);
+
+        return new CustomerWorkOrderView(
+                wo.getId(),
+                wo.getOrderCode(),
+                wo.getStatus(),
+                budget == null ? null : budgetMapper.toInfo(budget)
+        );
+    }
+
     @Transactional
     public WorkOrderInfo create(CreateWorkOrderCommand command) {
+        VehicleInfo vehicle = vehicleService.getById(command.vehicleId());
+
+        if (!vehicle.customerId().equals(command.customerId())) {
+            throw new VehicleOwnershipException(command.vehicleId(), command.customerId());
+        }
+
         WorkOrder wo = new WorkOrder();
         wo.setOrderCode(nextOrderNumber());
         wo.setCustomerId(command.customerId());
@@ -129,47 +158,24 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public WorkOrderInfo finishDiagnostics(UUID workOrderId, FinishDiagnosticsCommand command) {
         WorkOrder wo = load(workOrderId);
 
-        wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_APPROVAL));
+        wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.BUDGET_IN_DRAFT));
         wo.setDiagnosis(command.diagnosis());
         wo.setDiagnosticFinishedAt(Instant.now());
 
-        replaceRows(wo, command.rows());
-        recalculateTotals(wo);
+        Budget budget = new Budget();
+        budget.setWorkOrderId(wo.getId());
+        budget.setStatus(BudgetStatus.DRAFT);
+
+        command.lines().forEach(lineCommand -> budget.addLine(buildLine(lineCommand)));
+
+        budgetRepository.save(budget);
+        wo.setBudgetId(budget.getId());
 
         // Best-effort: claims what stock exists now, records the rest as a shortfall, and still lets
         // the quote go out. The physical constraint is enforced later, strictly, at startService.
-        partReservationService.reserveForWorkOrder(wo.getId(), partReservationRequests(wo));
+        partReservationService.reserveForWorkOrder(wo.getId(), partReservationRequests(budget));
 
-        events.publishEvent(new WorkOrderWaitingApprovalEvent(wo.getId(), wo.getCustomerId(), wo.getGrandTotal()));
-
-        return woMapper.toInfo(wo);
-    }
-
-    @Transactional
-    public WorkOrderInfo approve(UUID workOrderId) {
-        WorkOrder wo = load(workOrderId);
-
-        wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.APPROVED));
-        wo.setApprovedAt(Instant.now());
-
-        events.publishEvent(new WorkOrderApprovedEvent(wo.getId(), wo.getCustomerId(), wo.getGrandTotal()));
-
-        return woMapper.toInfo(wo);
-    }
-
-    @Transactional
-    public WorkOrderInfo refuse(UUID workOrderId, RefuseWorkOrderCommand command) {
-        WorkOrder wo = load(workOrderId);
-
-        wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.REFUSED));
-        wo.setRefusalReason(command.reason());
-        wo.setRefusedAt(Instant.now());
-
-        // A refusal moves no metal: every reservation the quote held is returned to availability, and
-        // no stock movement is written since nothing physical happened.
-        partReservationService.releaseForWorkOrder(wo.getId());
-
-        events.publishEvent(new WorkOrderRefusedEvent(wo.getId(), wo.getCustomerId(), command.reason()));
+        events.publishEvent(new BudgetDraftedEvent(wo.getId(), budget.getId()));
 
         return woMapper.toInfo(wo);
     }
@@ -192,44 +198,48 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     @Transactional
-    public WorkOrderInfo startRow(UUID workOrderId, UUID rowId) {
+    public WorkOrderInfo startLine(UUID workOrderId, UUID lineId) {
         WorkOrder wo = load(workOrderId);
         requireInProgress(wo);
 
-        WorkOrderRow row = findServiceRow(wo, rowId);
+        BudgetLine line = findServiceLine(wo, lineId);
 
-        if (row.getStartedAt() != null) {
-            throw new IllegalArgumentException("Row " + rowId + " has already been started");
+        if (line.getStartedAt() != null) {
+            throw new IllegalArgumentException("Line " + lineId + " has already been started");
         }
 
-        row.setStartedAt(Instant.now());
+        line.setStartedAt(Instant.now());
+
+        events.publishEvent(new BudgetLineStartedEvent(wo.getId(), line.getId()));
 
         return woMapper.toInfo(wo);
     }
 
     @Transactional
-    public WorkOrderInfo finishRow(UUID workOrderId, UUID rowId) {
+    public WorkOrderInfo finishLine(UUID workOrderId, UUID lineId) {
         WorkOrder wo = load(workOrderId);
         requireInProgress(wo);
 
-        WorkOrderRow row = findServiceRow(wo, rowId);
+        BudgetLine line = findServiceLine(wo, lineId);
 
-        if (row.getStartedAt() == null) {
-            throw new IllegalArgumentException("Row " + rowId + " has not been started");
+        if (line.getStartedAt() == null) {
+            throw new IllegalArgumentException("Line " + lineId + " has not been started");
         }
-        if (row.getFinishedAt() != null) {
-            throw new IllegalArgumentException("Row " + rowId + " has already been finished");
+        if (line.getFinishedAt() != null) {
+            throw new IllegalArgumentException("Line " + lineId + " has already been finished");
         }
 
         Instant finishedAt = Instant.now();
-        row.setFinishedAt(finishedAt);
+        line.setFinishedAt(finishedAt);
 
         // Clamped to at least 1s: the DB requires a positive duration, and an operation finished in
         // the same instant it started (a trivially fast service, or a test) shouldn't be rejected for it.
-        long elapsed = Duration.between(row.getStartedAt(), finishedAt).getSeconds();
+        long elapsed = Duration.between(line.getStartedAt(), finishedAt).getSeconds();
         int durationSeconds = (int) Math.max(1, elapsed);
 
-        repairServiceCatalogService.recordExecution(row.getServiceId(), wo.getId(), row.getId(), durationSeconds);
+        repairServiceCatalogService.recordExecution(line.getServiceId(), wo.getId(), line.getId(), durationSeconds);
+
+        events.publishEvent(new BudgetLineFinishedEvent(wo.getId(), line.getId()));
 
         return woMapper.toInfo(wo);
     }
@@ -291,27 +301,20 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         }
     }
 
-    private WorkOrderRow findServiceRow(WorkOrder wo, UUID rowId) {
-        WorkOrderRow row = wo.getRows().stream()
-                .filter(r -> r.getId().equals(rowId))
-                .findFirst()
-                .orElseThrow(() -> new WorkOrderRowNotFoundException(rowId));
+    private BudgetLine findServiceLine(WorkOrder wo, UUID lineId) {
+        Budget budget = budgetRepository.findById(wo.getBudgetId())
+                .orElseThrow(() -> new BudgetNotFoundException(wo.getBudgetId()));
 
-        if (row.getType() != RowType.SERVICE) {
-            throw new IllegalArgumentException("Row " + rowId + " is not a SERVICE row");
+        BudgetLine line = budget.getLines().stream()
+                .filter(l -> l.getId().equals(lineId))
+                .findFirst()
+                .orElseThrow(() -> new BudgetLineNotFoundException(lineId));
+
+        if (line.getType() != RowType.SERVICE) {
+            throw new IllegalArgumentException("Line " + lineId + " is not a SERVICE line");
         }
 
-        return row;
-    }
-
-    private void replaceRows(WorkOrder wo, List<CreateWorkOrderRowCommand> rowCommands) {
-        wo.clearRows();
-
-        wo.setRows(
-                rowCommands.stream()
-                        .map(this::buildRow)
-                        .toList()
-        );
+        return line;
     }
 
     /**
@@ -319,51 +322,38 @@ public class WorkOrderServiceImpl implements WorkOrderService {
      * inventory catalog here, so a later price change never rewrites what a customer already agreed
      * to.
      */
-    private WorkOrderRow buildRow(CreateWorkOrderRowCommand command) {
-        WorkOrderRow row = worMapper.fromCreateCommand(command);
+    private BudgetLine buildLine(AddBudgetLineCommand command) {
+        BudgetLine line = new BudgetLine();
+        line.setType(command.type());
+        line.setQuantity(command.quantity());
+        line.setPartId(command.partId());
+        line.setServiceId(command.serviceId());
 
         if (command.type() == RowType.PART) {
             if (command.partId() == null || command.serviceId() != null) {
-                throw new IllegalArgumentException("A PART row must supply partId and no serviceId");
+                throw new IllegalArgumentException("A PART line must supply partId and no serviceId");
             }
 
             PartInfo part = partCatalogService.getById(command.partId());
-            row.setDescription(part.name());
-            row.setUnitPrice(part.salePrice());
+            line.setDescription(part.name());
+            line.setUnitPrice(part.salePrice());
         } else {
             if (command.serviceId() == null || command.partId() != null) {
-                throw new IllegalArgumentException("A SERVICE row must supply serviceId and no partId");
+                throw new IllegalArgumentException("A SERVICE line must supply serviceId and no partId");
             }
 
             RepairServiceInfo service = repairServiceCatalogService.getById(command.serviceId());
-            row.setDescription(service.name());
-            row.setUnitPrice(service.price());
+            line.setDescription(service.name());
+            line.setUnitPrice(service.price());
         }
 
-        return row;
+        return line;
     }
 
-    private List<ReservePartCommand> partReservationRequests(WorkOrder wo) {
-        return wo.getRows().stream()
-                .filter(r -> r.getType() == RowType.PART)
-                .map(r -> new ReservePartCommand(r.getPartId(), r.getQuantity()))
+    private List<ReservePartCommand> partReservationRequests(Budget budget) {
+        return budget.getLines().stream()
+                .filter(l -> l.getType() == RowType.PART)
+                .map(l -> new ReservePartCommand(l.getPartId(), l.getQuantity()))
                 .toList();
-    }
-
-    private void recalculateTotals(WorkOrder wo) {
-        BigDecimal labor = sumRows(wo, RowType.SERVICE);
-        BigDecimal parts = sumRows(wo, RowType.PART);
-        BigDecimal total = labor.add(parts);
-
-        wo.setLaborTotal(labor);
-        wo.setPartsTotal(parts);
-        wo.setGrandTotal(total);
-    }
-
-    private BigDecimal sumRows(WorkOrder wo, RowType type) {
-        return wo.getRows().stream()
-                .filter(r -> r.getType() == type)
-                .map(WorkOrderRow::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

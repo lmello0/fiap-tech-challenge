@@ -5,7 +5,7 @@ import com.fiap.techchallenge.workorder.entities.WorkOrder;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = WorkOrderRowMapper.class)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface WorkOrderMapper {
 
     WorkOrderInfo toInfo(WorkOrder workOrder);

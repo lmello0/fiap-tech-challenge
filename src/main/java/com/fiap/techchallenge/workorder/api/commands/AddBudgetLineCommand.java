@@ -8,14 +8,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * A row on a work order's quote, identified by catalog reference rather than free text — description
- * and unit price are never taken from the caller. They are snapshotted from the inventory catalog at
- * quote time, so a later price change never rewrites what a customer already agreed to.
- *
- * <p>Exactly one of {@code partId}/{@code serviceId} must be supplied, matching {@code type}; the
- * service layer validates the pairing.
+ * A line added to a Budget still in DRAFT. Description and unit price are never taken from the
+ * caller — they are snapshotted from the inventory catalog at add-time. Exactly one of
+ * {@code partId}/{@code serviceId} must be supplied, matching {@code type}.
  */
-public record CreateWorkOrderRowCommand(
+public record AddBudgetLineCommand(
         @NotNull(message = "Type may not be null")
         RowType type,
 

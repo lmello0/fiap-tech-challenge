@@ -7,6 +7,10 @@ import org.hibernate.validator.constraints.Length;
 
 import java.util.List;
 
+/**
+ * Finishing diagnostics atomically drafts the work order's Budget, seeded with these lines
+ * (ADR 0008/0009).
+ */
 public record FinishDiagnosticsCommand(
         @NotBlank(message = "Diagnosis may not be blank")
         @Length(max = 2000, message = "Diagnosis may not exceed 2_000 characters")
@@ -14,6 +18,6 @@ public record FinishDiagnosticsCommand(
 
         @Valid
         @NotEmpty
-        List<CreateWorkOrderRowCommand> rows
+        List<AddBudgetLineCommand> lines
 ) {
 }

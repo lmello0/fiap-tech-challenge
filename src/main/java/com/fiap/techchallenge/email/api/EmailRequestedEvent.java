@@ -4,6 +4,7 @@ import lombok.Builder;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A request to deliver a single email, published by a module's own email facade and consumed only by
@@ -23,7 +24,8 @@ public record EmailRequestedEvent(
         String subject,
         String plainText,
         String html,
-        Instant expiresAt
+        Instant expiresAt,
+        UUID correlationId
 ) {
 
     public EmailRequestedEvent {

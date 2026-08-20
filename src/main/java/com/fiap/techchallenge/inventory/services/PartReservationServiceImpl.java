@@ -66,6 +66,39 @@ public class PartReservationServiceImpl implements PartReservationService {
 
     @Override
     @Transactional
+    public void releasePartial(UUID workOrderId, UUID partId, BigDecimal quantity) {
+        BigDecimal remaining = quantity;
+
+        List<PartReservation> reservations = reservationRepository
+                .findByWorkOrderIdAndPart_IdAndStatusOrderByReservedAtDesc(workOrderId, partId, ReservationStatus.HELD);
+
+        for (PartReservation reservation : reservations) {
+            if (remaining.signum() <= 0) {
+                break;
+            }
+
+            BigDecimal amount = reservation.getQuantityReserved().min(remaining);
+
+            if (amount.signum() > 0) {
+                Part part = loadForUpdate(partId);
+                part.releaseReservation(amount);
+
+                reservation.setQuantityReserved(reservation.getQuantityReserved().subtract(amount));
+                remaining = remaining.subtract(amount);
+            }
+
+            reservation.setQuantityRequested(
+                    reservation.getQuantityRequested().subtract(amount.min(reservation.getQuantityRequested())));
+
+            if (reservation.getQuantityReserved().signum() == 0 && reservation.getQuantityRequested().signum() == 0) {
+                reservation.setStatus(stateMachine.transition(reservation.getStatus(), ReservationStatus.RELEASED));
+                reservation.setResolvedAt(Instant.now());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
     public void releaseForWorkOrder(UUID workOrderId) {
         for (PartReservation reservation : held(workOrderId)) {
             resolve(reservation, ReservationStatus.RELEASED);

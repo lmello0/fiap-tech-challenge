@@ -4,17 +4,22 @@ import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.user.api.UserService;
+import com.fiap.techchallenge.workorder.api.BudgetService;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
-import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderRowCommand;
+import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
-import com.fiap.techchallenge.workorder.api.representation.WorkOrderRowInfo;
+import com.fiap.techchallenge.workorder.entities.Budget;
+import com.fiap.techchallenge.workorder.entities.BudgetLine;
 import com.fiap.techchallenge.workorder.entities.WorkOrder;
-import com.fiap.techchallenge.workorder.entities.WorkOrderRow;
+import com.fiap.techchallenge.workorder.enums.BudgetStatus;
 import com.fiap.techchallenge.workorder.enums.RowType;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotInProgressException;
+import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
 import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,14 +35,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Exercises the per-service execution timing wired into WorkOrderServiceImpl.startRow/finishRow: a
+ * Exercises the per-service execution timing wired into WorkOrderServiceImpl.startLine/finishLine: a
  * service's quoted duration falls back to its seeded estimate until samples exist, then becomes a
  * rolling average over the most recent app.inventory.average-window (20) samples — not an all-time
  * average, which is what the last test in this class specifically checks.
  *
- * WorkOrder fixtures are seeded directly via the repository, for the same reason as
- * PartReservationFlowTest: WorkOrderService.create() never sets assignedMechanicId, which the DB
- * requires NOT NULL.
+ * <p>Budgets are driven straight to SENT/APPROVED via the repository rather than through the real
+ * async email delivery-confirmation flow — see {@code PartReservationFlowTest} for why.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -47,7 +51,16 @@ class ServiceExecutionTimingTest {
     WorkOrderService workOrderService;
 
     @Autowired
+    BudgetService budgetService;
+
+    @Autowired
+    UserService userService;
+
+    @Autowired
     WorkOrderRepository workOrderRepository;
+
+    @Autowired
+    BudgetRepository budgetRepository;
 
     @Autowired
     RepairServiceCatalogService repairServiceCatalogService;
@@ -60,7 +73,7 @@ class ServiceExecutionTimingTest {
     }
 
     @Test
-    void finishingARowRecordsASampleAndUpdatesTheRollingAverage() {
+    void finishingALineRecordsASampleAndUpdatesTheRollingAverage() {
         RepairServiceInfo service = createService("TIMING-AVG-1", 1800);
 
         recordExecution(service.id(), 100);
@@ -88,66 +101,77 @@ class ServiceExecutionTimingTest {
     }
 
     @Test
-    void rowLifecycleGuardsRejectDoubleStartAndFinishBeforeStart() {
+    void lineLifecycleGuardsRejectDoubleStartAndFinishBeforeStart() {
         RepairServiceInfo service = createService("TIMING-GUARD-1", 1800);
         UUID workOrderId = seedWorkOrder();
         advanceToInProgress(workOrderId, service.id());
 
-        WorkOrderInfo wo = workOrderService.getWorkOrderById(workOrderId);
-        UUID rowId = wo.rows().get(0).id();
+        UUID lineId = firstLineId(workOrderId);
 
-        assertThatThrownBy(() -> workOrderService.finishRow(workOrderId, rowId))
+        assertThatThrownBy(() -> workOrderService.finishLine(workOrderId, lineId))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        workOrderService.startRow(workOrderId, rowId);
+        workOrderService.startLine(workOrderId, lineId);
 
-        assertThatThrownBy(() -> workOrderService.startRow(workOrderId, rowId))
+        assertThatThrownBy(() -> workOrderService.startLine(workOrderId, lineId))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void startingARowOnAWorkOrderThatIsNotInProgressIsRejected() {
+    void startingALineOnAWorkOrderThatIsNotInProgressIsRejected() {
         RepairServiceInfo service = createService("TIMING-GUARD-2", 1800);
         UUID workOrderId = seedWorkOrder();
 
         advanceToInDiagnostics(workOrderId);
         WorkOrderInfo quoted = finishDiagnosticsWith(workOrderId, service.id());
-        UUID rowId = quoted.rows().get(0).id();
+        UUID lineId = firstLineId(workOrderId);
 
-        // Still WAITING_APPROVAL, not IN_PROGRESS.
-        assertThatThrownBy(() -> workOrderService.startRow(workOrderId, rowId))
+        // Still BUDGET_IN_DRAFT, not IN_PROGRESS.
+        assertThat(quoted.status()).isEqualTo(WorkOrderStatus.BUDGET_IN_DRAFT);
+        assertThatThrownBy(() -> workOrderService.startLine(workOrderId, lineId))
                 .isInstanceOf(WorkOrderNotInProgressException.class);
     }
 
     // --- fixtures -----------------------------------------------------------------------------
 
     /**
-     * Runs one full row through start -> finish, backdating startedAt so the elapsed time is exactly
-     * {@code durationSeconds} rather than depending on a real sleep.
+     * Runs one full line through start -> finish, backdating startedAt so the elapsed time is
+     * exactly {@code durationSeconds} rather than depending on a real sleep.
      */
     private void recordExecution(UUID serviceId, int durationSeconds) {
         UUID workOrderId = seedWorkOrder();
         advanceToInProgress(workOrderId, serviceId);
 
-        WorkOrderInfo wo = workOrderService.getWorkOrderById(workOrderId);
-        UUID rowId = wo.rows().get(0).id();
+        UUID lineId = firstLineId(workOrderId);
 
-        workOrderService.startRow(workOrderId, rowId);
-        backdateRowStart(workOrderId, rowId, durationSeconds);
-        workOrderService.finishRow(workOrderId, rowId);
+        workOrderService.startLine(workOrderId, lineId);
+        backdateLineStart(workOrderId, lineId, durationSeconds);
+        workOrderService.finishLine(workOrderId, lineId);
     }
 
-    private void backdateRowStart(UUID workOrderId, UUID rowId, int durationSeconds) {
+    private UUID firstLineId(UUID workOrderId) {
         WorkOrder wo = workOrderRepository.findById(workOrderId).orElseThrow();
-        WorkOrderRow row = wo.getRows().stream().filter(r -> r.getId().equals(rowId)).findFirst().orElseThrow();
-        row.setStartedAt(Instant.now().minusSeconds(durationSeconds));
-        workOrderRepository.save(wo);
+        Budget budget = budgetRepository.findWithLinesById(wo.getBudgetId()).orElseThrow();
+
+        return budget.getLines().get(0).getId();
+    }
+
+    private void backdateLineStart(UUID workOrderId, UUID lineId, int durationSeconds) {
+        WorkOrder wo = workOrderRepository.findById(workOrderId).orElseThrow();
+        Budget budget = budgetRepository.findWithLinesById(wo.getBudgetId()).orElseThrow();
+        BudgetLine line = budget.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst().orElseThrow();
+        line.setStartedAt(Instant.now().minusSeconds(durationSeconds));
+        budgetRepository.save(budget);
     }
 
     private void advanceToInProgress(UUID workOrderId, UUID serviceId) {
         advanceToInDiagnostics(workOrderId);
-        finishDiagnosticsWith(workOrderId, serviceId);
-        workOrderService.approve(workOrderId);
+        WorkOrderInfo quoted = finishDiagnosticsWith(workOrderId, serviceId);
+        UUID budgetId = quoted.budgetId();
+
+        sendAndConfirm(budgetId);
+        budgetService.approve(budgetId, quoted.customerId());
+
         workOrderService.startService(workOrderId);
     }
 
@@ -159,19 +183,76 @@ class ServiceExecutionTimingTest {
     private WorkOrderInfo finishDiagnosticsWith(UUID workOrderId, UUID serviceId) {
         return workOrderService.finishDiagnostics(workOrderId, new FinishDiagnosticsCommand(
                 "Diagnosed",
-                List.of(new CreateWorkOrderRowCommand(RowType.SERVICE, BigDecimal.ONE, null, serviceId))
+                List.of(new AddBudgetLineCommand(RowType.SERVICE, BigDecimal.ONE, null, serviceId))
         ));
+    }
+
+    /** Simulates confirmed email delivery without a real SMTP server: DRAFT -> WAITING_SEND -> SENT. */
+    private void sendAndConfirm(UUID budgetId) {
+        budgetService.send(budgetId);
+
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        budget.setStatus(BudgetStatus.SENT);
+        budget.setSentAt(Instant.now());
+        budgetRepository.save(budget);
+
+        WorkOrder wo = workOrderRepository.findById(budget.getWorkOrderId()).orElseThrow();
+        wo.setStatus(WorkOrderStatus.WAITING_APPROVAL);
+        workOrderRepository.save(wo);
     }
 
     private UUID seedWorkOrder() {
         WorkOrder wo = new WorkOrder();
-        wo.setOrderCode("WO-TIMING-" + UUID.randomUUID());
+        wo.setOrderCode("WO-TIMING-" + UUID.randomUUID().toString().substring(0, 8));
         wo.setStatus(WorkOrderStatus.RECEIVED);
-        wo.setCustomerId(UUID.randomUUID());
+        // A real, registered customer: dispatchBudgetEmail (send/resend) looks the customer up via
+        // UserService to find their email, so a bare random UUID would 404 there.
+        wo.setCustomerId(registerCustomer());
         wo.setVehicleId(UUID.randomUUID());
         wo.setAssignedMechanicId(UUID.randomUUID());
 
         return workOrderRepository.save(wo).getId();
+    }
+
+    private UUID registerCustomer() {
+        String email = UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@example.com";
+
+        return userService.createCustomer(new com.fiap.techchallenge.user.api.commands.CreateUserCommand(
+                email,
+                "Test",
+                "Customer",
+                com.fiap.techchallenge.user.enums.DocumentType.CPF,
+                uniqueDocument(),
+                java.util.List.of(new com.fiap.techchallenge.user.api.commands.RegisterPhoneNumberCommand(
+                        com.fiap.techchallenge.user.enums.PhoneType.MOBILE, "11999999999", true))
+        )).id();
+    }
+
+    /** DocumentValidator rejects bad check digits, so the digits have to be computed, not random. */
+    private static String uniqueDocument() {
+        int[] digits = new int[11];
+
+        for (int i = 0; i < 9; i++) {
+            digits[i] = java.util.concurrent.ThreadLocalRandom.current().nextInt(10);
+        }
+
+        for (int position = 9; position < 11; position++) {
+            int sum = 0;
+
+            for (int i = 0; i < position; i++) {
+                sum += digits[i] * (position + 1 - i);
+            }
+
+            int remainder = (sum * 10) % 11;
+            digits[position] = remainder == 10 ? 0 : remainder;
+        }
+
+        StringBuilder cpf = new StringBuilder(11);
+        for (int digit : digits) {
+            cpf.append(digit);
+        }
+
+        return cpf.toString();
     }
 
     private RepairServiceInfo createService(String code, int estimatedSeconds) {

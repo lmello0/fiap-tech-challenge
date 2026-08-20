@@ -21,6 +21,14 @@ public interface PartReservationService {
     void reserveForWorkOrder(UUID workOrderId, List<ReservePartCommand> requests);
 
     /**
+     * Releases up to {@code quantity} of HELD reservations for {@code partId} on {@code workOrderId},
+     * most-recently-reserved first, reducing or fully releasing reservation rows as needed. Used by a
+     * budget draft line edit that reduces or removes a quantity — releases only the delta, never the
+     * whole work order's reservations (see the Work Orders ADR on draft edits reserving/releasing live).
+     */
+    void releasePartial(UUID workOrderId, UUID partId, java.math.BigDecimal quantity);
+
+    /**
      * Returns every {@code HELD} reservation's claimed stock to availability and marks them
      * {@code RELEASED}. A no-op if the work order holds no {@code HELD} reservations.
      */

@@ -19,6 +19,36 @@ class WorkOrderStateMachineTest {
     }
 
     @Test
+    void finishingDiagnosticsMovesToBudgetInDraft() {
+        assertThat(stateMachine.transition(WorkOrderStatus.IN_DIAGNOSTICS, WorkOrderStatus.BUDGET_IN_DRAFT))
+                .isEqualTo(WorkOrderStatus.BUDGET_IN_DRAFT);
+    }
+
+    @Test
+    void budgetInDraftOnlyMovesToWaitingApproval() {
+        assertThat(stateMachine.transition(WorkOrderStatus.BUDGET_IN_DRAFT, WorkOrderStatus.WAITING_APPROVAL))
+                .isEqualTo(WorkOrderStatus.WAITING_APPROVAL);
+
+        assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.IN_DIAGNOSTICS, WorkOrderStatus.WAITING_APPROVAL))
+                .isInstanceOf(IllegalWorkOrderTransitionException.class);
+    }
+
+    @Test
+    void waitingApprovalCanGoEitherWay() {
+        assertThat(stateMachine.canTransition(WorkOrderStatus.WAITING_APPROVAL, WorkOrderStatus.APPROVED)).isTrue();
+        assertThat(stateMachine.canTransition(WorkOrderStatus.WAITING_APPROVAL, WorkOrderStatus.REFUSED)).isTrue();
+    }
+
+    @Test
+    void refusalIsTerminalExceptForPickup() {
+        assertThat(stateMachine.transition(WorkOrderStatus.REFUSED, WorkOrderStatus.WAITING_PICKUP))
+                .isEqualTo(WorkOrderStatus.WAITING_PICKUP);
+
+        assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.REFUSED, WorkOrderStatus.IN_PROGRESS))
+                .isInstanceOf(IllegalWorkOrderTransitionException.class);
+    }
+
+    @Test
     void rejectsATransitionOutOfATerminalStatus() {
         assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.DELIVERED, WorkOrderStatus.IN_PROGRESS))
                 .isInstanceOf(IllegalWorkOrderTransitionException.class)

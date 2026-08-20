@@ -109,3 +109,45 @@ The `Worker` facet role that runs the storeroom: the part and service catalogs, 
 reorder rules, and stock adjustments. Holds the same inventory rights as `Manager` — the role exists to
 name who is expected to do this work day to day, not to fence `Manager` out of it.
 _Avoid_: Stock clerk, Storekeeper
+
+## Work Orders
+
+Repair jobs the shop performs on a customer's vehicle, tracked from intake through diagnostics,
+pricing, customer approval, execution, and pickup.
+
+### Language
+
+**Work Order**:
+The record of a repair job for one vehicle, tracked through a fixed status lifecycle from intake to
+delivery. Holds no line items of its own — the work being done is entirely whatever the current
+`Budget`'s lines say, once that Budget is approved.
+_Avoid_: Order (collides with `Purchase Order`), Job, Ticket
+
+**Budget**:
+A priced proposal of the Parts and Services a Work Order needs, sent to the customer to approve or
+refuse. Exactly one Budget is live per Work Order. Once sent, a Budget's lines are frozen — there is no
+requoting, only approve or refuse; a refused Budget is terminal for its Work Order.
+_Avoid_: Quote (fine in speech, but `Budget` is the canonical term in code and docs), Estimate, Proposal
+
+**Budget Line**:
+One priced item on a `Budget`: a `Part` or a `Service` (never both), a quantity, and the price at the
+moment it was added. A snapshot taken from the Inventory context's catalog data, not a live reference to
+it — the catalog `Part`/`Service` can reprice later without changing what a customer already approved.
+_Avoid_: Row, Item (ambiguous with the Inventory `Part`)
+
+**Draft** (Budget status):
+The editable phase of a Budget's life, opened the instant diagnostics finish and seeded with the
+mechanic's initial lines. Every add, removal, or quantity change while in Draft reserves or releases
+stock immediately. Ends the moment staff sends the Budget — a Draft is never partially locked.
+
+**Send** (Budget action):
+The staff action that freezes a Draft Budget's lines and hands it to the customer by email. Moves the
+Budget to `Waiting Send` while delivery is attempted; only confirmed delivery (`Sent`) moves the owning
+Work Order's status to `WAITING_APPROVAL`. A Budget stuck in `Waiting Send` after a delivery failure can
+be resent as many times as needed without re-locking or re-reserving anything.
+_Avoid_: Submit, Publish
+
+**Diagnostics**:
+The mechanic's inspection of the vehicle, which produces the Work Order's first Budget Draft. Distinct
+from executing a Budget's lines (the repair itself), which only ever happens after that Budget has been
+approved.

@@ -1,5 +1,7 @@
 package com.fiap.techchallenge.email.services;
 
+import com.fiap.techchallenge.email.api.EmailDeliveredEvent;
+import com.fiap.techchallenge.email.api.EmailDeliveryFailedEvent;
 import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.email.exceptions.EmailExpiredException;
 import com.fiap.techchallenge.email.properties.EmailProperties;
@@ -8,6 +10,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -37,24 +40,37 @@ public class EmailDispatcher {
 
     private final JavaMailSender mailSender;
     private final EmailProperties properties;
+    private final ApplicationEventPublisher events;
 
     @ApplicationModuleListener
     void on(EmailRequestedEvent event) throws Exception {
-        if (event.isExpired(Instant.now())) {
-            log.warn("Dropping expired email subject='{}' expiresAt={} recipients={}",
-                    event.subject(), event.expiresAt(), event.to().size());
+        try {
+            if (event.isExpired(Instant.now())) {
+                log.warn("Dropping expired email subject='{}' expiresAt={} recipients={}",
+                        event.subject(), event.expiresAt(), event.to().size());
 
-            throw new EmailExpiredException("Email expired before delivery: " + event.subject());
+                throw new EmailExpiredException("Email expired before delivery: " + event.subject());
+            }
+
+            if (event.html() == null || event.html().isBlank()) {
+                mailSender.send(plainMessage(event));
+            } else {
+                mailSender.send(mimeMessage(event));
+            }
+
+            log.info("Email sent subject='{}' recipients={} multipart={}",
+                    event.subject(), event.to().size(), event.isMultipart());
+
+            if (event.correlationId() != null) {
+                events.publishEvent(new EmailDeliveredEvent(event.correlationId()));
+            }
+        } catch (Exception e) {
+            if (event.correlationId() != null) {
+                events.publishEvent(new EmailDeliveryFailedEvent(event.correlationId(), e.getMessage()));
+            }
+
+            throw e;
         }
-
-        if (event.html() == null || event.html().isBlank()) {
-            mailSender.send(plainMessage(event));
-        } else {
-            mailSender.send(mimeMessage(event));
-        }
-
-        log.info("Email sent subject='{}' recipients={} multipart={}",
-                event.subject(), event.to().size(), event.isMultipart());
     }
 
     private SimpleMailMessage plainMessage(EmailRequestedEvent event) throws UnsupportedEncodingException {

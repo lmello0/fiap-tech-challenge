@@ -2,9 +2,7 @@ package com.fiap.techchallenge.workorder.api.representation;
 
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 public record WorkOrderInfo(
@@ -17,10 +15,7 @@ public record WorkOrderInfo(
         String customerComplaint,
         String diagnosis,
         String refusalReason,
-        List<WorkOrderRowInfo> rows,
-        BigDecimal laborTotal,
-        BigDecimal partsTotal,
-        BigDecimal grandTotal,
+        UUID budgetId,
         Instant createdAt,
         Instant updatedAt,
         Instant diagnosticRequestedAt,

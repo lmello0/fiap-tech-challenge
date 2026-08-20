@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-public record WorkOrderRowInfo(
+public record BudgetLineInfo(
         UUID id,
         RowType type,
         String description,

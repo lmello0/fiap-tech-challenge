@@ -7,10 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -52,17 +49,10 @@ public class WorkOrder {
     @Column(length = 2000)
     private String refusalReason;
 
-    @OneToMany(
-            mappedBy = "workOrder",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true)
-    private List<WorkOrderRow> rows = new ArrayList<>();
-
-    private BigDecimal laborTotal;
-
-    private BigDecimal partsTotal;
-
-    private BigDecimal grandTotal;
+    /** The Budget currently attached to this work order. There is no requoting, so a single reference
+     * is enough — no historical collection is kept (ADR 0008/0009). */
+    @Column
+    private UUID budgetId;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -88,14 +78,4 @@ public class WorkOrder {
     private Instant pickupReadyAt;
 
     private Instant deliveredAt;
-
-    public void addRow(WorkOrderRow row) {
-        rows.add(row);
-        row.setWorkOrder(this);
-    }
-
-    public void clearRows() {
-        rows.forEach(r -> r.setWorkOrder(null));
-        rows.clear();
-    }
 }

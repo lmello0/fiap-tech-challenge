@@ -1,3 +1,7 @@
+---
+status: accepted (the accumulation behavior described in the last paragraph is superseded by ADR-0010)
+---
+
 # Reserving is best-effort, consuming is strict
 
 A quote that needs four brake pads when only two are on the shelf has two honest outcomes: refuse to

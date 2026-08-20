@@ -16,4 +16,8 @@ public interface PartReservationRepository extends JpaRepository<PartReservation
 
     /** Oldest first, so a fresh receipt tops up the reservation that has been waiting the longest. */
     List<PartReservation> findByPart_IdAndStatusOrderByReservedAtAsc(UUID partId, ReservationStatus status);
+
+    /** Most-recently-reserved first, so releasing a delta unwinds the most recent claim first. */
+    List<PartReservation> findByWorkOrderIdAndPart_IdAndStatusOrderByReservedAtDesc(
+            UUID workOrderId, UUID partId, ReservationStatus status);
 }
