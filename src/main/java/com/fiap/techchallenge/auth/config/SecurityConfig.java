@@ -57,6 +57,16 @@ public class SecurityConfig {
                                 "/auth/email-verification/resend",
                                 "/auth/email-verification/confirm",
                                 "/auth/email-change/confirm").permitAll()
+                        // Guest scheduling (CONTEXT.md "Guest"): booking a Drop-off and every
+                        // token-driven guest action require no account — see ADR 0015.
+                        .requestMatchers(HttpMethod.POST,
+                                "/appointments/dropoff/guest",
+                                "/appointments/pickup/book",
+                                "/appointments/guest/view",
+                                "/appointments/guest/cancel",
+                                "/appointments/guest/reschedule",
+                                "/appointments/guest/complete-registration").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/appointments/availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()

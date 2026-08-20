@@ -68,6 +68,17 @@ app:
       mock:
         lead-time-days: 3
 
+  scheduling:
+    min-notice: 2h
+    max-lookahead: 30d
+    access-token-ttl: 7d
+    registration-token-ttl: 7d
+    pickup-invitation-token-ttl: 14d
+    no-show-sweep-cron: "0 */15 * * * ?"
+
+    email:
+      base-url: ${APP_BASE_URL:http://localhost:4200}
+
   auth:
     purge-expired-tokens-cron: "0 30 3 * * ?"
 

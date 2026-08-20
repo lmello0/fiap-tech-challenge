@@ -152,6 +152,85 @@ The mechanic's inspection of the vehicle, which produces the Work Order's first 
 from executing a Budget's lines (the repair itself), which only ever happens after that Budget has been
 approved.
 
+## Scheduling
+
+Booking a visit to the shop — dropping a vehicle off for diagnostics, and later picking it up once
+its Work Order is ready. Drop-offs can be booked by an unregistered Guest as well as a signed-in
+Customer; Pickups always belong to a real Customer, since a Work Order can't exist without one.
+
+### Language
+
+**Appointment**:
+A booked visit to the shop for a specific 30-minute slot — either a `Drop-off Appointment` or a
+`Pickup Appointment`. Auto-confirmed the moment it's booked; there is no separate approval step.
+_Avoid_: Schedule (that's the module/bounded context, not a bookable thing), Booking, Reservation
+(already means something else — see Inventory's `Reservation`)
+
+**Drop-off Appointment**:
+An Appointment to bring a vehicle in for diagnostics. Booked either by a `Guest` (carrying their own
+inline contact and vehicle details) or by a signed-in Customer against an existing `Vehicle`.
+Checking in a Drop-off Appointment is what produces a `Work Order`.
+
+**Pickup Appointment**:
+An Appointment to collect a vehicle once its `Work Order` reaches `WAITING_PICKUP`. Always tied to a
+real Customer, Vehicle, and Work Order — never booked by a `Guest`, since reaching `WAITING_PICKUP`
+means `Guest Conversion` already happened. Reaching `WAITING_PICKUP` only sends a booking invitation;
+no Appointment row exists until someone actually picks a slot.
+
+**Guest**:
+An unregistered person booking a Drop-off Appointment — name, phone, email, and vehicle
+maker/model/year given directly on the Appointment, not backed by a `User`. Distinct from the
+`Customer` facet, which only exists once a real `User` does.
+_Avoid_: Customer (when referring to an unregistered person), Anonymous user
+
+**Guest Conversion**:
+Turning a Guest's captured details into a real `User` with a `Customer` facet and a `Vehicle`, and
+linking the originating Appointment to the new `customerId`/`vehicleId`. Happens one of two ways: the
+guest completing registration through their own token link, or an Attendant registering them at
+Check-in. A Guest who instead signs up independently through ordinary registration, with a matching
+email, is *not* auto-linked — the Appointment stays a guest booking until one of the two explicit
+conversion paths happens.
+_Avoid_: Registration (Guest Conversion reuses/extends ordinary `User` registration, but is
+specifically about linking a prior Appointment to the result)
+
+**Check-in**:
+The Attendant action of marking an Appointment `COMPLETED` when the customer or guest physically
+arrives for their slot. For a Drop-off, may require `Guest Conversion` first if the guest hasn't
+already completed registration on their own. Triggers Work Order creation (Drop-off) or the Work
+Order's `DELIVERED` transition (Pickup).
+
+**No-Show**:
+Terminal status set automatically, by a scheduled sweep, once a `SCHEDULED` Appointment's slot end
+time passes with no Check-in.
+_Avoid_: Cancelled (No-Show is distinct from a customer/guest actively cancelling)
+
+**Reschedule**:
+Moving an Appointment to a different slot: cancels the original (`CANCELLED`, reason `RESCHEDULED`,
+linked via `rescheduledToId`) and creates a new Appointment carrying the same guest/customer/vehicle/
+complaint. Changes the slot only — correcting contact details is not something Reschedule does.
+
+**Operating Calendar**:
+The Manager-configured rules an Appointment is booked against: the fixed Monday–Friday 8AM–6PM week,
+any specific future dates a Manager has closed, and slot capacity (tracked independently per
+Appointment type). Not itself a bookable thing.
+
+**Closure**:
+A specific future date a Manager marks as not open, overriding the Operating Calendar's default
+weekly hours for that date. Closing a date that already has Appointments booked on it cancels them
+and notifies the affected Customers/Guests, optionally carrying a Manager-written explanation.
+_Avoid_: Holiday (implies a fixed, recurring calendar this doesn't have — every Closure is a one-off
+Manager decision)
+
+**Slot Capacity**:
+How many Appointments of a given type can be booked into the same slot. Tracked independently per
+Appointment type — Drop-off and Pickup never compete for the same capacity.
+
+**Booking-Management Token / Complete-Registration Token**:
+Two single-use, hashed, expiring tokens (same shape as the Users & Auth context's tokens — see ADR
+0002) sent to a Guest after booking: one lets them view, cancel, or reschedule their Appointment; the
+other drives `Guest Conversion`. Kept separate because they authorize different-stakes actions —
+managing a booking versus creating login credentials.
+
 ## History
 
 An append-only, query-only account of what happened to the things the shop tracks — Work Orders,

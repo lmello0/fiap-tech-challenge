@@ -10,7 +10,9 @@ import com.fiap.techchallenge.auth.api.commands.RegisterWorkerCommand;
 import com.fiap.techchallenge.auth.api.commands.RequestEmailChangeCommand;
 import com.fiap.techchallenge.auth.api.commands.RequestPasswordResetCommand;
 import com.fiap.techchallenge.auth.api.commands.ResendEmailVerificationCommand;
+import com.fiap.techchallenge.auth.api.representation.TemporaryCredential;
 import com.fiap.techchallenge.auth.api.representation.TokenResponse;
+import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 
 import java.util.UUID;
@@ -27,6 +29,13 @@ public interface AuthService {
      * Staff registration, performed by a manager. Issues no tokens — the worker signs in themselves.
      */
     UserInfo registerWorker(RegisterWorkerCommand command);
+
+    /**
+     * Staff-initiated customer registration: the system picks a random password, which the caller
+     * (an Attendant standing with the customer) is expected to relay verbally — the customer must
+     * rotate it before the account is otherwise usable.
+     */
+    TemporaryCredential registerCustomerWithTemporaryPassword(CreateUserCommand command);
 
     TokenResponse login(LoginCommand command);
 

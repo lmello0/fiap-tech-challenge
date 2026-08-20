@@ -11,7 +11,13 @@ import com.fiap.techchallenge.auth.api.commands.RegisterWorkerCommand;
 import com.fiap.techchallenge.auth.api.commands.RequestEmailChangeCommand;
 import com.fiap.techchallenge.auth.api.commands.RequestPasswordResetCommand;
 import com.fiap.techchallenge.auth.api.commands.ResendEmailVerificationCommand;
+import com.fiap.techchallenge.auth.api.representation.TemporaryCredential;
 import com.fiap.techchallenge.auth.api.representation.TokenResponse;
+import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
+import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
+import org.springframework.security.crypto.keygen.StringKeyGenerator;
+
+import java.util.Base64;
 import com.fiap.techchallenge.auth.entities.UserAuth;
 import com.fiap.techchallenge.auth.enums.AuthProvider;
 import com.fiap.techchallenge.auth.exceptions.AccountDisabledException;
@@ -55,6 +61,32 @@ public class AuthServiceImpl implements AuthService {
     private final EmailChangeService emailChangeService;
     private final LoginRateLimitProperties rateLimitProperties;
 
+    /**
+     * Base64's alphabet has exactly 64 symbols, so each character of a random base64 string can
+     * index straight into a 64-word list — no separate random-number step needed, and the result
+     * reads aloud far more easily than a raw random string (e.g. "River-Comet-Otter-Willow-42").
+     * This never has to survive past the customer's first login, where {@code needPasswordChange}
+     * forces a real one, so a handful of words plus a two-digit suffix is plenty.
+     */
+    private static final String BASE64_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    private static final String[] PASSPHRASE_WORDS = {
+            "Apple", "River", "Comet", "Puzzle", "Otter", "Maple", "Cedar", "Falcon",
+            "Garden", "Harbor", "Island", "Jungle", "Kettle", "Lantern", "Meadow", "Nectar",
+            "Ocean", "Pebble", "Quartz", "Rocket", "Summit", "Timber", "Velvet", "Willow",
+            "Yonder", "Zephyr", "Amber", "Breeze", "Canyon", "Delta", "Ember", "Frost",
+            "Glacier", "Horizon", "Indigo", "Jasper", "Kite", "Lagoon", "Marble", "Nimbus",
+            "Orbit", "Prairie", "Quiver", "Ripple", "Sable", "Thunder", "Umber", "Violet",
+            "Walnut", "Xenon", "Yarrow", "Zenith", "Anchor", "Basil", "Coral", "Dune",
+            "Echo", "Fable", "Grove", "Haven", "Ivory", "Juniper", "Knoll", "Lumen"
+    };
+
+    private static final int PASSPHRASE_WORD_COUNT = 2;
+
+    private final StringKeyGenerator temporaryPassphraseGenerator =
+            new Base64StringKeyGenerator(Base64.getEncoder().withoutPadding(), 24);
+
     private String dummyHash;
 
     @PostConstruct
@@ -97,6 +129,26 @@ public class AuthServiceImpl implements AuthService {
             return user;
         } catch (DataIntegrityViolationException e) {
             log.warn("Worker registration conflict (race on a unique index)");
+            throw new RegistrationConflictException();
+        }
+    }
+
+    @Override
+    @Transactional
+    public TemporaryCredential registerCustomerWithTemporaryPassword(CreateUserCommand command) {
+        try {
+            UserInfo user = userService.createCustomer(command);
+
+            String rawPassword = generateTemporaryPassphrase();
+            userAuthRepository.save(UserAuth.localWithTemporaryPassword(
+                    user.id(), passwordEncoder.encode(rawPassword)));
+            emailVerificationService.issueEmailVerification(user.id(), user.email());
+
+            log.info("Staff-initiated customer registration succeeded userId={}", user.id());
+
+            return new TemporaryCredential(user, rawPassword);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Staff-initiated customer registration conflict (race on a unique index)");
             throw new RegistrationConflictException();
         }
     }
@@ -264,5 +316,21 @@ public class AuthServiceImpl implements AuthService {
     private UserPrincipal principalOf(UUID userId) {
         return userService.findPrincipalById(userId)
                 .orElseThrow(() -> new IllegalStateException("User vanished right after creation: " + userId));
+    }
+
+    private String generateTemporaryPassphrase() {
+        String raw = temporaryPassphraseGenerator.generateKey();
+
+        StringBuilder passphrase = new StringBuilder();
+        for (int i = 0; i < PASSPHRASE_WORD_COUNT; i++) {
+            int wordIndex = BASE64_ALPHABET.indexOf(raw.charAt(i));
+            passphrase.append(PASSPHRASE_WORDS[wordIndex]).append('-');
+        }
+
+        int suffix = (BASE64_ALPHABET.indexOf(raw.charAt(PASSPHRASE_WORD_COUNT)) * 64
+                + BASE64_ALPHABET.indexOf(raw.charAt(PASSPHRASE_WORD_COUNT + 1))) % 100;
+        passphrase.append(suffix);
+
+        return passphrase.toString();
     }
 }
