@@ -3,6 +3,7 @@ package com.fiap.techchallenge.auth.services;
 import com.fiap.techchallenge.auth.api.AuthService;
 import com.fiap.techchallenge.auth.api.commands.RegisterWorkerCommand;
 import com.fiap.techchallenge.auth.properties.BootstrapManagerProperties;
+import com.fiap.techchallenge.shared.logging.Masking;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
@@ -41,7 +42,7 @@ public class BootstrapManagerRunner implements ApplicationRunner {
         }
 
         if (userService.findByEmail(properties.email()).isPresent()) {
-            log.info("Bootstrap manager already exists, skipping. email={}", properties.email());
+            log.info("Bootstrap manager already exists, skipping. email={}", Masking.email(properties.email()));
             return;
         }
 

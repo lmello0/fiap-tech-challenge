@@ -2,6 +2,7 @@ package com.fiap.techchallenge.scheduling.services;
 
 import com.fiap.techchallenge.scheduling.api.events.PickupInvitationRequestedEvent;
 import com.fiap.techchallenge.scheduling.notifications.SchedulingEmails;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 import lombok.RequiredArgsConstructor;
@@ -26,19 +27,27 @@ class PickupInvitationRequestedListener {
 
     @ApplicationModuleListener
     void on(PickupInvitationRequestedEvent event) {
-        String rawToken = tokenService.issuePickupInvitationToken(
-                event.workOrderId(), event.customerId(), event.vehicleId());
+        try (LogContext.Scope ignored = LogContext.open(event.metadata().requestId())) {
+            LogContext.put("workOrderId", event.workOrderId());
+            LogContext.put("customerId", event.customerId());
 
-        String email = userService.findById(event.customerId())
-                .map(UserInfo::email)
-                .orElse(null);
+            String rawToken = tokenService.issuePickupInvitationToken(
+                    event.workOrderId(), event.customerId(), event.vehicleId());
 
-        if (email == null) {
-            log.warn("Cannot send pickup invitation, customer vanished workOrderId={} customerId={}",
-                    event.workOrderId(), event.customerId());
-            return;
+            String email = userService.findById(event.customerId())
+                    .map(UserInfo::email)
+                    .orElse(null);
+
+            if (email == null) {
+                LogContext.put("outcome", "customer_vanished");
+                log.warn("pickup_invitation_requested");
+                return;
+            }
+
+            emails.pickupInvitation(email, rawToken);
+
+            LogContext.put("outcome", "sent");
+            log.info("pickup_invitation_requested");
         }
-
-        emails.pickupInvitation(email, rawToken);
     }
 }

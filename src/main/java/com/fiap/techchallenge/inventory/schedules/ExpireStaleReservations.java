@@ -2,6 +2,7 @@ package com.fiap.techchallenge.inventory.schedules;
 
 import com.fiap.techchallenge.inventory.api.PartReservationService;
 import com.fiap.techchallenge.inventory.properties.InventoryProperties;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -9,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Releases reservations whose work order never started service. Inventory has no way to ask whether a
@@ -30,11 +32,15 @@ public class ExpireStaleReservations {
             lockAtMostFor = "PT10M"
     )
     protected void expire() {
-        Instant cutoff = Instant.now().minus(properties.reservationTtl());
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            Instant cutoff = Instant.now().minus(properties.reservationTtl());
 
-        int expired = reservationService.expireStaleReservations(cutoff);
+            int expired = reservationService.expireStaleReservations(cutoff);
 
-        log.info("Expired {} stale part reservation(s) held before {} (ttl={})",
-                expired, cutoff, properties.reservationTtl());
+            LogContext.put("job", "ExpireStaleReservations");
+            LogContext.put("expired", expired);
+            LogContext.put("cutoff", cutoff);
+            log.info("scheduled_job");
+        }
     }
 }

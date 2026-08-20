@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.shared.audit;
 
+import com.fiap.techchallenge.shared.logging.LogContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -39,7 +40,9 @@ public class ActorResolver {
                 .map(Object::toString)
                 .orElse(null);
 
-        return new EventMetadata(UUID.randomUUID(), Instant.now(), ActorType.USER, actorId, role, customerVisible);
+        return new EventMetadata(
+                UUID.randomUUID(), Instant.now(), ActorType.USER, actorId, role, customerVisible,
+                LogContext.requestId());
     }
 
     /** For a scheduled job or startup task with no authenticated request behind it. */
@@ -54,6 +57,8 @@ public class ActorResolver {
      * SecurityContextHolder} can see.
      */
     public EventMetadata forSelf(UUID actorId, boolean customerVisible) {
-        return new EventMetadata(UUID.randomUUID(), Instant.now(), ActorType.USER, actorId, "SELF", customerVisible);
+        return new EventMetadata(
+                UUID.randomUUID(), Instant.now(), ActorType.USER, actorId, "SELF", customerVisible,
+                LogContext.requestId());
     }
 }

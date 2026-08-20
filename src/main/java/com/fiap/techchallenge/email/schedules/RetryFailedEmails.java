@@ -2,6 +2,7 @@ package com.fiap.techchallenge.email.schedules;
 
 import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.email.properties.EmailProperties;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Resends emails whose delivery failed. Spring Modulith persists every publication but never
@@ -49,31 +51,49 @@ public class RetryFailedEmails {
      * the lock is held.
      */
     public void resubmitFailedEmails() {
-        Instant now = Instant.now();
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            Instant now = Instant.now();
+            Counts counts = new Counts();
 
-        failedEventPublications.resubmit(ResubmissionOptions.defaults()
-                .withFilter(publication -> isRetryableEmail(publication, now)));
+            failedEventPublications.resubmit(ResubmissionOptions.defaults()
+                    .withFilter(publication -> isRetryableEmail(publication, now, counts)));
+
+            LogContext.put("job", "RetryFailedEmails");
+            LogContext.put("resubmitted", counts.resubmitted);
+            LogContext.put("expired", counts.expired);
+            LogContext.put("attemptsExhausted", counts.attemptsExhausted);
+            log.info("scheduled_job");
+        }
     }
 
-    private boolean isRetryableEmail(EventPublication publication, Instant now) {
+    private boolean isRetryableEmail(EventPublication publication, Instant now, Counts counts) {
         if (!(publication.getEvent() instanceof EmailRequestedEvent email)) {
             return false;
         }
 
         if (email.isExpired(now)) {
-            log.warn("Abandoning expired email subject='{}' expiresAt={}", email.subject(), email.expiresAt());
+            counts.expired++;
+            // Terminal: unlike a resubmission, nothing ever gets its own canonical line for this
+            // email again, so its abandonment is worth one here.
+            log.warn("email_retry_abandoned subject='{}' reason=expired expiresAt={}", email.subject(), email.expiresAt());
             return false;
         }
 
         if (publication.getCompletionAttempts() >= properties.maxAttempts()) {
-            log.warn("Abandoning email subject='{}' after {} attempt(s)",
+            counts.attemptsExhausted++;
+            log.warn("email_retry_abandoned subject='{}' reason=attempts_exhausted attempts={}",
                     email.subject(), publication.getCompletionAttempts());
             return false;
         }
 
-        log.info("Resubmitting email subject='{}' attempt={}",
-                email.subject(), publication.getCompletionAttempts() + 1);
-
+        counts.resubmitted++;
         return true;
+    }
+
+    /** Per-run tallies for the one canonical line {@link #resubmitFailedEmails()} logs (ADR 0017). */
+    private static final class Counts {
+        int resubmitted;
+        int expired;
+        int attemptsExhausted;
     }
 }

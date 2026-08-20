@@ -5,9 +5,9 @@ import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
 import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.EmailChangeTokenRepository;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,6 @@ import java.util.UUID;
 /**
  * Orchestrates the email change flow (see ADR 0002 and ADR 0003).
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailChangeService {
@@ -66,7 +65,7 @@ public class EmailChangeService {
         userService.changeEmail(token.getUserId(), token.getNewEmail());
         refreshTokenService.revokeAllForUser(token.getUserId());
 
-        log.info("Email changed userId={}", token.getUserId());
+        LogContext.put("userId", token.getUserId());
     }
 
     private static String hash(String token) {

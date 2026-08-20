@@ -7,6 +7,7 @@ import com.fiap.techchallenge.scheduling.enums.AppointmentStatus;
 import com.fiap.techchallenge.scheduling.mappers.AppointmentMapper;
 import com.fiap.techchallenge.scheduling.repositories.AppointmentRepository;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Marks a SCHEDULED Appointment NO_SHOW once its slot end time has passed with no Check-in
@@ -40,21 +42,26 @@ public class MarkNoShows {
     )
     @Transactional
     protected void sweep() {
-        Instant cutoff = Instant.now().minus(Appointment.SLOT_DURATION);
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            Instant cutoff = Instant.now().minus(Appointment.SLOT_DURATION);
 
-        List<Appointment> overdue = repository.findByStatusAndSlotStartLessThan(AppointmentStatus.SCHEDULED, cutoff);
+            List<Appointment> overdue = repository.findByStatusAndSlotStartLessThan(AppointmentStatus.SCHEDULED, cutoff);
 
-        for (Appointment appointment : overdue) {
-            appointment.markNoShow();
-            repository.save(appointment);
+            for (Appointment appointment : overdue) {
+                appointment.markNoShow();
+                repository.save(appointment);
 
-            events.publishEvent(new AppointmentNoShowEvent(
-                    appointment.getId(),
-                    actorResolver.forSystem("MarkNoShows", true),
-                    new AppointmentSnapshot(mapper.toInfo(appointment))
-            ));
+                events.publishEvent(new AppointmentNoShowEvent(
+                        appointment.getId(),
+                        actorResolver.forSystem("MarkNoShows", true),
+                        new AppointmentSnapshot(mapper.toInfo(appointment))
+                ));
+            }
+
+            LogContext.put("job", "MarkNoShows");
+            LogContext.put("marked", overdue.size());
+            LogContext.put("cutoff", cutoff);
+            log.info("scheduled_job");
         }
-
-        log.info("Marked {} appointment(s) NO_SHOW (slot end before {})", overdue.size(), cutoff);
     }
 }

@@ -10,6 +10,7 @@ import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 import com.fiap.techchallenge.workorder.api.BudgetService;
@@ -208,29 +209,42 @@ public class BudgetServiceImpl implements BudgetService {
     /** Delivery-confirmation listener: only Budget-sent emails carry a correlation id we recognize. */
     @ApplicationModuleListener
     void on(EmailDeliveredEvent event) {
-        budgetRepository.findById(event.correlationId()).ifPresent(budget -> {
-            if (budget.getStatus() != BudgetStatus.WAITING_SEND) {
-                return;
-            }
+        try (LogContext.Scope ignored = LogContext.open(event.requestId())) {
+            budgetRepository.findById(event.correlationId()).ifPresent(budget -> {
+                LogContext.put("budgetId", budget.getId());
 
-            budget.setStatus(budgetStateMachine.transition(budget.getStatus(), BudgetStatus.SENT));
-            budget.setSentAt(Instant.now());
+                if (budget.getStatus() != BudgetStatus.WAITING_SEND) {
+                    LogContext.put("outcome", "ignored");
+                    log.info("budget_email_delivered");
+                    return;
+                }
 
-            WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
-            wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_APPROVAL));
-            workOrderRepository.save(wo);
+                budget.setStatus(budgetStateMachine.transition(budget.getStatus(), BudgetStatus.SENT));
+                budget.setSentAt(Instant.now());
 
-            events.publishEvent(new BudgetSentEvent(
-                    wo.getId(), budget.getId(), wo.getCustomerId(), budget.getGrandTotal(),
-                    actorResolver.forSystem("EmailDispatcher", true), snapshot(wo, budget)));
-        });
+                WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
+                wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.WAITING_APPROVAL));
+                workOrderRepository.save(wo);
+
+                events.publishEvent(new BudgetSentEvent(
+                        wo.getId(), budget.getId(), wo.getCustomerId(), budget.getGrandTotal(),
+                        actorResolver.forSystem("EmailDispatcher", true), snapshot(wo, budget)));
+
+                LogContext.put("outcome", "sent");
+                log.info("budget_email_delivered");
+            });
+        }
     }
 
     @ApplicationModuleListener
     void on(EmailDeliveryFailedEvent event) {
-        budgetRepository.findById(event.correlationId()).ifPresent(budget ->
-                log.warn("Budget {} email delivery failed, staying WAITING_SEND for resend: {}",
-                        budget.getId(), event.reason()));
+        try (LogContext.Scope ignored = LogContext.open(event.requestId())) {
+            budgetRepository.findById(event.correlationId()).ifPresent(budget -> {
+                LogContext.put("budgetId", budget.getId());
+                LogContext.put("reason", event.reason());
+                log.warn("budget_email_delivery_failed");
+            });
+        }
     }
 
     private void dispatchBudgetEmail(Budget budget) {

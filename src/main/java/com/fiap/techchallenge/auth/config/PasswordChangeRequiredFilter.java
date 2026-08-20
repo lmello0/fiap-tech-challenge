@@ -3,12 +3,12 @@ package com.fiap.techchallenge.auth.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.techchallenge.shared.exceptions.ProblemDetails;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -32,7 +32,6 @@ import java.net.URI;
  * can see it — the caller would get a bodyless 403 indistinguishable from an ordinary permission
  * failure. Writing the problem detail here is what gives a client a title it can branch on.
  */
-@Slf4j
 @RequiredArgsConstructor
 public class PasswordChangeRequiredFilter extends OncePerRequestFilter {
 
@@ -57,7 +56,7 @@ public class PasswordChangeRequiredFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.debug("Blocked request pending a password change: {} {}", request.getMethod(), request.getRequestURI());
+        LogContext.put("outcome", "password_change_required");
 
         ProblemDetail problem = ProblemDetails.of(
                 HttpStatus.FORBIDDEN,

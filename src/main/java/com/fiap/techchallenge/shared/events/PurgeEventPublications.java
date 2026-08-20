@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.shared.events;
 
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Keeps the {@code event_publication} table from growing without bound.
@@ -53,12 +55,16 @@ public class PurgeEventPublications {
             lockAtMostFor = "PT10M"
     )
     protected void purge() {
-        completedEventPublications.deletePublicationsOlderThan(properties.retention());
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            completedEventPublications.deletePublicationsOlderThan(properties.retention());
 
-        Instant cutoff = Instant.now().minus(properties.retention());
-        int abandoned = jdbcTemplate.update(DELETE_ABANDONED, Timestamp.from(cutoff));
+            Instant cutoff = Instant.now().minus(properties.retention());
+            int abandoned = jdbcTemplate.update(DELETE_ABANDONED, Timestamp.from(cutoff));
 
-        log.info("Purged completed event publications older than {} and {} abandoned publication(s)",
-                properties.retention(), abandoned);
+            LogContext.put("job", "PurgeEventPublications");
+            LogContext.put("abandoned", abandoned);
+            LogContext.put("retention", properties.retention());
+            log.info("scheduled_job");
+        }
     }
 }

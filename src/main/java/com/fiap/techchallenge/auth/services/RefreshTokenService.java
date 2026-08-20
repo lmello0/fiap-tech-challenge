@@ -4,6 +4,7 @@ import com.fiap.techchallenge.auth.entities.RefreshToken;
 import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
 import com.fiap.techchallenge.auth.properties.JwtProperties;
 import com.fiap.techchallenge.auth.repositories.RefreshTokenRepository;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
@@ -76,6 +77,9 @@ public class RefreshTokenService {
                 // copy: treat it as theft and kill every session for the user. This runs in its own
                 // transaction because the exception below rolls the surrounding one back.
                 requiresNewTx.executeWithoutResult(status -> repository.revokeAllForUser(userId, now));
+
+                LogContext.put("userId", userId);
+                LogContext.put("outcome", "refresh_token_reuse_detected");
                 log.error("SECURITY: refresh-token reuse detected; revoked all sessions for userId={}", userId);
 
                 throw new InvalidTokenException("Refresh token already used");
@@ -101,7 +105,7 @@ public class RefreshTokenService {
         );
 
         current.revoke(now, next.getId());
-        log.debug("Refresh token rotated for userId={}", current.getUserId());
+        LogContext.put("userId", current.getUserId());
 
         return new Rotation(current.getUserId(), newRaw);
     }
@@ -111,7 +115,7 @@ public class RefreshTokenService {
         repository.findByTokenHash(hash(rawToken)).ifPresent(token -> {
             if (!token.isRevoked()) {
                 token.revoke(Instant.now());
-                log.info("Refresh token revoked for userId={}", token.getUserId());
+                LogContext.put("userId", token.getUserId());
             }
         });
     }
@@ -119,13 +123,14 @@ public class RefreshTokenService {
     @Transactional
     public void revokeAllForUser(UUID userId) {
         int revoked = repository.revokeAllForUser(userId, Instant.now());
-        log.info("Revoked {} active refresh token(s) for userId={}", revoked, userId);
+        LogContext.put("userId", userId);
+        LogContext.put("revokedTokens", revoked);
     }
 
     @Transactional
     public void deleteAllForUser(UUID userId) {
         repository.deleteByUserId(userId);
-        log.info("Deleted all refresh tokens for userId={}", userId);
+        LogContext.put("userId", userId);
     }
 
     @Transactional

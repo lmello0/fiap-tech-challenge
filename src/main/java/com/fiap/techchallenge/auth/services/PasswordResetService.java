@@ -8,9 +8,9 @@ import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.PasswordResetTokenRepository;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +27,6 @@ import java.util.HexFormat;
 /**
  * Orchestrates the password reset flow (see ADR 0002 and ADR 0003).
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
@@ -58,8 +57,6 @@ public class PasswordResetService {
 
             authEmails.passwordReset(email, raw);
         });
-
-        log.info("Password reset requested");
     }
 
     @Transactional
@@ -78,7 +75,7 @@ public class PasswordResetService {
         token.markUsed(now);
         refreshTokenService.revokeAllForUser(token.getUserId());
 
-        log.info("Password reset completed userId={}", token.getUserId());
+        LogContext.put("userId", token.getUserId());
     }
 
     private static String hash(String token) {

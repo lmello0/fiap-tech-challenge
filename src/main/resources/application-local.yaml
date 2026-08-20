@@ -1,0 +1,12 @@
+# Overrides the JSON console format from application.yaml (ADR 0017) with a plain-text pattern —
+# one JSON object per line is right for a container's stdout, not for a terminal a developer is
+# reading directly. `%mdc` prints every LogContext.put field inline (requestId, outcome, and
+# whatever else the canonical line for that request/listener/job picked up) so nothing the JSON
+# format shows is lost, just reformatted to read left-to-right instead of as JSON.
+# Activate with `--spring.profiles.active=local` (or `SPRING_PROFILES_ACTIVE=local`).
+logging:
+  structured:
+    format:
+      console:
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m %mdc%n%wEx"

@@ -2,9 +2,11 @@ package com.fiap.techchallenge.workorder.services;
 
 import com.fiap.techchallenge.scheduling.api.events.PickupInvitationRequestedEvent;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.workorder.api.events.WorkOrderWaitingPickupEvent;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
  * creates points from {@code workorder} to {@code scheduling.api.events}, the same direction as the
  * Check-in coordination.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 class PickupInvitationTrigger {
@@ -24,13 +27,18 @@ class PickupInvitationTrigger {
 
     @ApplicationModuleListener
     void on(WorkOrderWaitingPickupEvent event) {
-        WorkOrderInfo workOrder = event.snapshot().workOrder();
+        try (LogContext.Scope ignored = LogContext.open(event.metadata().requestId())) {
+            WorkOrderInfo workOrder = event.snapshot().workOrder();
 
-        events.publishEvent(new PickupInvitationRequestedEvent(
-                workOrder.id(),
-                workOrder.customerId(),
-                workOrder.vehicleId(),
-                actorResolver.forSystem("WorkOrderWaitingPickup", true)
-        ));
+            events.publishEvent(new PickupInvitationRequestedEvent(
+                    workOrder.id(),
+                    workOrder.customerId(),
+                    workOrder.vehicleId(),
+                    actorResolver.forSystem("WorkOrderWaitingPickup", true)
+            ));
+
+            LogContext.put("workOrderId", workOrder.id());
+            log.info("pickup_invitation_triggered");
+        }
     }
 }

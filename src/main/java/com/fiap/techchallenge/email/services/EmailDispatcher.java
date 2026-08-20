@@ -6,6 +6,7 @@ import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.email.exceptions.EmailExpiredException;
 import com.fiap.techchallenge.email.properties.EmailProperties;
 import com.fiap.techchallenge.email.schedules.RetryFailedEmails;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,9 @@ import java.util.List;
  * leaves that row incomplete, and {@link RetryFailedEmails} picks it up on a later tick.
  *
  * <p>Recipient addresses are deliberately kept out of the logs, matching the auth services.
+ * {@code requestId} is reopened from the event under {@link LogContext} (ADR 0017), inherited from
+ * whatever originally published it, so this invocation's canonical line — and any further event this
+ * dispatch publishes — still logs under the request that asked for the email.
  */
 @Slf4j
 @Component
@@ -44,32 +48,51 @@ public class EmailDispatcher {
 
     @ApplicationModuleListener
     void on(EmailRequestedEvent event) throws Exception {
-        try {
-            if (event.isExpired(Instant.now())) {
-                log.warn("Dropping expired email subject='{}' expiresAt={} recipients={}",
-                        event.subject(), event.expiresAt(), event.to().size());
+        try (LogContext.Scope ignored = LogContext.open(event.requestId())) {
+            LogContext.put("subject", event.subject());
+            LogContext.put("recipients", event.to().size());
+            LogContext.put("multipart", event.isMultipart());
 
-                throw new EmailExpiredException("Email expired before delivery: " + event.subject());
+            try {
+                send(event);
+
+                LogContext.put("outcome", "sent");
+                log.info("email_dispatch");
+
+                if (event.correlationId() != null) {
+                    events.publishEvent(new EmailDeliveredEvent(event.correlationId()));
+                }
+            } catch (EmailExpiredException e) {
+                LogContext.put("outcome", "expired");
+                log.warn("email_dispatch");
+
+                publishFailure(event, e);
+                throw e;
+            } catch (Exception e) {
+                LogContext.put("outcome", "failed");
+                log.error("email_dispatch", e);
+
+                publishFailure(event, e);
+                throw e;
             }
+        }
+    }
 
-            if (event.html() == null || event.html().isBlank()) {
-                mailSender.send(plainMessage(event));
-            } else {
-                mailSender.send(mimeMessage(event));
-            }
+    private void send(EmailRequestedEvent event) throws Exception {
+        if (event.isExpired(Instant.now())) {
+            throw new EmailExpiredException("Email expired before delivery: " + event.subject());
+        }
 
-            log.info("Email sent subject='{}' recipients={} multipart={}",
-                    event.subject(), event.to().size(), event.isMultipart());
+        if (event.html() == null || event.html().isBlank()) {
+            mailSender.send(plainMessage(event));
+        } else {
+            mailSender.send(mimeMessage(event));
+        }
+    }
 
-            if (event.correlationId() != null) {
-                events.publishEvent(new EmailDeliveredEvent(event.correlationId()));
-            }
-        } catch (Exception e) {
-            if (event.correlationId() != null) {
-                events.publishEvent(new EmailDeliveryFailedEvent(event.correlationId(), e.getMessage()));
-            }
-
-            throw e;
+    private void publishFailure(EmailRequestedEvent event, Exception e) {
+        if (event.correlationId() != null) {
+            events.publishEvent(new EmailDeliveryFailedEvent(event.correlationId(), e.getMessage()));
         }
     }
 

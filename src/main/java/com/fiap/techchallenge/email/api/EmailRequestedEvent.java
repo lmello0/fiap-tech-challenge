@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.email.api;
 
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.Builder;
 
 import java.time.Instant;
@@ -15,6 +16,11 @@ import java.util.UUID;
  *
  * <p>{@code expiresAt} bounds how long the message is worth delivering — a password reset email is
  * pointless once its token has expired. {@code null} means the message never goes stale.
+ *
+ * <p>{@code requestId} (ADR 0017) defaults to whichever unit of work is open when this is built —
+ * a producing module's facade never needs to set it, and {@link com.fiap.techchallenge.email.services.EmailDispatcher}
+ * (a separate async listener invocation) reopens {@link LogContext} under it, so retries and
+ * post-restart redelivery still log under the request that originally asked for this email.
  */
 @Builder
 public record EmailRequestedEvent(
@@ -25,13 +31,15 @@ public record EmailRequestedEvent(
         String plainText,
         String html,
         Instant expiresAt,
-        UUID correlationId
+        UUID correlationId,
+        String requestId
 ) {
 
     public EmailRequestedEvent {
         to = copyOf(to);
         cc = copyOf(cc);
         bcc = copyOf(bcc);
+        requestId = requestId == null ? LogContext.requestId() : requestId;
 
         if (to.isEmpty()) {
             throw new IllegalArgumentException("An email needs at least one recipient");

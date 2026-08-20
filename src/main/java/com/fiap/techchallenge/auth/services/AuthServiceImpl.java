@@ -27,12 +27,12 @@ import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
 import com.fiap.techchallenge.auth.exceptions.RegistrationConflictException;
 import com.fiap.techchallenge.auth.properties.LoginRateLimitProperties;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
 import com.fiap.techchallenge.user.api.representation.UserPrincipal;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -103,11 +102,11 @@ public class AuthServiceImpl implements AuthService {
             userAuthRepository.save(UserAuth.local(user.id(), passwordEncoder.encode(command.rawPassword())));
             emailVerificationService.issueEmailVerification(user.id(), user.email());
 
-            log.info("Local registration succeeded userId={}", user.id());
+            LogContext.put("userId", user.id());
 
             return issueFor(principalOf(user.id()), false);
         } catch (DataIntegrityViolationException e) {
-            log.warn("Registration conflict (race on a unique index)");
+            LogContext.put("outcome", "registration_conflict");
             throw new RegistrationConflictException();
         }
     }
@@ -124,11 +123,11 @@ public class AuthServiceImpl implements AuthService {
                     user.id(), passwordEncoder.encode(command.rawPassword())));
             emailVerificationService.issueEmailVerification(user.id(), user.email());
 
-            log.info("Worker registration succeeded userId={}", user.id());
+            LogContext.put("userId", user.id());
 
             return user;
         } catch (DataIntegrityViolationException e) {
-            log.warn("Worker registration conflict (race on a unique index)");
+            LogContext.put("outcome", "registration_conflict");
             throw new RegistrationConflictException();
         }
     }
@@ -144,11 +143,11 @@ public class AuthServiceImpl implements AuthService {
                     user.id(), passwordEncoder.encode(rawPassword)));
             emailVerificationService.issueEmailVerification(user.id(), user.email());
 
-            log.info("Staff-initiated customer registration succeeded userId={}", user.id());
+            LogContext.put("userId", user.id());
 
             return new TemporaryCredential(user, rawPassword);
         } catch (DataIntegrityViolationException e) {
-            log.warn("Staff-initiated customer registration conflict (race on a unique index)");
+            LogContext.put("outcome", "registration_conflict");
             throw new RegistrationConflictException();
         }
     }
@@ -166,7 +165,8 @@ public class AuthServiceImpl implements AuthService {
 
         Instant now = Instant.now();
         if (credential.isPresent() && credential.get().isLocked(now)) {
-            log.warn("Login blocked (account locked) userId={}", user.id());
+            LogContext.put("userId", user.id());
+            LogContext.put("outcome", "account_locked");
             throw new AccountLockedException("Account is temporarily locked due to too many failed attempts");
         }
 
@@ -178,19 +178,20 @@ public class AuthServiceImpl implements AuthService {
 
         if (user == null || !passwordOk) {
             credential.ifPresent(c -> c.registerFailedAttempt(now, rateLimitProperties.maxAttempts(), rateLimitProperties.lockDuration()));
-            log.warn("Login failed (invalid credentials)");
+            LogContext.put("outcome", "invalid_credentials");
             throw new BadCredentialsException("Invalid credentials");
         }
 
         if (!user.emailVerified()) {
-            log.warn("Login blocked (email not verified) userId={}", user.id());
+            LogContext.put("userId", user.id());
+            LogContext.put("outcome", "email_not_verified");
             throw new EmailNotVerifiedException("Email address has not been verified yet");
         }
 
         ensureActive(user);
         credential.ifPresent(UserAuth::resetFailedAttempts);
 
-        log.info("Login succeeded userId={}", user.id());
+        LogContext.put("userId", user.id());
         return issueFor(user, credential.map(UserAuth::isNeedPasswordChange).orElse(false));
     }
 
@@ -228,7 +229,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logoutEverywhere(UUID userId) {
         refreshTokenService.revokeAllForUser(userId);
-        log.info("Logged out everywhere userId={}", userId);
+        LogContext.put("userId", userId);
     }
 
     @Override
@@ -243,14 +244,15 @@ public class AuthServiceImpl implements AuthService {
                 && passwordEncoder.matches(command.currentPassword(), credential.getPasswordHash());
 
         if (!currentPasswordOk) {
-            log.warn("Password change rejected (invalid current password) userId={}", userId);
+            LogContext.put("userId", userId);
+            LogContext.put("outcome", "invalid_current_password");
             throw new BadCredentialsException("Invalid credentials");
         }
 
         credential.changePassword(passwordEncoder.encode(command.newPassword()));
         refreshTokenService.revokeAllForUser(userId);
 
-        log.info("Password changed userId={}", userId);
+        LogContext.put("userId", userId);
     }
 
     @Override
@@ -293,7 +295,8 @@ public class AuthServiceImpl implements AuthService {
 
     private void ensureActive(UserPrincipal user) {
         if (!user.enabled()) {
-            log.warn("Login blocked for disabled account userId={}", user.id());
+            LogContext.put("userId", user.id());
+            LogContext.put("outcome", "account_disabled");
             throw new AccountDisabledException("Account is disabled");
         }
     }

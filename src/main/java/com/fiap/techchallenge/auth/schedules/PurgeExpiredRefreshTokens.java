@@ -2,6 +2,7 @@ package com.fiap.techchallenge.auth.schedules;
 
 import com.fiap.techchallenge.auth.properties.JwtProperties;
 import com.fiap.techchallenge.auth.services.RefreshTokenService;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 
 @Slf4j
@@ -29,11 +31,16 @@ public class PurgeExpiredRefreshTokens {
             lockAtMostFor = "PT10M"
     )
     protected void purge() {
-        Instant cutoff = Instant.now().minus(RETENTION_AFTER_EXPIRY);
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            Instant cutoff = Instant.now().minus(RETENTION_AFTER_EXPIRY);
 
-        int deleted = refreshTokenService.purgeExpiredBefore(cutoff);
+            int deleted = refreshTokenService.purgeExpiredBefore(cutoff);
 
-        log.info("Purged {} refresh token(s) expired before {} (retention={} past a {} TTL)",
-                deleted, cutoff, RETENTION_AFTER_EXPIRY, properties.refreshTokenTTL());
+            LogContext.put("job", "PurgeExpiredRefreshTokens");
+            LogContext.put("deleted", deleted);
+            LogContext.put("cutoff", cutoff);
+            LogContext.put("retention", RETENTION_AFTER_EXPIRY);
+            log.info("scheduled_job");
+        }
     }
 }

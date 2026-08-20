@@ -1,6 +1,7 @@
 package com.fiap.techchallenge.user.services;
 
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
@@ -26,7 +27,6 @@ import com.fiap.techchallenge.user.repositories.UserRepository;
 import com.fiap.techchallenge.user.repositories.WorkerRepository;
 import com.fiap.techchallenge.user.repositories.specifications.UserSpecifications;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +38,6 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -56,7 +55,7 @@ public class UserServiceImpl implements UserService {
         user.becomeCustomer();
 
         User saved = userRepository.save(user);
-        log.info("Customer created userId={}", saved.getId());
+        LogContext.put("userId", saved.getId());
 
         UserInfo info = userMapper.toInfo(saved);
         events.publishEvent(new CustomerRegisteredEvent(saved.getId(), actorResolver.forSelf(saved.getId(), true), info));
@@ -83,7 +82,8 @@ public class UserServiceImpl implements UserService {
                 .build());
 
         User saved = userRepository.save(user);
-        log.info("Worker created userId={} role={}", saved.getId(), command.role());
+        LogContext.put("userId", saved.getId());
+        LogContext.put("role", command.role());
 
         UserInfo info = userMapper.toInfo(saved);
         events.publishEvent(new WorkerRegisteredEvent(
@@ -103,7 +103,8 @@ public class UserServiceImpl implements UserService {
         }
 
         user.getWorker().terminate(on);
-        log.info("Terminated worker userId={} on={}", userId, on);
+        LogContext.put("userId", userId);
+        LogContext.put("terminatedOn", on);
 
         events.publishEvent(new WorkerTerminatedEvent(
                 userId, on, actorResolver.forCurrentUser(false), userMapper.toInfo(user)));
@@ -137,7 +138,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User saved = userRepository.save(user);
-        log.info("Profile updated userId={}", userId);
+        LogContext.put("userId", userId);
 
         UserInfo info = userMapper.toInfo(saved);
         events.publishEvent(new UserProfileUpdatedEvent(userId, actorResolver.forCurrentUser(true), info));
@@ -156,7 +157,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.getCustomer().deactivate();
-        log.info("Customer deactivated userId={}", userId);
+        LogContext.put("userId", userId);
 
         events.publishEvent(new CustomerDeactivatedEvent(userId, actorResolver.forCurrentUser(true), userMapper.toInfo(user)));
     }
@@ -172,7 +173,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.getCustomer().reactivate();
-        log.info("Customer reactivated userId={}", userId);
+        LogContext.put("userId", userId);
 
         events.publishEvent(new CustomerReactivatedEvent(userId, actorResolver.forCurrentUser(true), userMapper.toInfo(user)));
     }
@@ -184,7 +185,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
         user.verifyEmail();
-        log.info("Email verified userId={}", userId);
+        LogContext.put("userId", userId);
 
         events.publishEvent(new UserEmailVerifiedEvent(userId, actorResolver.forSelf(userId, true), userMapper.toInfo(user)));
     }
@@ -200,7 +201,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.changeEmail(newEmail);
-        log.info("Email changed userId={}", userId);
+        LogContext.put("userId", userId);
 
         events.publishEvent(new UserEmailChangedEvent(userId, actorResolver.forSelf(userId, true), userMapper.toInfo(user)));
     }

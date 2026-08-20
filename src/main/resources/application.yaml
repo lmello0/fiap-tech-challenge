@@ -44,6 +44,14 @@ spring:
         max-page-size: 100
         default-page-size: 20
 
+# One JSON object per log line (ADR 0017), built into Boot's logging system since 3.4 — no extra
+# encoder dependency needed. `context.include` (on by default) is what folds every LogContext.put
+# field into the line, since those only ever land in MDC.
+logging:
+  structured:
+    format:
+      console: logstash
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

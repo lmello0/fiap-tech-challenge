@@ -5,9 +5,9 @@ import com.fiap.techchallenge.auth.exceptions.InvalidTokenException;
 import com.fiap.techchallenge.auth.notifications.AuthEmails;
 import com.fiap.techchallenge.auth.properties.VerificationProperties;
 import com.fiap.techchallenge.auth.repositories.EmailVerificationTokenRepository;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,6 @@ import java.util.UUID;
 /**
  * Orchestrates the registration email verification flow (see ADR 0002 and ADR 0003).
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailVerificationService {
@@ -57,8 +56,6 @@ public class EmailVerificationService {
         userService.findByEmail(email)
                 .filter(user -> !user.emailVerified())
                 .ifPresent(user -> issueEmailVerification(user.id(), email));
-
-        log.info("Email verification resend requested");
     }
 
     @Transactional
@@ -72,7 +69,7 @@ public class EmailVerificationService {
         token.markUsed(now);
         userService.markEmailVerified(token.getUserId());
 
-        log.info("Email verified userId={}", token.getUserId());
+        LogContext.put("userId", token.getUserId());
     }
 
     private static String hash(String token) {

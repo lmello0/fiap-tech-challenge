@@ -4,6 +4,7 @@ import com.fiap.techchallenge.inventory.entities.Part;
 import com.fiap.techchallenge.inventory.entities.ReorderRule;
 import com.fiap.techchallenge.inventory.repositories.ReorderRuleRepository;
 import com.fiap.techchallenge.inventory.services.ReorderRuleEvaluator;
+import com.fiap.techchallenge.shared.logging.LogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -34,9 +35,13 @@ public class ReorderSweep {
             lockAtMostFor = "PT10M"
     )
     protected void sweep() {
-        int evaluated = runSweep();
+        try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
+            int evaluated = runSweep();
 
-        log.info("Reorder sweep evaluated {} rule(s)", evaluated);
+            LogContext.put("job", "ReorderSweep");
+            LogContext.put("evaluated", evaluated);
+            log.info("scheduled_job");
+        }
     }
 
     public int runSweep() {
