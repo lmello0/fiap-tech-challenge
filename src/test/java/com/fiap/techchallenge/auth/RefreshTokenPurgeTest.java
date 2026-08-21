@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,8 +71,35 @@ class RefreshTokenPurgeTest {
                 "Ana",
                 "Souza",
                 DocumentType.CPF,
-                unique.replaceAll("\\D", "0").substring(0, 11),
+                uniqueDocument(),
                 List.of(new RegisterPhoneNumberCommand(PhoneType.MOBILE, "11999999999", true))
         )).id();
+    }
+
+    /** DocumentValidator rejects bad check digits, so the digits have to be computed, not random. */
+    private static String uniqueDocument() {
+        int[] digits = new int[11];
+
+        for (int i = 0; i < 9; i++) {
+            digits[i] = ThreadLocalRandom.current().nextInt(10);
+        }
+
+        for (int position = 9; position < 11; position++) {
+            int sum = 0;
+
+            for (int i = 0; i < position; i++) {
+                sum += digits[i] * (position + 1 - i);
+            }
+
+            int remainder = (sum * 10) % 11;
+            digits[position] = remainder == 10 ? 0 : remainder;
+        }
+
+        StringBuilder cpf = new StringBuilder(11);
+        for (int digit : digits) {
+            cpf.append(digit);
+        }
+
+        return cpf.toString();
     }
 }
