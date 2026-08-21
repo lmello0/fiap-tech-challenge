@@ -165,6 +165,20 @@ class VehicleControllerTest {
     }
 
     @Test
+    void aCustomerCannotGetAnotherCustomersVehicle() throws Exception {
+        Fixture owner = registerCustomer();
+        Fixture other = registerCustomer();
+
+        UUID vehicleId = createVehicle(owner, null, "PRV0001");
+
+        // 404, not 403 -- same masking as update/deactivate: existence of another customer's
+        // vehicle isn't revealed to a non-owner.
+        mvc.perform(get("/vehicles/{id}", vehicleId)
+                        .header("Authorization", "Bearer " + other.accessToken()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void aCustomerCanUpdateAndDeleteTheirOwnVehicle() throws Exception {
         Fixture owner = registerCustomer();
         UUID vehicleId = createVehicle(owner, null, "OWN0001");
