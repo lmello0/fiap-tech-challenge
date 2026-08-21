@@ -10,17 +10,13 @@ import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.events.WorkOrderAggregate;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
-import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -29,40 +25,37 @@ import java.util.UUID;
 /**
  * Staff-facing work order endpoints. CUSTOMER has no access here at all — see
  * {@link CustomerWorkOrderController} for the narrow customer-scoped read and approve/refuse actions.
+ * Full endpoint documentation lives on {@link WorkOrderControllerSwaggerDoc}.
  */
 @RestController
-@RequestMapping("work-orders")
 @RequiredArgsConstructor
-public class WorkOrderController {
+public class WorkOrderController implements WorkOrderControllerSwaggerDoc {
 
     private static final String STAFF = "hasAnyRole('ATTENDANT', 'MECHANIC', 'MANAGER')";
 
     private final WorkOrderService service;
     private final HistoryQueryService historyQueryService;
 
-    @GetMapping
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<PageResponse<WorkOrderInfo>> getAll(
-            @PageableDefault Pageable pageable,
-            @Valid WorkOrderFilterQuery filter
-    ) {
+    public ResponseEntity<PageResponse<WorkOrderInfo>> getAll(Pageable pageable, WorkOrderFilterQuery filter) {
         Page<WorkOrderInfo> page = service
                 .getAllWorkOrders(filter, pageable);
 
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    @GetMapping("/{id}")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<WorkOrderInfo> getById(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> getById(UUID id) {
         WorkOrderInfo wo = service.getWorkOrderById(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping
+    @Override
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> create(@Valid @RequestBody CreateWorkOrderCommand woCommand) {
+    public ResponseEntity<WorkOrderInfo> create(CreateWorkOrderCommand woCommand) {
         WorkOrderInfo wo = service.create(woCommand);
 
         URI location = ServletUriComponentsBuilder
@@ -76,101 +69,89 @@ public class WorkOrderController {
                 .body(wo);
     }
 
-    @PostMapping("/{id}/diagnostics/request")
+    @Override
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> requestDiagnostics(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> requestDiagnostics(UUID id) {
         WorkOrderInfo wo = service.requestDiagnostics(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/diagnostics/start")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> startDiagnostics(
-            @PathVariable UUID id,
-            @Valid @RequestBody StartDiagnosticsCommand command
-    ) {
+    public ResponseEntity<WorkOrderInfo> startDiagnostics(UUID id, StartDiagnosticsCommand command) {
         WorkOrderInfo wo = service.startDiagnostics(id, command);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/diagnostics/finish")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> finishDiagnostics(
-            @PathVariable UUID id,
-            @Valid @RequestBody FinishDiagnosticsCommand command
-    ) {
+    public ResponseEntity<WorkOrderInfo> finishDiagnostics(UUID id, FinishDiagnosticsCommand command) {
         WorkOrderInfo wo = service.finishDiagnostics(id, command);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/service/start")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> start(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> start(UUID id) {
         WorkOrderInfo wo = service.startService(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/service/finish")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> finish(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> finish(UUID id) {
         WorkOrderInfo wo = service.finish(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/lines/{lineId}/start")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> startLine(@PathVariable UUID id, @PathVariable UUID lineId) {
+    public ResponseEntity<WorkOrderInfo> startLine(UUID id, UUID lineId) {
         WorkOrderInfo wo = service.startLine(id, lineId);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/lines/{lineId}/finish")
+    @Override
     @PreAuthorize("hasAnyRole('MECHANIC', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> finishLine(@PathVariable UUID id, @PathVariable UUID lineId) {
+    public ResponseEntity<WorkOrderInfo> finishLine(UUID id, UUID lineId) {
         WorkOrderInfo wo = service.finishLine(id, lineId);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/pickup-ready")
+    @Override
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> pickupReady(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> pickupReady(UUID id) {
         WorkOrderInfo wo = service.waitingPickup(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    @PostMapping("/{id}/delivery")
+    @Override
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
-    public ResponseEntity<WorkOrderInfo> delivery(@PathVariable UUID id) {
+    public ResponseEntity<WorkOrderInfo> delivery(UUID id) {
         WorkOrderInfo wo = service.deliver(id);
 
         return ResponseEntity.ok(wo);
     }
 
-    /** The Timeline behind the work orders screen's history button — every recorded milestone,
-     * each carrying enough to open its own Snapshot via {@link #historyEntry}. */
-    @GetMapping("/{id}/history")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<PageResponse<HistoryEntryInfo>> history(
-            @PathVariable UUID id,
-            @PageableDefault Pageable pageable
-    ) {
+    public ResponseEntity<PageResponse<HistoryEntryInfo>> history(UUID id, Pageable pageable) {
         Page<HistoryEntryInfo> page = historyQueryService.timeline(WorkOrderAggregate.TYPE, id, pageable);
 
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    /** The work order's state at the moment one Timeline entry was recorded. */
-    @GetMapping("/{id}/history/{entryId}")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<HistorySnapshotInfo> historyEntry(@PathVariable UUID id, @PathVariable UUID entryId) {
+    public ResponseEntity<HistorySnapshotInfo> historyEntry(UUID id, UUID entryId) {
         return historyQueryService
                 .snapshot(entryId, WorkOrderAggregate.TYPE, id)
                 .map(ResponseEntity::ok)

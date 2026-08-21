@@ -6,46 +6,41 @@ import com.fiap.techchallenge.inventory.api.commands.ReceivePurchaseOrderCommand
 import com.fiap.techchallenge.inventory.api.queries.PurchaseOrderFilterQuery;
 import com.fiap.techchallenge.inventory.api.representation.PurchaseOrderInfo;
 import com.fiap.techchallenge.shared.responses.PageResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.UUID;
 
+/** Full endpoint documentation lives on {@link PurchaseOrderControllerSwaggerDoc}. */
 @RestController
-@RequestMapping("purchase-orders")
 @RequiredArgsConstructor
-public class PurchaseOrderController {
+public class PurchaseOrderController implements PurchaseOrderControllerSwaggerDoc {
 
     private final PurchaseOrderService purchaseOrderService;
 
-    @GetMapping
+    @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PageResponse<PurchaseOrderInfo>> getAll(
-            Pageable pageable,
-            PurchaseOrderFilterQuery filter
-    ) {
+    public ResponseEntity<PageResponse<PurchaseOrderInfo>> getAll(Pageable pageable, PurchaseOrderFilterQuery filter) {
         Page<PurchaseOrderInfo> page = purchaseOrderService.listPurchaseOrders(filter, pageable);
 
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    @GetMapping("/{id}")
+    @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PurchaseOrderInfo> getById(@PathVariable UUID id) {
+    public ResponseEntity<PurchaseOrderInfo> getById(UUID id) {
         return ResponseEntity.ok(purchaseOrderService.getById(id));
     }
 
-    @PostMapping
+    @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PurchaseOrderInfo> place(@Valid @RequestBody PlacePurchaseOrderCommand command) {
+    public ResponseEntity<PurchaseOrderInfo> place(PlacePurchaseOrderCommand command) {
         PurchaseOrderInfo po = purchaseOrderService.place(command);
 
         URI location = ServletUriComponentsBuilder
@@ -57,18 +52,15 @@ public class PurchaseOrderController {
         return ResponseEntity.created(location).body(po);
     }
 
-    @PostMapping("/{id}/receipts")
+    @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PurchaseOrderInfo> receive(
-            @PathVariable UUID id,
-            @Valid @RequestBody ReceivePurchaseOrderCommand command
-    ) {
+    public ResponseEntity<PurchaseOrderInfo> receive(UUID id, ReceivePurchaseOrderCommand command) {
         return ResponseEntity.ok(purchaseOrderService.receive(id, command));
     }
 
-    @PostMapping("/{id}/cancellation")
+    @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PurchaseOrderInfo> cancel(@PathVariable UUID id) {
+    public ResponseEntity<PurchaseOrderInfo> cancel(UUID id) {
         return ResponseEntity.ok(purchaseOrderService.cancel(id));
     }
 }

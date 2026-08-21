@@ -7,12 +7,8 @@ import com.fiap.techchallenge.shared.responses.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -21,35 +17,27 @@ import java.util.UUID;
  * Generic staff read surface over any aggregate's Timeline — for a customer-scoped, ownership-checked
  * read of one Work Order's history, see {@code CustomerWorkOrderController} instead, which enforces
  * ownership before ever calling {@link HistoryQueryService} (History has no notion of who owns what).
+ * Full endpoint documentation lives on {@link HistoryControllerSwaggerDoc}.
  */
 @RestController
-@RequestMapping("history/{aggregateType}/{aggregateId}")
 @RequiredArgsConstructor
-public class HistoryController {
+public class HistoryController implements HistoryControllerSwaggerDoc {
 
     private static final String STAFF = "hasAnyRole('ATTENDANT', 'MECHANIC', 'MANAGER', 'STOCKIST')";
 
     private final HistoryQueryService historyQueryService;
 
-    @GetMapping
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<PageResponse<HistoryEntryInfo>> timeline(
-            @PathVariable String aggregateType,
-            @PathVariable UUID aggregateId,
-            @PageableDefault Pageable pageable
-    ) {
+    public ResponseEntity<PageResponse<HistoryEntryInfo>> timeline(String aggregateType, UUID aggregateId, Pageable pageable) {
         Page<HistoryEntryInfo> page = historyQueryService.timeline(aggregateType, aggregateId, pageable);
 
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    @GetMapping("/entries/{entryId}")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<HistorySnapshotInfo> snapshot(
-            @PathVariable String aggregateType,
-            @PathVariable UUID aggregateId,
-            @PathVariable UUID entryId
-    ) {
+    public ResponseEntity<HistorySnapshotInfo> snapshot(String aggregateType, UUID aggregateId, UUID entryId) {
         return historyQueryService
                 .snapshot(entryId, aggregateType, aggregateId)
                 .map(ResponseEntity::ok)

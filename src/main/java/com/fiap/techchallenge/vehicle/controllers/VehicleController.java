@@ -7,7 +7,6 @@ import com.fiap.techchallenge.vehicle.api.commands.CreateVehicleCommand;
 import com.fiap.techchallenge.vehicle.api.commands.UpdateVehicleCommand;
 import com.fiap.techchallenge.vehicle.api.queries.VehicleFilterQuery;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -15,20 +14,20 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.UUID;
 
+/** Full endpoint documentation lives on {@link VehicleControllerSwaggerDoc}. */
 @RestController
-@RequestMapping("vehicles")
 @RequiredArgsConstructor
-public class VehicleController {
+public class VehicleController implements VehicleControllerSwaggerDoc {
 
     private final VehicleService vehicleService;
 
-    @GetMapping
+    @Override
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
     public ResponseEntity<PageResponse<VehicleInfo>> getAllVehicles(
             VehicleFilterQuery filter,
@@ -42,21 +41,18 @@ public class VehicleController {
         return ResponseEntity.ok(PageResponse.from(vehicleService.listVehicles(effectiveFilter, pageable)));
     }
 
-    @GetMapping("/{id}")
+    @Override
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
-    public ResponseEntity<VehicleInfo> getById(@PathVariable UUID id, Authentication authentication) {
+    public ResponseEntity<VehicleInfo> getById(UUID id, Authentication authentication) {
         VehicleInfo vehicle = vehicleService.getById(id);
         requireOwnershipOrStaff(vehicle, authentication);
 
         return ResponseEntity.ok(vehicle);
     }
 
-    @PostMapping
+    @Override
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
-    public ResponseEntity<VehicleInfo> create(
-            @Valid @RequestBody CreateVehicleCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<VehicleInfo> create(CreateVehicleCommand command, Authentication authentication) {
         CreateVehicleCommand effectiveCommand = isStaff(authentication)
                 ? requireCustomerId(command)
                 : command.withCustomerId(UUID.fromString(authentication.getName()));
@@ -72,21 +68,17 @@ public class VehicleController {
         return ResponseEntity.created(location).body(vehicle);
     }
 
-    @PatchMapping("/{id}")
+    @Override
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
-    public ResponseEntity<VehicleInfo> update(
-            @PathVariable UUID id,
-            @Valid @RequestBody UpdateVehicleCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<VehicleInfo> update(UUID id, UpdateVehicleCommand command, Authentication authentication) {
         requireOwnershipOrStaff(vehicleService.getById(id), authentication);
 
         return ResponseEntity.ok(vehicleService.update(id, command));
     }
 
-    @DeleteMapping("/{id}")
+    @Override
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
-    public ResponseEntity<Void> deactivate(@PathVariable UUID id, Authentication authentication) {
+    public ResponseEntity<Void> deactivate(UUID id, Authentication authentication) {
         requireOwnershipOrStaff(vehicleService.getById(id), authentication);
         vehicleService.deactivate(id);
 

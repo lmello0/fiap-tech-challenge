@@ -5,45 +5,43 @@ import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.UpdateUserProfileCommand;
 import com.fiap.techchallenge.user.api.queries.UserFilterQuery;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
+/** Full endpoint documentation lives on {@link WorkerControllerSwaggerDoc}. */
 @RestController
-@RequestMapping("workers")
 @RequiredArgsConstructor
-public class WorkerController {
+public class WorkerController implements WorkerControllerSwaggerDoc {
 
     private final UserService service;
 
-    @GetMapping
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<PageResponse<UserInfo>> list(UserFilterQuery filter, Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(service.listWorkers(filter, pageable)));
     }
 
-    @GetMapping("/{id}")
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<UserInfo> getById(@PathVariable UUID id) {
+    public ResponseEntity<UserInfo> getById(UUID id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @PatchMapping("/{id}")
+    @Override
     @PreAuthorize("#id.toString() == authentication.name")
-    public ResponseEntity<UserInfo> update(@PathVariable UUID id, @Valid @RequestBody UpdateUserProfileCommand command) {
+    public ResponseEntity<UserInfo> update(UUID id, UpdateUserProfileCommand command) {
         return ResponseEntity.ok(service.updateProfile(id, command));
     }
 
-    @DeleteMapping("/{id}")
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<Void> terminate(@PathVariable UUID id) {
+    public ResponseEntity<Void> terminate(UUID id) {
         service.terminateWorker(id, LocalDate.now());
 
         return ResponseEntity.noContent().build();

@@ -5,60 +5,53 @@ import com.fiap.techchallenge.scheduling.api.commands.CreateClosureCommand;
 import com.fiap.techchallenge.scheduling.api.commands.UpdateSchedulingSettingsCommand;
 import com.fiap.techchallenge.scheduling.api.representation.ClosureInfo;
 import com.fiap.techchallenge.scheduling.api.representation.SchedulingSettingsInfo;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Shop-wide scheduling settings and closure days. Full endpoint documentation lives on
+ * {@link SchedulingSettingsControllerSwaggerDoc}.
+ */
 @RestController
-@RequestMapping("scheduling")
 @RequiredArgsConstructor
-public class SchedulingSettingsController {
+public class SchedulingSettingsController implements SchedulingSettingsControllerSwaggerDoc {
 
     private static final String STAFF = "hasAnyRole('ATTENDANT', 'MANAGER')";
 
     private final SchedulingSettingsService service;
 
-    @GetMapping("/settings")
+    @Override
     @PreAuthorize(STAFF)
     public ResponseEntity<SchedulingSettingsInfo> getSettings() {
         return ResponseEntity.ok(service.getSettings());
     }
 
-    @PutMapping("/settings")
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<SchedulingSettingsInfo> updateSettings(
-            @Valid @RequestBody UpdateSchedulingSettingsCommand command
-    ) {
+    public ResponseEntity<SchedulingSettingsInfo> updateSettings(UpdateSchedulingSettingsCommand command) {
         return ResponseEntity.ok(service.updateSettings(command));
     }
 
-    @GetMapping("/closures")
+    @Override
     @PreAuthorize(STAFF)
     public ResponseEntity<List<ClosureInfo>> listClosures() {
         return ResponseEntity.ok(service.listClosures());
     }
 
-    @PostMapping("/closures")
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<ClosureInfo> createClosure(@Valid @RequestBody CreateClosureCommand command) {
+    public ResponseEntity<ClosureInfo> createClosure(CreateClosureCommand command) {
         return ResponseEntity.ok(service.createClosure(command));
     }
 
-    @DeleteMapping("/closures/{date}")
+    @Override
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<Void> deleteClosure(@PathVariable LocalDate date) {
+    public ResponseEntity<Void> deleteClosure(LocalDate date) {
         service.deleteClosure(date);
         return ResponseEntity.noContent().build();
     }

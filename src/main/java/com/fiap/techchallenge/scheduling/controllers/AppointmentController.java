@@ -17,20 +17,12 @@ import com.fiap.techchallenge.scheduling.api.representation.AppointmentInfo;
 import com.fiap.techchallenge.scheduling.api.representation.GuestConversionResult;
 import com.fiap.techchallenge.scheduling.enums.AppointmentType;
 import com.fiap.techchallenge.shared.responses.PageResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -40,150 +32,122 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Drop-off/pickup scheduling endpoints — staff, customer, and public guest-token flows. Full
+ * endpoint documentation lives on {@link AppointmentControllerSwaggerDoc}.
+ */
 @RestController
-@RequestMapping("appointments")
 @RequiredArgsConstructor
-public class AppointmentController {
+public class AppointmentController implements AppointmentControllerSwaggerDoc {
 
     private static final String STAFF = "hasAnyRole('ATTENDANT', 'MANAGER')";
 
     private final AppointmentService service;
 
-    @GetMapping
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<PageResponse<AppointmentInfo>> getAll(
-            @PageableDefault Pageable pageable,
-            @Valid AppointmentFilterQuery filter
-    ) {
+    public ResponseEntity<PageResponse<AppointmentInfo>> getAll(Pageable pageable, AppointmentFilterQuery filter) {
         Page<AppointmentInfo> page = service.list(filter, pageable);
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    @GetMapping("/{id}")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<AppointmentInfo> getById(@PathVariable UUID id) {
+    public ResponseEntity<AppointmentInfo> getById(UUID id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @GetMapping("/availability")
-    public ResponseEntity<List<Instant>> availability(
-            @RequestParam AppointmentType type,
-            @RequestParam LocalDate date
-    ) {
+    @Override
+    public ResponseEntity<List<Instant>> availability(AppointmentType type, LocalDate date) {
         return ResponseEntity.ok(service.availableSlots(type, date));
     }
 
-    @PostMapping("/dropoff/guest")
-    public ResponseEntity<AppointmentInfo> bookGuestDropoff(@Valid @RequestBody BookGuestDropoffCommand command) {
+    @Override
+    public ResponseEntity<AppointmentInfo> bookGuestDropoff(BookGuestDropoffCommand command) {
         AppointmentInfo appointment = service.bookGuestDropoff(command);
         return ResponseEntity.created(locationOf(appointment.id())).body(appointment);
     }
 
-    @PostMapping("/dropoff/customer")
+    @Override
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<AppointmentInfo> bookCustomerDropoff(
-            @Valid @RequestBody BookCustomerDropoffCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<AppointmentInfo> bookCustomerDropoff(BookCustomerDropoffCommand command, Authentication authentication) {
         AppointmentInfo appointment = service.bookCustomerDropoff(currentUserId(authentication), command);
         return ResponseEntity.created(locationOf(appointment.id())).body(appointment);
     }
 
-    @PostMapping("/dropoff/on-behalf")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<AppointmentInfo> bookDropoffOnBehalf(@Valid @RequestBody BookDropoffOnBehalfCommand command) {
+    public ResponseEntity<AppointmentInfo> bookDropoffOnBehalf(BookDropoffOnBehalfCommand command) {
         AppointmentInfo appointment = service.bookDropoffOnBehalf(command);
         return ResponseEntity.created(locationOf(appointment.id())).body(appointment);
     }
 
-    @PostMapping("/pickup")
+    @Override
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<AppointmentInfo> bookPickup(
-            @Valid @RequestBody BookPickupCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<AppointmentInfo> bookPickup(BookPickupCommand command, Authentication authentication) {
         AppointmentInfo appointment = service.bookPickup(currentUserId(authentication), command);
         return ResponseEntity.created(locationOf(appointment.id())).body(appointment);
     }
 
-    @PostMapping("/pickup/book")
-    public ResponseEntity<AppointmentInfo> bookPickupByToken(@Valid @RequestBody BookPickupByTokenCommand command) {
+    @Override
+    public ResponseEntity<AppointmentInfo> bookPickupByToken(BookPickupByTokenCommand command) {
         AppointmentInfo appointment = service.bookPickupByToken(command);
         return ResponseEntity.created(locationOf(appointment.id())).body(appointment);
     }
 
-    @PostMapping("/{id}/check-in")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<AppointmentInfo> checkIn(@PathVariable UUID id) {
+    public ResponseEntity<AppointmentInfo> checkIn(UUID id) {
         return ResponseEntity.ok(service.checkIn(id));
     }
 
-    @PostMapping("/{id}/register-guest")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<GuestConversionResult> registerGuestAtCheckIn(
-            @PathVariable UUID id,
-            @Valid @RequestBody RegisterGuestAtCheckInCommand command
-    ) {
+    public ResponseEntity<GuestConversionResult> registerGuestAtCheckIn(UUID id, RegisterGuestAtCheckInCommand command) {
         return ResponseEntity.ok(service.registerGuestAtCheckIn(id, command));
     }
 
-    @PostMapping("/{id}/cancel")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<AppointmentInfo> cancel(
-            @PathVariable UUID id,
-            @Valid @RequestBody CancelAppointmentCommand command
-    ) {
+    public ResponseEntity<AppointmentInfo> cancel(UUID id, CancelAppointmentCommand command) {
         return ResponseEntity.ok(service.cancel(id, command));
     }
 
-    @PostMapping("/{id}/customer-cancel")
+    @Override
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<AppointmentInfo> cancelOwn(
-            @PathVariable UUID id,
-            @Valid @RequestBody CancelAppointmentCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<AppointmentInfo> cancelOwn(UUID id, CancelAppointmentCommand command, Authentication authentication) {
         return ResponseEntity.ok(service.cancelOwn(id, currentUserId(authentication), command));
     }
 
-    @PostMapping("/{id}/reschedule")
+    @Override
     @PreAuthorize(STAFF)
-    public ResponseEntity<AppointmentInfo> reschedule(
-            @PathVariable UUID id,
-            @Valid @RequestBody RescheduleAppointmentCommand command
-    ) {
+    public ResponseEntity<AppointmentInfo> reschedule(UUID id, RescheduleAppointmentCommand command) {
         return ResponseEntity.ok(service.reschedule(id, command));
     }
 
-    @PostMapping("/{id}/customer-reschedule")
+    @Override
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<AppointmentInfo> rescheduleOwn(
-            @PathVariable UUID id,
-            @Valid @RequestBody RescheduleAppointmentCommand command,
-            Authentication authentication
-    ) {
+    public ResponseEntity<AppointmentInfo> rescheduleOwn(UUID id, RescheduleAppointmentCommand command, Authentication authentication) {
         return ResponseEntity.ok(service.rescheduleOwn(id, currentUserId(authentication), command));
     }
 
-    @PostMapping("/guest/view")
-    public ResponseEntity<AppointmentInfo> guestView(@Valid @RequestBody GuestTokenCommand command) {
+    @Override
+    public ResponseEntity<AppointmentInfo> guestView(GuestTokenCommand command) {
         return ResponseEntity.ok(service.getByToken(command));
     }
 
-    @PostMapping("/guest/cancel")
-    public ResponseEntity<AppointmentInfo> guestCancel(@Valid @RequestBody GuestTokenCommand command) {
+    @Override
+    public ResponseEntity<AppointmentInfo> guestCancel(GuestTokenCommand command) {
         return ResponseEntity.ok(service.cancelByToken(command));
     }
 
-    @PostMapping("/guest/reschedule")
-    public ResponseEntity<AppointmentInfo> guestReschedule(@Valid @RequestBody GuestRescheduleCommand command) {
+    @Override
+    public ResponseEntity<AppointmentInfo> guestReschedule(GuestRescheduleCommand command) {
         return ResponseEntity.ok(service.rescheduleByToken(command));
     }
 
-    @PostMapping("/guest/complete-registration")
-    public ResponseEntity<GuestConversionResult> completeRegistration(
-            @Valid @RequestBody CompleteGuestRegistrationCommand command
-    ) {
+    @Override
+    public ResponseEntity<GuestConversionResult> completeRegistration(CompleteGuestRegistrationCommand command) {
         return ResponseEntity.ok(service.completeRegistrationViaToken(command));
     }
 
