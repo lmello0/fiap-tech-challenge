@@ -128,7 +128,13 @@ public class UserServiceImpl implements UserService {
         user.setFirstName(command.firstName());
         user.setLastName(command.lastName());
 
+        // Flushed separately: uk_phone_primary_per_user only allows one primary phone per user, and
+        // PhoneNumber's IDENTITY id forces its insert to run immediately rather than queuing behind
+        // the orphan-removal deletes below, so the old primary row has to be gone from the database
+        // before a new one is added, not just scheduled for removal.
         user.getPhoneNumbers().clear();
+        userRepository.saveAndFlush(user);
+
         for (RegisterPhoneNumberCommand phone : command.phoneNumbers()) {
             user.addPhoneNumber(PhoneNumber.builder()
                     .type(phone.type())
