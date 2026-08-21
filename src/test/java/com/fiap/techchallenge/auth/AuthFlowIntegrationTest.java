@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -53,7 +54,34 @@ class AuthFlowIntegrationTest {
         String unique = UUID.randomUUID().toString().replace("-", "");
 
         this.email = unique.substring(0, 12) + "@example.com";
-        this.document = unique.replaceAll("\\D", "0").substring(0, 11);
+        this.document = uniqueDocument();
+    }
+
+    /** DocumentValidator rejects bad check digits, so the digits have to be computed, not random. */
+    private static String uniqueDocument() {
+        int[] digits = new int[11];
+
+        for (int i = 0; i < 9; i++) {
+            digits[i] = ThreadLocalRandom.current().nextInt(10);
+        }
+
+        for (int position = 9; position < 11; position++) {
+            int sum = 0;
+
+            for (int i = 0; i < position; i++) {
+                sum += digits[i] * (position + 1 - i);
+            }
+
+            int remainder = (sum * 10) % 11;
+            digits[position] = remainder == 10 ? 0 : remainder;
+        }
+
+        StringBuilder cpf = new StringBuilder(11);
+        for (int digit : digits) {
+            cpf.append(digit);
+        }
+
+        return cpf.toString();
     }
 
     @Test
@@ -122,14 +150,14 @@ class AuthFlowIntegrationTest {
         String rotated = refresh(original).get("refreshToken").asText();
 
         // replay the token that was already consumed
-        mvc.perform(post("/auth/refresh")
+        mvc.perform(post("/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"refreshToken": "%s"}""".formatted(original))))
                 .andExpect(status().isUnauthorized());
 
         // the reuse must have taken the whole session family down, not just the replayed token
-        mvc.perform(post("/auth/refresh")
+        mvc.perform(post("/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"refreshToken": "%s"}""".formatted(rotated))))
@@ -147,13 +175,13 @@ class AuthFlowIntegrationTest {
                                 {"refreshToken": "%s"}""".formatted(sessionOne))))
                 .andExpect(status().isNoContent());
 
-        mvc.perform(post("/auth/refresh")
+        mvc.perform(post("/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"refreshToken": "%s"}""".formatted(sessionOne))))
                 .andExpect(status().isUnauthorized());
 
-        mvc.perform(post("/auth/refresh")
+        mvc.perform(post("/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"refreshToken": "%s"}""".formatted(sessionTwo))))
@@ -171,7 +199,7 @@ class AuthFlowIntegrationTest {
                 .andExpect(status().isNoContent());
 
         for (JsonNode session : new JsonNode[]{first, second, third}) {
-            mvc.perform(post("/auth/refresh")
+            mvc.perform(post("/auth/refresh-token")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body("""
                                     {"refreshToken": "%s"}""".formatted(session.get("refreshToken").asText()))))
@@ -189,7 +217,7 @@ class AuthFlowIntegrationTest {
     void rejectsADuplicateEmail() throws Exception {
         register();
 
-        mvc.perform(post("/auth/register")
+        mvc.perform(post("/auth/register/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registrationPayload()))
                 .andExpect(status().isConflict());
@@ -197,7 +225,7 @@ class AuthFlowIntegrationTest {
 
     @Test
     void rejectsAnInvalidRegistrationPayload() throws Exception {
-        mvc.perform(post("/auth/register")
+        mvc.perform(post("/auth/register/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"user": {"email": "not-an-email", "firstName": "A", "phoneNumbers": []},
@@ -240,7 +268,7 @@ class AuthFlowIntegrationTest {
     }
 
     private JsonNode register() throws Exception {
-        MvcResult result = mvc.perform(post("/auth/register")
+        MvcResult result = mvc.perform(post("/auth/register/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registrationPayload()))
                 .andExpect(status().isCreated())
@@ -264,7 +292,7 @@ class AuthFlowIntegrationTest {
     }
 
     private JsonNode refresh(String refreshToken) throws Exception {
-        MvcResult result = mvc.perform(post("/auth/refresh")
+        MvcResult result = mvc.perform(post("/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("""
                                 {"refreshToken": "%s"}""".formatted(refreshToken))))
