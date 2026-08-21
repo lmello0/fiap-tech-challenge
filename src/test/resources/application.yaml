@@ -41,6 +41,20 @@ app:
       mock:
         lead-time-days: 3
 
+  scheduling:
+    # Matches the values AvailabilityServiceTest/AppointmentTokenServiceTest construct by hand for
+    # their plain-unit-test SchedulingProperties instances.
+    min-notice: 2h
+    max-lookahead: 30d
+    access-token-ttl: 7d
+    registration-token-ttl: 7d
+    pickup-invitation-token-ttl: 14d
+    # Effectively disables the scheduled sweep; no-show tests would invoke the service directly.
+    no-show-sweep-cron: "0 0 4 * * ?"
+
+    email:
+      base-url: http://localhost:4200
+
   auth:
     email:
       base-url: http://localhost:4200
