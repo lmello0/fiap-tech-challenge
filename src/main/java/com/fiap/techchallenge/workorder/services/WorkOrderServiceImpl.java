@@ -175,7 +175,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         command.lines().forEach(lineCommand -> budget.addLine(buildLine(lineCommand)));
 
-        budgetRepository.save(budget);
+        // Flushed, not just saved: each BudgetLine's id is only assigned once its INSERT actually
+        // runs, and the snapshot captured below for BudgetDraftedEvent needs those ids populated --
+        // otherwise History's per-line entries get written with a null entity_id and fail their
+        // not-null constraint (see BudgetServiceImpl#addLine for the same fix).
+        budgetRepository.saveAndFlush(budget);
 
         // Best-effort: claims what stock exists now, records the rest as a shortfall, and still lets
         // the quote go out. The physical constraint is enforced later, strictly, at startService.
