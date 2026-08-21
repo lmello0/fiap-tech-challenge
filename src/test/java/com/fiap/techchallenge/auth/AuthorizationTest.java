@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -69,8 +70,11 @@ class AuthorizationTest {
 
     @Test
     void aWorkerMayReachAWorkerOnlyRoute() throws Exception {
-        Fixture manager = registerWorker(WorkerRole.MANAGER);
-        Fixture worker = registerWorkerVia(manager, WorkerRole.MECHANIC);
+        // Onboarding through /auth/register/worker (registerWorkerVia) hands out a temporary
+        // password and forces a rotation before anything else is reachable (see
+        // ForcedPasswordChangeTest) -- irrelevant to this test's RBAC question, so this fixture
+        // bootstraps the worker directly instead.
+        Fixture worker = registerWorker(WorkerRole.MECHANIC);
         Fixture target = registerCustomer();
 
         mvc.perform(get("/users/{id}", target.id())
@@ -150,7 +154,7 @@ class AuthorizationTest {
     private Fixture registerCustomer() throws Exception {
         String email = uniqueEmail();
 
-        MvcResult result = mvc.perform(post("/auth/register")
+        MvcResult result = mvc.perform(post("/auth/register/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(customerPayload(email)))
                 .andExpect(status().isCreated())
@@ -181,25 +185,6 @@ class AuthorizationTest {
         userService.markEmailVerified(user.id());
 
         return new Fixture(user.id(), email, login(email).get("accessToken").asText());
-    }
-
-    private Fixture registerWorkerVia(Fixture manager, WorkerRole role) throws Exception {
-        MvcResult result = mvc.perform(post("/auth/register/worker")
-                        .header("Authorization", "Bearer " + manager.accessToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(workerPayload(role)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        JsonNode created = json.readTree(result.getResponse().getContentAsString());
-        String createdEmail = created.get("email").asText();
-
-        userService.markEmailVerified(UUID.fromString(created.get("id").asText()));
-
-        return new Fixture(
-                UUID.fromString(created.get("id").asText()),
-                createdEmail,
-                login(createdEmail).get("accessToken").asText());
     }
 
     /**
@@ -280,8 +265,31 @@ class AuthorizationTest {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@example.com";
     }
 
+    /** DocumentValidator rejects bad check digits, so the digits have to be computed, not random. */
     private static String uniqueDocument() {
-        return UUID.randomUUID().toString().replaceAll("\\D", "0").substring(0, 11);
+        int[] digits = new int[11];
+
+        for (int i = 0; i < 9; i++) {
+            digits[i] = ThreadLocalRandom.current().nextInt(10);
+        }
+
+        for (int position = 9; position < 11; position++) {
+            int sum = 0;
+
+            for (int i = 0; i < position; i++) {
+                sum += digits[i] * (position + 1 - i);
+            }
+
+            int remainder = (sum * 10) % 11;
+            digits[position] = remainder == 10 ? 0 : remainder;
+        }
+
+        StringBuilder cpf = new StringBuilder(11);
+        for (int digit : digits) {
+            cpf.append(digit);
+        }
+
+        return cpf.toString();
     }
 
     record Fixture(UUID id, String email, String accessToken) {
