@@ -7,10 +7,10 @@ import com.fiap.techchallenge.vehicle.api.commands.CreateVehicleCommand;
 import com.fiap.techchallenge.vehicle.api.commands.UpdateVehicleCommand;
 import com.fiap.techchallenge.vehicle.api.queries.VehicleFilterQuery;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
+import com.fiap.techchallenge.vehicle.exceptions.VehicleNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -92,13 +92,15 @@ public class VehicleController implements VehicleControllerSwaggerDoc {
                         || authority.equals("ROLE_" + WorkerRole.MANAGER));
     }
 
+    /** A mismatch throws not-found rather than access-denied, so as not to reveal that another
+     * customer's vehicle exists — same masking as the workorder and appointment modules. */
     private void requireOwnershipOrStaff(VehicleInfo vehicle, Authentication authentication) {
         if (isStaff(authentication)) {
             return;
         }
 
         if (!vehicle.customerId().toString().equals(authentication.getName())) {
-            throw new AccessDeniedException("Not allowed to access this vehicle");
+            throw new VehicleNotFoundException(vehicle.id());
         }
     }
 

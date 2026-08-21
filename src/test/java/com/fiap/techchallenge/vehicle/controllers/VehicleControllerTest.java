@@ -151,15 +151,17 @@ class VehicleControllerTest {
 
         UUID vehicleId = createVehicle(owner, null, "LCK0001");
 
+        // 404, not 403 -- ownership mismatches don't reveal that the vehicle exists, same masking
+        // as the workorder and appointment modules.
         mvc.perform(patch("/vehicles/{id}", vehicleId)
                         .header("Authorization", "Bearer " + other.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload("LCK0002")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
 
         mvc.perform(delete("/vehicles/{id}", vehicleId)
                         .header("Authorization", "Bearer " + other.accessToken()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test

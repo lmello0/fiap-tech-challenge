@@ -29,9 +29,10 @@ import java.util.UUID;
 
 /**
  * Full Swagger/OpenAPI contract for {@link VehicleController}. A CUSTOMER may only list, read, create,
- * update, or deactivate their own vehicles (checked in code, not via {@code @PreAuthorize}, so a
- * mismatch surfaces as 403, not 404); ATTENDANT and MANAGER see and manage every vehicle. MECHANIC and
- * STOCKIST have no access to this resource at all.
+ * update, or deactivate their own vehicles (checked in code, not via {@code @PreAuthorize}); a
+ * mismatch returns 404, not 403, so as not to reveal that another customer's vehicle exists — same
+ * masking as the workorder and appointment modules. ATTENDANT and MANAGER see and manage every
+ * vehicle. MECHANIC and STOCKIST have no access to this resource at all.
  */
 @Tag(name = "Vehicles", description = "Customer vehicle registration and management.")
 @RequestMapping("vehicles")
@@ -54,10 +55,10 @@ public interface VehicleControllerSwaggerDoc {
     @Operation(
             summary = "Get a vehicle by id",
             description = "Requires the CUSTOMER, ATTENDANT, or MANAGER role. A CUSTOMER may only fetch their own "
-                    + "vehicle; requesting another customer's vehicle returns 403, not 404."
+                    + "vehicle; requesting another customer's vehicle returns 404, so as not to reveal it exists."
     )
     @CommonApiResponses
-    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id.",
+    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id, or it does not belong to the caller.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping("/{id}")
     ResponseEntity<VehicleInfo> getById(@Parameter(description = "Vehicle id") @PathVariable UUID id, Authentication authentication);
@@ -77,10 +78,10 @@ public interface VehicleControllerSwaggerDoc {
     @Operation(
             summary = "Update a vehicle",
             description = "Requires the CUSTOMER, ATTENDANT, or MANAGER role. A CUSTOMER may only update their own "
-                    + "vehicle; attempting to update another customer's vehicle returns 403, not 404."
+                    + "vehicle; attempting to update another customer's vehicle returns 404, so as not to reveal it exists."
     )
     @CommonApiResponses
-    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id.",
+    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id, or it does not belong to the caller.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "The license plate is already registered to another vehicle.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
@@ -95,11 +96,11 @@ public interface VehicleControllerSwaggerDoc {
             summary = "Deactivate a vehicle",
             description = "Soft-deletes the vehicle. Requires the CUSTOMER, ATTENDANT, or MANAGER role. A CUSTOMER "
                     + "may only deactivate their own vehicle; attempting to deactivate another customer's vehicle "
-                    + "returns 403, not 404."
+                    + "returns 404, so as not to reveal it exists."
     )
     @CommonApiResponses
     @ApiResponse(responseCode = "204", description = "The vehicle was deactivated.")
-    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id.",
+    @ApiResponse(responseCode = "404", description = "No vehicle exists with the given id, or it does not belong to the caller.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @DeleteMapping("/{id}")
     ResponseEntity<Void> deactivate(@Parameter(description = "Vehicle id") @PathVariable UUID id, Authentication authentication);
