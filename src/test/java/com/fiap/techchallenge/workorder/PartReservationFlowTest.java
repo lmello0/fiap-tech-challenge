@@ -37,8 +37,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -94,6 +96,9 @@ class PartReservationFlowTest {
 
     @Autowired
     StockMovementRepository movementRepository;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
 
     @Test
     void quotingReservesWhatExistsAndRecordsAShortfall() {
@@ -198,8 +203,12 @@ class PartReservationFlowTest {
 
         PartReservation reservation =
                 reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.HELD).get(0);
-        reservation.setReservedAt(Instant.now().minus(Duration.ofDays(10)));
-        reservationRepository.save(reservation);
+
+        // reserved_at is @CreationTimestamp/updatable=false, so backdating it has to go around
+        // Hibernate directly rather than through the entity setter, which it would silently ignore.
+        jdbcTemplate.update(
+                "UPDATE inventory.part_reservations SET reserved_at = ? WHERE id = ?",
+                Timestamp.from(Instant.now().minus(Duration.ofDays(10))), reservation.getId());
 
         int expired = reservationService.expireStaleReservations(Instant.now().minus(Duration.ofDays(7)));
 
