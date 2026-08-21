@@ -99,6 +99,7 @@ class ReorderRuleFlowTest {
     void disabledRulePublishesLowStockEventInsteadOfOrdering() {
         VendorInfo vendor = createVendor();
         PartInfo part = createPart("REORDER-3");
+        stockService.adjust(part.id(), new AdjustStockCommand(BigDecimal.valueOf(10), "Seed above min"));
         reorderRuleService.create(new CreateReorderRuleCommand(part.id(), BigDecimal.valueOf(5), BigDecimal.valueOf(20), vendor.id(), false));
 
         reservationService.reserveForWorkOrder(UUID.randomUUID(), List.of(new ReservePartCommand(part.id(), BigDecimal.valueOf(6))));
