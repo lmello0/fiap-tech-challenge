@@ -30,6 +30,14 @@
         <java.version>25</java.version>
         <spring-modulith.version>2.1.0</spring-modulith.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
+
+        <sonar.host.url>http://sonarqube:9000</sonar.host.url>
+        <sonar.projectKey>fiap-techchallenge</sonar.projectKey>
+        <sonar.projectName>Auto repair shop API</sonar.projectName>
+
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${project.build.directory}/site/jacoco/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <dependencies>
         <dependency>
@@ -266,6 +274,28 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

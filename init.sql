@@ -1,0 +1,7 @@
+CREATE USER auto_repair_shop_user WITH ENCRYPTED PASSWORD 'secret';
+
+CREATE DATABASE auto_repair_shop WITH OWNER auto_repair_shop_user ENCODING 'UTF8';
+
+CREATE USER sonar WITH ENCRYPTED PASSWORD 'secret';
+
+CREATE DATABASE sonar WITH OWNER sonar ENCODING 'UTF8';

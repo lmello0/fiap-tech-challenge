@@ -1,27 +1,167 @@
 services:
   postgres:
     image: 'postgres:18'
-    env_file:
-      - .env
+    restart: unless-stopped
     environment:
-      - 'TZ=America/Sao_Paulo'
+      TZ: America/Sao_Paulo
+      POSTGRES_PASSWORD: secret
+    volumes:
       - postgres:/var/lib/postgresql/18/docker
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - '5432:5432'
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped
+    environment:
+      TZ: America/Sao_Paulo
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit:/data
     ports:
       - '8025:8025'
       - '1025:1025'
+
+  sonarqube:
+    image: 'sonarqube:community'
+    restart: unless-stopped
     environment:
-      - 'TZ=America/Sao_Paulo'
-      - 'MP_SMTP_AUTH_ACCEPT_ANY=1'
-      - 'MP_SMTP_AUTH_ALLOW_INSECURE=1'
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: secret
     volumes:
-      - mailpit:/data
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_temp:/opt/sonarqube/temp
+    ports:
+      - '9000:9000'
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"
+      ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 80s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  sonar-setup:
+    image: curlimages/curl:latest
+    user: root
+    restart: no
+    volumes:
+      - sonar_token:/token
+    environment:
+      SONAR_HOST_URL: http://sonarqube:9000
+      SONAR_USER: admin
+      SONAR_PASSWORD: admin
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        set -e
+
+        echo "Waiting for SonarQube..."
+
+        until curl -sf \
+          -u "$${SONAR_USER}:$${SONAR_PASSWORD}" \
+          "$${SONAR_HOST_URL}/api/system/status" \
+          | grep -q '"status":"UP"'; do
+          sleep 5
+        done
+
+        echo "SonarQube is ready."
+
+        echo "Revoking previous demo token..."
+
+        curl -sf \
+          -u "$${SONAR_USER}:$${SONAR_PASSWORD}" \
+          -X POST \
+          "$${SONAR_HOST_URL}/api/user_tokens/revoke" \
+          -d "name=demo-scanner" \
+          || true
+
+        echo "Creating demo scanner token..."
+
+        RESPONSE=$$(curl -sf \
+          -u "$${SONAR_USER}:$${SONAR_PASSWORD}" \
+          -X POST \
+          "$${SONAR_HOST_URL}/api/user_tokens/generate" \
+          -d "name=demo-scanner")
+
+        TOKEN=$$(echo "$$RESPONSE" \
+          | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+        if [ -z "$$TOKEN" ]; then
+          echo "Failed to create SonarQube token."
+          echo "$$RESPONSE"
+          exit 1
+        fi
+
+        rm -f /token/sonar-token
+        printf '%s' "$$TOKEN" > /token/sonar-token
+        chmod 644 /token/sonar-token
+
+        echo "SonarQube token created successfully."
+
+  sonar-analysis:
+    image: maven:3.9-amazoncorretto-25
+    restart: no
+    working_dir: /usr/src
+    volumes:
+      - .:/usr/src
+      - maven_repository:/root/.m2
+      - sonar_token:/token:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      SONAR_HOST_URL: http://sonarqube:9000
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      DOCKER_HOST: unix:///var/run/docker.sock
+    depends_on:
+      sonar-setup:
+        condition: service_completed_successfully
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        set -e
+
+        echo "======================================"
+        echo " Running Maven tests + Sonar analysis "
+        echo "======================================"
+
+        export SONAR_TOKEN=$$(cat /token/sonar-token)
+
+        mvn \
+          -B \
+          clean verify \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.host.url=$${SONAR_HOST_URL} \
+          -Dsonar.token=$${SONAR_TOKEN} \
+          -Dsonar.qualitygate.wait=true
+
+        echo "======================================"
+        echo " Sonar analysis completed "
+        echo "======================================"
 
 volumes:
   postgres:
   mailpit:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonarqube_temp:
+  sonar_token:
+  maven_repository:
