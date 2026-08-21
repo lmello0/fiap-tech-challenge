@@ -77,8 +77,15 @@ public class BudgetServiceImpl implements BudgetService {
         Budget budget = load(budgetId);
         requireDraft(budget);
 
-        BudgetLine line = buildLine(command);
-        budget.addLine(line);
+        BudgetLine transientLine = buildLine(command);
+        budget.addLine(transientLine);
+
+        // budget is already managed (loaded above), so save() merges rather than persists it -- and
+        // merge() cascades by replacing each new, still-transient child with a newly managed copy
+        // rather than attaching transientLine itself. Its id is never assigned; the flushed,
+        // now-generated id has to be read back from budget's own collection instead.
+        budgetRepository.saveAndFlush(budget);
+        BudgetLine line = budget.getLines().get(budget.getLines().size() - 1);
 
         if (line.getType() == RowType.PART) {
             partReservationService.reserveForWorkOrder(
