@@ -2,12 +2,7 @@ package com.fiap.techchallenge.user.controllers;
 
 import com.fiap.techchallenge.shared.exceptions.ExceptionHandlerOrder;
 import com.fiap.techchallenge.shared.exceptions.ProblemDetails;
-import com.fiap.techchallenge.user.exceptions.DocumentAlreadyInUseException;
-import com.fiap.techchallenge.user.exceptions.EmailAlreadyInUseException;
-import com.fiap.techchallenge.user.exceptions.NotACustomerException;
-import com.fiap.techchallenge.user.exceptions.NotAWorkerException;
-import com.fiap.techchallenge.user.exceptions.RegistrationAlreadyInUseException;
-import com.fiap.techchallenge.user.exceptions.UserNotFoundException;
+import com.fiap.techchallenge.user.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -28,7 +23,8 @@ public class UserExceptionHandler {
     @ExceptionHandler({
             EmailAlreadyInUseException.class,
             DocumentAlreadyInUseException.class,
-            RegistrationAlreadyInUseException.class
+            RegistrationAlreadyInUseException.class,
+            MultiplePrimaryPhoneNumberException.class
     })
     ProblemDetail handleConflict(RuntimeException e) {
         return ProblemDetails.of(HttpStatus.CONFLICT, "Conflict", e.getMessage());
