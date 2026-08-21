@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "app.auth.bootstrap-manager.first-name=Boot",
         "app.auth.bootstrap-manager.last-name=Strap",
         "app.auth.bootstrap-manager.document-type=CPF",
-        "app.auth.bootstrap-manager.document-code=00000000000",
+        "app.auth.bootstrap-manager.document-code=52998224725",
         "app.auth.bootstrap-manager.phone=11999999999"
 })
 class BootstrapManagerRunnerTest {
