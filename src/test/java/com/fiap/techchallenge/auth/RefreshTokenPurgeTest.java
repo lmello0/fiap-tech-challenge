@@ -3,6 +3,7 @@ package com.fiap.techchallenge.auth;
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.auth.entities.RefreshToken;
 import com.fiap.techchallenge.auth.repositories.RefreshTokenRepository;
+import com.fiap.techchallenge.auth.schedules.PurgeExpiredRefreshTokens;
 import com.fiap.techchallenge.auth.services.RefreshTokenService;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
@@ -34,6 +35,22 @@ class RefreshTokenPurgeTest {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    PurgeExpiredRefreshTokens scheduledJob;
+
+    @Test
+    void theScheduledJobPurgesTokensPastTheRetentionWindow() {
+        UUID userId = newUser();
+
+        UUID stale = persist(userId, Instant.now().minus(Duration.ofDays(45)));
+        UUID live = persist(userId, Instant.now().plus(Duration.ofDays(1)));
+
+        scheduledJob.purgeExpiredTokens();
+
+        assertThat(repository.findById(stale)).isEmpty();
+        assertThat(repository.findById(live)).isPresent();
+    }
 
     @Test
     void purgesOnlyTokensPastTheCutoff() {

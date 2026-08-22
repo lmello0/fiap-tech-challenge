@@ -20,6 +20,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -31,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -56,7 +59,81 @@ class AuthorizationTest {
     @Autowired
     PasswordEncoder passwordEncoder;
 
+    @Autowired
+    JwtDecoder jwtDecoder;
+
     final ObjectMapper json = new ObjectMapper();
+
+    @Test
+    void aManagerOnboardsAWorkerOverHttp() throws Exception {
+        Fixture manager = registerWorker(WorkerRole.MANAGER);
+
+        MvcResult result = mvc.perform(post("/auth/register/worker")
+                        .header("Authorization", "Bearer " + manager.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(workerPayload(WorkerRole.MECHANIC)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.worker").value(true))
+                .andExpect(jsonPath("$.workerRole").value("MECHANIC"))
+                .andReturn();
+
+        assertThat(result.getResponse().getHeader("Location"))
+                .contains("/users/");
+    }
+
+    @Test
+    void loginLocksTheAccountAfterTooManyFailedAttempts() throws Exception {
+        Fixture customer = registerCustomer();
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(post("/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"email": "%s", "rawPassword": "wrongPassword%d"}""".formatted(customer.email(), attempt)))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // even the correct password is now refused: the account is locked, not the credentials wrong
+        mvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "rawPassword": "%s"}""".formatted(customer.email(), PASSWORD)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Account locked"));
+    }
+
+    @Test
+    void aDeactivatedCustomerWithNoWorkerFacetCannotLogIn() throws Exception {
+        Fixture customer = registerCustomer();
+
+        userService.deactivateCustomer(customer.id());
+
+        mvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "rawPassword": "%s"}""".formatted(customer.email(), PASSWORD)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Account disabled"));
+    }
+
+    /**
+     * Every worker also carries an active Customer facet (ADR 0001), so deactivating just the
+     * Customer facet must not lock the account out (the Worker facet keeps it enabled) — but the
+     * granted authorities must drop CUSTOMER all the same.
+     */
+    @Test
+    void aWorkerWithADeactivatedCustomerFacetKeepsLoggingInButLosesCustomerAuthority() throws Exception {
+        Fixture worker = registerWorker(WorkerRole.MECHANIC);
+
+        userService.deactivateCustomer(worker.id());
+
+        JsonNode session = login(worker.email());
+        Jwt jwt = jwtDecoder.decode(session.get("accessToken").asText());
+
+        assertThat(jwt.getClaimAsStringList("roles"))
+                .contains("WORKER", "MECHANIC")
+                .doesNotContain("CUSTOMER");
+    }
 
     @Test
     void aCustomerMayNotReachAWorkerOnlyRoute() throws Exception {

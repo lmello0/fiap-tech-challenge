@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.auth.entities.UserAuth;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
+import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
@@ -20,14 +21,22 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@RecordApplicationEvents
 class SchedulingSettingsControllerTest {
 
     private static final String PASSWORD = "aVeryLongPassword1";
@@ -54,6 +64,9 @@ class SchedulingSettingsControllerTest {
 
     @Autowired
     PasswordEncoder passwordEncoder;
+
+    @Autowired
+    ApplicationEvents events;
 
     final ObjectMapper json = new ObjectMapper();
 
@@ -175,6 +188,40 @@ class SchedulingSettingsControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void closingADateAutoCancelsItsScheduledAppointmentsAndNotifiesTheGuest() throws Exception {
+        Fixture manager = registerWorker(WorkerRole.MANAGER);
+        // 10 days out (still inside the 30-day booking lookahead) so this can't collide with
+        // AppointmentControllerTest's 3-days-out slots -- both classes share the same Testcontainers
+        // Postgres instance via Spring context caching.
+        LocalDate date = weekdayAtLeast(10);
+        Instant slot = ZonedDateTime.of(date, LocalTime.of(9, 0), ZoneId.systemDefault()).toInstant();
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(guestDropoffPayload(slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(post("/scheduling/closures")
+                        .header("Authorization", "Bearer " + manager.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(closurePayload(date, "Unplanned shop closure")))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/appointments/{id}", appointmentId)
+                        .header("Authorization", "Bearer " + manager.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelReason").value("MANAGER_CLOSURE"));
+
+        boolean cancellationEmailSent = events.stream(EmailRequestedEvent.class)
+                .anyMatch(e -> e.subject().equals("Your appointment was cancelled")
+                        && e.plainText().contains("Unplanned shop closure"));
+        assertThat(cancellationEmailSent).isTrue();
+    }
+
     // --- payloads -----------------------------------------------------------------------------
 
     private String settingsPayload() {
@@ -185,6 +232,34 @@ class SchedulingSettingsControllerTest {
                   "dropoffSlotCapacity": 3,
                   "pickupSlotCapacity": 2
                 }""";
+    }
+
+    private String guestDropoffPayload(Instant slot) {
+        return """
+                {
+                  "guestName": "Closure Casualty",
+                  "guestPhone": "%s",
+                  "guestEmail": "%s",
+                  "guestVehicleMake": "Toyota",
+                  "guestVehicleModel": "Corolla",
+                  "guestVehicleYear": 2019,
+                  "complaint": "Won't start",
+                  "slotStart": "%s"
+                }""".formatted(uniquePhone(), uniqueEmail(), slot);
+    }
+
+    private static String uniquePhone() {
+        return "119" + ThreadLocalRandom.current().nextInt(10000000, 99999999);
+    }
+
+    private static LocalDate weekdayAtLeast(int daysOut) {
+        LocalDate date = LocalDate.now().plusDays(daysOut);
+
+        while (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            date = date.plusDays(1);
+        }
+
+        return date;
     }
 
     private String closurePayload(LocalDate date, String message) {

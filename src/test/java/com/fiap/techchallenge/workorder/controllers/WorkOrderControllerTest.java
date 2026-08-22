@@ -166,6 +166,75 @@ class WorkOrderControllerTest {
     }
 
     @Test
+    void finishingALineTwiceIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+        UUID budgetId = ids[1];
+
+        UUID lineId = firstLineId(mechanic, budgetId);
+
+        mvc.perform(post("/work-orders/{id}/service/start", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/start", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/finish", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/finish", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void finishingDiagnosticsWithAPartLineMissingItsPartIdIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        MvcResult createResult = mvc.perform(post("/work-orders")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "vehicleId": "%s",
+                                  "complaint": "Something is wrong"
+                                }""".formatted(customer.id(), vehicleId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID workOrderId = UUID.fromString(json.readTree(createResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(post("/work-orders/{id}/diagnostics/request", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/diagnostics/start", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mechanicId": "%s"}""".formatted(mechanic.id())))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/diagnostics/finish", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "diagnosis": "Needs work",
+                                  "lines": [{"type": "PART", "quantity": 1}]
+                                }"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void finishingServiceBeforeStartingIsAConflict() throws Exception {
         Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
@@ -196,6 +265,53 @@ class WorkOrderControllerTest {
         mvc.perform(get("/work-orders/{id}/history/{entryId}", workOrderId, entryId)
                         .header("Authorization", "Bearer " + attendant.accessToken()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void aHistorySnapshotForAnUnknownEntryIsNotFound() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(get("/work-orders/{id}/history/{entryId}", workOrderId, UUID.randomUUID())
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void startingALineBeforeServiceHasStartedIsAConflict() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+        UUID budgetId = ids[1];
+
+        UUID lineId = firstLineId(mechanic, budgetId);
+
+        // APPROVED, not yet IN_PROGRESS (service/start was never called)
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/start", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void creatingAWorkOrderForAVehicleOwnedBySomeoneElseIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture vehicleOwner = registerCustomer();
+        Fixture otherCustomer = registerCustomer();
+        UUID vehicleId = createVehicle(vehicleOwner);
+
+        mvc.perform(post("/work-orders")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "vehicleId": "%s",
+                                  "complaint": "Something is wrong"
+                                }""".formatted(otherCustomer.id(), vehicleId)))
+                .andExpect(status().isBadRequest());
     }
 
     // --- flow fixture ---------------------------------------------------------------------------

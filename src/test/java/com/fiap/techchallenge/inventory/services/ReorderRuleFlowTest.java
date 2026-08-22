@@ -114,6 +114,36 @@ class ReorderRuleFlowTest {
     }
 
     @Test
+    void creatingARuleForAnUnknownPartFails() {
+        VendorInfo vendor = createVendor();
+
+        assertThatThrownBy(() -> reorderRuleService.create(new CreateReorderRuleCommand(
+                UUID.randomUUID(), BigDecimal.valueOf(5), BigDecimal.valueOf(20), vendor.id(), true)))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.PartNotFoundException.class);
+    }
+
+    @Test
+    void creatingARuleAgainstAnUnknownVendorFails() {
+        PartInfo part = createPart("REORDER-NOVENDOR");
+
+        assertThatThrownBy(() -> reorderRuleService.create(new CreateReorderRuleCommand(
+                part.id(), BigDecimal.valueOf(5), BigDecimal.valueOf(20), UUID.randomUUID(), true)))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException.class);
+    }
+
+    @Test
+    void updatingARuleToAnUnknownVendorFails() {
+        VendorInfo vendor = createVendor();
+        PartInfo part = createPart("REORDER-UPDVENDOR");
+        var rule = reorderRuleService.create(new CreateReorderRuleCommand(
+                part.id(), BigDecimal.valueOf(5), BigDecimal.valueOf(20), vendor.id(), false));
+
+        assertThatThrownBy(() -> reorderRuleService.update(rule.id(), new com.fiap.techchallenge.inventory.api.commands.UpdateReorderRuleCommand(
+                BigDecimal.valueOf(5), BigDecimal.valueOf(20), UUID.randomUUID(), false)))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException.class);
+    }
+
+    @Test
     void maxMustExceedMinAtCreation() {
         VendorInfo vendor = createVendor();
         PartInfo part = createPart("REORDER-4");

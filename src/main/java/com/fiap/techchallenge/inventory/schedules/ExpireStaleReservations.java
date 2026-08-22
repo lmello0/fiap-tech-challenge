@@ -32,6 +32,10 @@ public class ExpireStaleReservations {
             lockAtMostFor = "PT10M"
     )
     protected void expire() {
+        runExpiry();
+    }
+
+    public int runExpiry() {
         try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
             Instant cutoff = Instant.now().minus(properties.reservationTtl());
 
@@ -41,6 +45,8 @@ public class ExpireStaleReservations {
             LogContext.put("expired", expired);
             LogContext.put("cutoff", cutoff);
             log.info("scheduled_job");
+
+            return expired;
         }
     }
 }

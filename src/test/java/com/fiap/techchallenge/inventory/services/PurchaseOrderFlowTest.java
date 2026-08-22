@@ -176,6 +176,78 @@ class PurchaseOrderFlowTest {
     }
 
     @Test
+    void placingAgainstAnUnknownVendorFails() {
+        PartInfo part = createPart("PO-NOVENDOR-1");
+
+        assertThatThrownBy(() -> purchaseOrderService.place(new PlacePurchaseOrderCommand(
+                UUID.randomUUID(), List.of(new PlacePurchaseOrderLineCommand(part.id(), BigDecimal.ONE)))))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException.class);
+    }
+
+    @Test
+    void placingALineAgainstAnUnknownPartFails() {
+        VendorInfo vendor = createVendor("No Part Vendor");
+
+        assertThatThrownBy(() -> purchaseOrderService.place(new PlacePurchaseOrderCommand(
+                vendor.id(), List.of(new PlacePurchaseOrderLineCommand(UUID.randomUUID(), BigDecimal.ONE)))))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.PartNotFoundException.class);
+    }
+
+    @Test
+    void receivingAnUnknownPurchaseOrderFails() {
+        assertThatThrownBy(() -> purchaseOrderService.receive(UUID.randomUUID(), new ReceivePurchaseOrderCommand(List.of())))
+                .isInstanceOf(com.fiap.techchallenge.inventory.exceptions.PurchaseOrderNotFoundException.class);
+    }
+
+    @Test
+    void receivingALineThatDoesNotBelongToTheOrderFails() {
+        VendorInfo vendor = createVendor("Wrong Line Vendor");
+        PartInfo part = createPart("PO-WRONGLINE-1");
+
+        PurchaseOrderInfo placed = purchaseOrderService.place(new PlacePurchaseOrderCommand(
+                vendor.id(), List.of(new PlacePurchaseOrderLineCommand(part.id(), BigDecimal.ONE))));
+
+        assertThatThrownBy(() -> purchaseOrderService.receive(placed.id(), new ReceivePurchaseOrderCommand(
+                List.of(new ReceivePurchaseOrderLineCommand(UUID.randomUUID(), BigDecimal.ONE, BigDecimal.ONE)))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not belong to purchase order");
+    }
+
+    @Test
+    void receivingStopsToppingUpFurtherReservationsOnceAvailableRunsOut() {
+        VendorInfo vendor = createVendor("Break Topup Vendor");
+        PartInfo part = createPart("PO-BREAK-1");
+
+        // Three shortfall reservations, oldest first; only 3 units arrive — exactly enough for the
+        // first two, leaving nothing for the third, whose loop iteration must never be reached.
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        UUID third = UUID.randomUUID();
+        reservationService.reserveForWorkOrder(first, List.of(new ReservePartCommand(part.id(), BigDecimal.valueOf(2))));
+        reservationService.reserveForWorkOrder(second, List.of(new ReservePartCommand(part.id(), BigDecimal.valueOf(1))));
+        reservationService.reserveForWorkOrder(third, List.of(new ReservePartCommand(part.id(), BigDecimal.valueOf(5))));
+
+        backdate(first, 120);
+        backdate(second, 60);
+
+        PurchaseOrderInfo po = purchaseOrderService.place(new PlacePurchaseOrderCommand(
+                vendor.id(), List.of(new PlacePurchaseOrderLineCommand(part.id(), BigDecimal.valueOf(3)))));
+        purchaseOrderService.receive(po.id(), new ReceivePurchaseOrderCommand(
+                List.of(new ReceivePurchaseOrderLineCommand(po.lines().get(0).id(), BigDecimal.valueOf(3), BigDecimal.TEN))));
+
+        assertThat(reservationRepository.findByWorkOrderIdAndStatus(first, ReservationStatus.HELD).get(0).hasShortfall()).isFalse();
+        assertThat(reservationRepository.findByWorkOrderIdAndStatus(second, ReservationStatus.HELD).get(0).hasShortfall()).isFalse();
+        assertThat(reservationRepository.findByWorkOrderIdAndStatus(third, ReservationStatus.HELD).get(0).getQuantityReserved())
+                .isEqualByComparingTo("0");
+    }
+
+    private void backdate(UUID workOrderId, int secondsAgo) {
+        PartReservation reservation = reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.HELD).get(0);
+        reservation.setReservedAt(reservation.getReservedAt().minusSeconds(secondsAgo));
+        reservationRepository.save(reservation);
+    }
+
+    @Test
     void cancellingAPlacedOrderStopsItFromBeingReceived() {
         VendorInfo vendor = createVendor("Cancel Vendor");
         PartInfo part = createPart("PO-CANCEL-1");

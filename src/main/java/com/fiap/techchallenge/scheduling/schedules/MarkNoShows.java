@@ -40,8 +40,16 @@ public class MarkNoShows {
             lockAtLeastFor = "PT30S",
             lockAtMostFor = "PT5M"
     )
-    @Transactional
     protected void sweep() {
+        markOverdueAppointmentsNoShow();
+    }
+
+    /**
+     * Split from {@link #sweep()} so it can be driven without ShedLock's lock (see
+     * {@code email.schedules.RetryFailedEmails} for the original precedent).
+     */
+    @Transactional
+    public int markOverdueAppointmentsNoShow() {
         try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
             Instant cutoff = Instant.now().minus(Appointment.SLOT_DURATION);
 
@@ -62,6 +70,8 @@ public class MarkNoShows {
             LogContext.put("marked", overdue.size());
             LogContext.put("cutoff", cutoff);
             log.info("scheduled_job");
+
+            return overdue.size();
         }
     }
 }

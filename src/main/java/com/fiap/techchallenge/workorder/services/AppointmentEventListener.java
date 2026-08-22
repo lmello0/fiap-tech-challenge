@@ -26,6 +26,16 @@ class AppointmentEventListener {
 
     @ApplicationModuleListener
     void on(AppointmentCheckedInEvent event) {
+        handle(event);
+    }
+
+    /**
+     * Split from {@link #on(AppointmentCheckedInEvent)} so it can be called directly in tests:
+     * {@code ApplicationEvents} does not reliably capture events published from
+     * {@code @ApplicationModuleListener}'s async execution (see {@code PickupInvitationRequestedListener}
+     * for the same split, applied for the same reason).
+     */
+    void handle(AppointmentCheckedInEvent event) {
         try (LogContext.Scope ignored = LogContext.open(event.metadata().requestId())) {
             LogContext.put("appointmentId", event.aggregateId());
             LogContext.put("appointmentType", event.appointmentType());

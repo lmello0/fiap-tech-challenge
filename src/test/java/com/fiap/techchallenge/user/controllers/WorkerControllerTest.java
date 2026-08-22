@@ -173,6 +173,16 @@ class WorkerControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void terminatingAUserWithNoWorkerFacetIsUnprocessable() throws Exception {
+        Fixture manager = registerWorker(WorkerRole.MANAGER);
+        Fixture customerOnly = registerCustomer();
+
+        mvc.perform(delete("/workers/{id}", customerOnly.id())
+                        .header("Authorization", "Bearer " + manager.accessToken()))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
     // --- payloads ---------------------------------------------------------------------------------
 
     private String updatePayload(String firstName, String phoneSuffix) {
@@ -195,6 +205,17 @@ class WorkerControllerTest {
                 LocalDate.now().minusYears(1),
                 LocalDate.now().minusYears(1)
         ));
+
+        setPassword(user.id());
+        userService.markEmailVerified(user.id());
+
+        return new Fixture(user.id(), email, login(email).get("accessToken").asText());
+    }
+
+    private Fixture registerCustomer() throws Exception {
+        String email = uniqueEmail();
+
+        UserInfo user = userService.createCustomer(userCommand(email));
 
         setPassword(user.id());
         userService.markEmailVerified(user.id());

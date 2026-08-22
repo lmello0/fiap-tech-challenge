@@ -38,6 +38,50 @@
         <sonar.coverage.jacoco.xmlReportPaths>
             ${project.build.directory}/site/jacoco/jacoco.xml
         </sonar.coverage.jacoco.xmlReportPaths>
+
+        <!-- Mirrors jacoco-maven-plugin's <excludes> above: files with no behavior of their own to
+             verify. Kept in sync manually since the two plugins use different exclude syntaxes
+             (class names vs source paths). -->
+        <sonar.coverage.exclusions>
+            src/main/java/com/fiap/techchallenge/TechChallengeApplication.java,
+            src/main/java/com/fiap/techchallenge/auth/config/JwtConfig.java,
+            src/main/java/com/fiap/techchallenge/auth/config/SecurityConfig.java,
+            src/main/java/com/fiap/techchallenge/shared/config/OpenApiConfig.java,
+            src/main/java/com/fiap/techchallenge/shared/config/SchedulerConfig.java,
+            src/main/java/com/fiap/techchallenge/vehicle/exceptions/VehicleNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/workorder/exceptions/VehicleOwnershipException.java,
+            src/main/java/com/fiap/techchallenge/workorder/exceptions/BudgetNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/workorder/exceptions/WorkOrderNotInProgressException.java,
+            src/main/java/com/fiap/techchallenge/workorder/exceptions/BudgetLockedException.java,
+            src/main/java/com/fiap/techchallenge/workorder/exceptions/BudgetLineNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/auth/exceptions/EmailNotVerifiedException.java,
+            src/main/java/com/fiap/techchallenge/auth/exceptions/RegistrationConflictException.java,
+            src/main/java/com/fiap/techchallenge/auth/exceptions/AccountLockedException.java,
+            src/main/java/com/fiap/techchallenge/auth/exceptions/AccountDisabledException.java,
+            src/main/java/com/fiap/techchallenge/email/exceptions/EmailExpiredException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/InvalidStockAdjustmentException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/VendorNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/PartNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/RepairServiceNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/ReorderRuleNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/inventory/exceptions/PurchaseOrderNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/NotACustomerException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/EmailAlreadyInUseException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/RegistrationAlreadyInUseException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/InvalidWorkerStartDateException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/UserNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/MultiplePrimaryPhoneNumberException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/NotAWorkerException.java,
+            src/main/java/com/fiap/techchallenge/user/exceptions/DocumentAlreadyInUseException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/ClosureConflictException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/VehicleOwnershipException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/InvalidBookingRequestException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/InvalidAppointmentTokenException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/IllegalAppointmentStateException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/AppointmentNotFoundException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/SlotUnavailableException.java,
+            src/main/java/com/fiap/techchallenge/scheduling/exceptions/GuestBookingLimitExceededException.java
+        </sonar.coverage.exclusions>
     </properties>
     <dependencies>
         <dependency>
@@ -280,6 +324,61 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.13</version>
 
+                <configuration>
+                    <!--
+                    No behavior of their own to verify: the app entrypoint, and @Configuration
+                    classes that are pure @Bean wiring with no conditional logic. Config classes
+                    that do carry real branching (PasswordChangeRequiredFilter,
+                    EmailAsyncExceptionConfig) are deliberately NOT here.
+                    -->
+                    <excludes>
+                        <exclude>com/fiap/techchallenge/TechChallengeApplication.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/config/JwtConfig.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/config/SecurityConfig.class</exclude>
+                        <exclude>com/fiap/techchallenge/shared/config/OpenApiConfig.class</exclude>
+                        <exclude>com/fiap/techchallenge/shared/config/SchedulerConfig.class</exclude>
+
+                        <!--
+                        Exception classes that are nothing but a single super(message) constructor:
+                        no branch, no custom field, no cause chain. Anything with more than that
+                        stays covered.
+                        -->
+                        <exclude>com/fiap/techchallenge/vehicle/exceptions/VehicleNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/workorder/exceptions/VehicleOwnershipException.class</exclude>
+                        <exclude>com/fiap/techchallenge/workorder/exceptions/BudgetNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/workorder/exceptions/WorkOrderNotInProgressException.class</exclude>
+                        <exclude>com/fiap/techchallenge/workorder/exceptions/BudgetLockedException.class</exclude>
+                        <exclude>com/fiap/techchallenge/workorder/exceptions/BudgetLineNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/exceptions/EmailNotVerifiedException.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/exceptions/RegistrationConflictException.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/exceptions/AccountLockedException.class</exclude>
+                        <exclude>com/fiap/techchallenge/auth/exceptions/AccountDisabledException.class</exclude>
+                        <exclude>com/fiap/techchallenge/email/exceptions/EmailExpiredException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/InvalidStockAdjustmentException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/VendorNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/PartNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/RepairServiceNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/ReorderRuleNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/inventory/exceptions/PurchaseOrderNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/NotACustomerException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/EmailAlreadyInUseException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/RegistrationAlreadyInUseException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/InvalidWorkerStartDateException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/UserNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/MultiplePrimaryPhoneNumberException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/NotAWorkerException.class</exclude>
+                        <exclude>com/fiap/techchallenge/user/exceptions/DocumentAlreadyInUseException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/ClosureConflictException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/VehicleOwnershipException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/InvalidBookingRequestException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/InvalidAppointmentTokenException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/IllegalAppointmentStateException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/AppointmentNotFoundException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/SlotUnavailableException.class</exclude>
+                        <exclude>com/fiap/techchallenge/scheduling/exceptions/GuestBookingLimitExceededException.class</exclude>
+                    </excludes>
+                </configuration>
+
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -288,11 +387,83 @@
                         </goals>
                     </execution>
 
+                    <!--
+                    Same destFile AND property name as prepare-agent above (append is jacoco's
+                    default), so maven-failsafe-plugin's *IT tests contribute to the same coverage
+                    report as maven-surefire-plugin's *Test ones, picked up via the same implicit
+                    ${argLine} binding surefire already relies on below (no explicit argLine config
+                    needed on either plugin). Reusing "argLine" rather than jacoco's own default
+                    "failsafeArgLine" sidesteps a Maven delayed-property-expansion issue where
+                    @{failsafeArgLine} was never substituted and got passed to the forked JVM
+                    literally, crashing it before any IT ran.
+                    -->
+                    <execution>
+                        <id>prepare-agent-integration</id>
+                        <goals>
+                            <goal>prepare-agent-integration</goal>
+                        </goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <propertyName>argLine</propertyName>
+                        </configuration>
+                    </execution>
+
                     <execution>
                         <id>report</id>
                         <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
+                        </goals>
+                    </execution>
+
+                    <!--
+                    Floor, not a target: coverage sat at 96.82% line / 86.31% branch once the
+                    90%-coverage push (staged by module, see git log) finished. These thresholds
+                    are set well under that so ordinary feature work doesn't trip the build, while
+                    still catching a real regression.
+                    -->
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.75</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+            *IT classes (e.g. EmailDeliveryIT) were never actually running: surefire's default
+            includes only match *Test.java, and nothing bound failsafe to pick up the rest. This
+            wires failsafe into the integration-test/verify phases so they do.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -31,6 +31,15 @@ public class PurgeExpiredRefreshTokens {
             lockAtMostFor = "PT10M"
     )
     protected void purge() {
+        purgeExpiredTokens();
+    }
+
+    /**
+     * The work itself, split from {@link #purge()} so it can be driven without ShedLock's lock: with
+     * the default PROXY_METHOD interception a direct call to the scheduled method is skipped whenever
+     * the lock is held (see {@code email.schedules.RetryFailedEmails} for the same split).
+     */
+    public void purgeExpiredTokens() {
         try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
             Instant cutoff = Instant.now().minus(RETENTION_AFTER_EXPIRY);
 

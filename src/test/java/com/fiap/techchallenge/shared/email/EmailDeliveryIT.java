@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.email.api.EmailRequestedEvent;
+import com.fiap.techchallenge.email.properties.EmailProperties;
 import com.fiap.techchallenge.email.schedules.RetryFailedEmails;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,9 @@ class EmailDeliveryIT {
     RetryFailedEmails retryFailedEmails;
 
     @Autowired
+    EmailProperties emailProperties;
+
+    @Autowired
     JdbcTemplate jdbcTemplate;
 
     @Test
@@ -113,6 +117,25 @@ class EmailDeliveryIT {
     }
 
     @Test
+    void htmlOnlyBodyIsDeliveredAndCcAndBccReachTheirRecipients() throws Exception {
+        String subject = uniqueSubject();
+
+        publish(EmailRequestedEvent.builder()
+                .to(List.of("reader@example.com"))
+                .cc(List.of("copied@example.com"))
+                .bcc(List.of("blind-copied@example.com"))
+                .subject(subject)
+                .html("<p>HTML only</p>")
+                .build());
+
+        JsonNode message = awaitMessage(subject);
+
+        assertThat(recipients(message, "Cc")).containsExactly("copied@example.com");
+        assertThat(recipients(message, "Bcc")).containsExactly("blind-copied@example.com");
+        assertThat(body(message).path("HTML").asText()).contains("<p>HTML only</p>");
+    }
+
+    @Test
     void anEmailThatFailedToSendGoesOutOnceTheMailServerIsBack() throws Exception {
         String subject = uniqueSubject();
         int workingPort = mailSender.getPort();
@@ -136,6 +159,42 @@ class EmailDeliveryIT {
         retryFailedEmails.resubmitFailedEmails();
 
         assertThat(body(awaitMessage(subject)).path("Text").asText()).contains("Sent on the second attempt");
+    }
+
+    @Test
+    void anEmailThatKeepsFailingIsAbandonedOnceMaxAttemptsIsReached() throws Exception {
+        String subject = uniqueSubject();
+        int workingPort = mailSender.getPort();
+
+        mailSender.setPort(2);
+        try {
+            publish(EmailRequestedEvent.builder()
+                    .to(List.of("persistent-failure@example.com"))
+                    .subject(subject)
+                    .plainText("Never actually sendable")
+                    .expiresAt(Instant.now().plus(Duration.ofHours(1)))
+                    .build());
+
+            awaitFailedPublication(subject);
+
+            // The initial publish above is attempt 1; drive it up to maxAttempts with the mail
+            // server still down, so the next retry finds completionAttempts >= maxAttempts and
+            // abandons it instead of trying again.
+            for (int remaining = emailProperties.maxAttempts() - 1; remaining > 0; remaining--) {
+                retryFailedEmails.resubmitFailedEmails();
+                awaitFailedPublication(subject);
+            }
+        } finally {
+            mailSender.setPort(workingPort);
+        }
+
+        // One more retry, now with a working mail server: if the abandonment check fired, this must
+        // be filtered out before ever reaching the (now working) mailSender.
+        retryFailedEmails.resubmitFailedEmails();
+        Thread.sleep(1_000);
+
+        assertThat(findMessage(subject)).isEmpty();
+        assertThat(completedPublications(subject)).isZero();
     }
 
     @Test
@@ -223,7 +282,11 @@ class EmailDeliveryIT {
     }
 
     private static List<String> recipients(JsonNode message) {
-        return message.path("To").valueStream()
+        return recipients(message, "To");
+    }
+
+    private static List<String> recipients(JsonNode message, String field) {
+        return message.path(field).valueStream()
                 .map(recipient -> recipient.path("Address").asText())
                 .toList();
     }

@@ -5,9 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.auth.entities.UserAuth;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
+import com.fiap.techchallenge.inventory.api.PartCatalogService;
 import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
+import com.fiap.techchallenge.inventory.api.StockService;
+import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
+import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
 import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
+import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
+import com.fiap.techchallenge.inventory.enums.UnitOfMeasure;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
@@ -32,6 +38,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,6 +69,12 @@ class BudgetControllerTest {
 
     @Autowired
     RepairServiceCatalogService repairServiceCatalogService;
+
+    @Autowired
+    PartCatalogService partCatalogService;
+
+    @Autowired
+    StockService stockService;
 
     final ObjectMapper json = new ObjectMapper();
 
@@ -101,6 +114,89 @@ class BudgetControllerTest {
                         .header("Authorization", "Bearer " + mechanic.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lines.length()").value(1));
+    }
+
+    @Test
+    void mechanicCanAddChangeAndRemoveAPartLineWithReservationFollowingIt() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        RepairServiceInfo service = createService();
+        PartInfo part = createPart();
+        UUID budgetId = draftBudget(attendant, mechanic, customer, vehicleId, service);
+
+        MvcResult addResult = mvc.perform(post("/budgets/{id}/lines", budgetId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type": "PART", "quantity": 2, "partId": "%s"}""".formatted(part.id())))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("2");
+
+        UUID lineId = UUID.fromString(json.readTree(addResult.getResponse().getContentAsString())
+                .get("lines").get(1).get("id").asText());
+
+        mvc.perform(patch("/budgets/{id}/lines/{lineId}/quantity", budgetId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"quantity": 5}"""))
+                .andExpect(status().isOk());
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("5");
+
+        mvc.perform(patch("/budgets/{id}/lines/{lineId}/quantity", budgetId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"quantity": 1}"""))
+                .andExpect(status().isOk());
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("1");
+
+        mvc.perform(delete("/budgets/{id}/lines/{lineId}", budgetId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void addingAPartLineWithoutAPartIdIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        RepairServiceInfo service = createService();
+        UUID budgetId = draftBudget(attendant, mechanic, customer, vehicleId, service);
+
+        mvc.perform(post("/budgets/{id}/lines", budgetId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type": "PART", "quantity": 1}"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addingAServiceLineWithAPartIdIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        RepairServiceInfo service = createService();
+        PartInfo part = createPart();
+        UUID budgetId = draftBudget(attendant, mechanic, customer, vehicleId, service);
+
+        mvc.perform(post("/budgets/{id}/lines", budgetId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type": "SERVICE", "quantity": 1, "serviceId": "%s", "partId": "%s"}"""
+                                .formatted(service.id(), part.id())))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -186,6 +282,49 @@ class BudgetControllerTest {
     }
 
     @Test
+    void gettingAnUnknownBudgetReturnsNotFound() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+
+        mvc.perform(get("/budgets/{id}", UUID.randomUUID())
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void changingTheQuantityOfAnUnknownLineReturnsNotFound() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        RepairServiceInfo service = createService();
+        UUID budgetId = draftBudget(attendant, mechanic, customer, vehicleId, service);
+
+        mvc.perform(patch("/budgets/{id}/lines/{lineId}/quantity", budgetId, UUID.randomUUID())
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"quantity": 2}"""))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void resendingABudgetThatWasNeverSentIsAConflict() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        RepairServiceInfo service = createService();
+        UUID budgetId = draftBudget(attendant, mechanic, customer, vehicleId, service);
+
+        // still DRAFT -- resend only makes sense once a Budget has actually been sent
+        mvc.perform(post("/budgets/{id}/resend", budgetId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void addingALineWithANonPositiveQuantityIsRejected() throws Exception {
         Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
@@ -250,6 +389,15 @@ class BudgetControllerTest {
     private RepairServiceInfo createService() {
         return repairServiceCatalogService.create(new CreateRepairServiceCommand(
                 "BGT-SVC-" + UUID.randomUUID(), "Test Service", null, BigDecimal.valueOf(100), 1800));
+    }
+
+    private PartInfo createPart() {
+        PartInfo part = partCatalogService.create(new CreatePartCommand(
+                "BGT-PART-" + UUID.randomUUID(), "Test Part", null, null, UnitOfMeasure.UNIT, BigDecimal.valueOf(50)));
+
+        stockService.adjust(part.id(), new AdjustStockCommand(BigDecimal.valueOf(20), "Seed"));
+
+        return partCatalogService.getById(part.id());
     }
 
     private UUID createVehicle(Fixture owner) throws Exception {

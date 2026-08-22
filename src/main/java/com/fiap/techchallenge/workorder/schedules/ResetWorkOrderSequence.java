@@ -22,6 +22,11 @@ public class ResetWorkOrderSequence {
     @Scheduled(cron = "0 0 0 * * ?")
     @SchedulerLock(name = "ResetWorkOrderSequence_resetSequence")
     protected void resetSequence() {
+        reset();
+    }
+
+    @Transactional
+    public void reset() {
         try (LogContext.Scope ignored = LogContext.open(UUID.randomUUID().toString())) {
             entityManager
                     .createNativeQuery("SELECT setval('work_orders.seq_work_order_code', 1, false)")

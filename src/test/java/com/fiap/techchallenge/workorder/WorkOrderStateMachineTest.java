@@ -49,6 +49,20 @@ class WorkOrderStateMachineTest {
     }
 
     @Test
+    void allowedNextListsEveryDeclaredTransition() {
+        assertThat(stateMachine.allowedNext(WorkOrderStatus.WAITING_APPROVAL))
+                .containsExactlyInAnyOrder(WorkOrderStatus.APPROVED, WorkOrderStatus.REFUSED);
+
+        assertThat(stateMachine.allowedNext(WorkOrderStatus.DELIVERED)).isEmpty();
+    }
+
+    @Test
+    void onlyDeliveredIsTerminal() {
+        assertThat(stateMachine.isTerminal(WorkOrderStatus.DELIVERED)).isTrue();
+        assertThat(stateMachine.isTerminal(WorkOrderStatus.RECEIVED)).isFalse();
+    }
+
+    @Test
     void rejectsATransitionOutOfATerminalStatus() {
         assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.DELIVERED, WorkOrderStatus.IN_PROGRESS))
                 .isInstanceOf(IllegalWorkOrderTransitionException.class)

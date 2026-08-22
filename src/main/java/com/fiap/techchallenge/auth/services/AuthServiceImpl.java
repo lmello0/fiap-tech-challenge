@@ -37,7 +37,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -59,6 +62,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailVerificationService emailVerificationService;
     private final EmailChangeService emailChangeService;
     private final LoginRateLimitProperties rateLimitProperties;
+    private final PlatformTransactionManager transactionManager;
 
     /**
      * Base64's alphabet has exactly 64 symbols, so each character of a random base64 string can
@@ -87,10 +91,14 @@ public class AuthServiceImpl implements AuthService {
             new Base64StringKeyGenerator(Base64.getEncoder().withoutPadding(), 24);
 
     private String dummyHash;
+    private TransactionTemplate requiresNewTx;
 
     @PostConstruct
     void init() {
         this.dummyHash = passwordEncoder.encode("timing-attack-mitigation-placeholder");
+
+        this.requiresNewTx = new TransactionTemplate(transactionManager);
+        this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
@@ -177,7 +185,14 @@ public class AuthServiceImpl implements AuthService {
         boolean passwordOk = passwordEncoder.matches(command.rawPassword(), hashToCheck);
 
         if (user == null || !passwordOk) {
-            credential.ifPresent(c -> c.registerFailedAttempt(now, rateLimitProperties.maxAttempts(), rateLimitProperties.lockDuration()));
+            // Runs in its own transaction and explicitly saves: this method throws right after, which
+            // would otherwise roll the increment back along with everything else (and merely mutating
+            // the entity here wouldn't be seen by a REQUIRES_NEW transaction's own persistence context
+            // anyway) and leave rate-limiting a no-op.
+            credential.ifPresent(c -> requiresNewTx.executeWithoutResult(status -> {
+                c.registerFailedAttempt(now, rateLimitProperties.maxAttempts(), rateLimitProperties.lockDuration());
+                userAuthRepository.save(c);
+            }));
             LogContext.put("outcome", "invalid_credentials");
             throw new BadCredentialsException("Invalid credentials");
         }

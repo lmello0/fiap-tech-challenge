@@ -27,6 +27,17 @@ class PickupInvitationRequestedListener {
 
     @ApplicationModuleListener
     void on(PickupInvitationRequestedEvent event) {
+        handle(event);
+    }
+
+    /**
+     * Split from {@link #on} so it can be driven without Modulith's async dispatch (see
+     * {@code email.schedules.RetryFailedEmails} for the original precedent, applied here to
+     * {@code @ApplicationModuleListener} instead of {@code @Scheduled}): calling {@code on} directly
+     * still goes through the proxy that makes it asynchronous, since the interception is keyed to the
+     * method itself, not how it's invoked.
+     */
+    void handle(PickupInvitationRequestedEvent event) {
         try (LogContext.Scope ignored = LogContext.open(event.metadata().requestId())) {
             LogContext.put("workOrderId", event.workOrderId());
             LogContext.put("customerId", event.customerId());

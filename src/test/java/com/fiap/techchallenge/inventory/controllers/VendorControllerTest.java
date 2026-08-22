@@ -92,6 +92,29 @@ class VendorControllerTest {
     }
 
     @Test
+    void stockistCanListAndFilterVendorsByNameAndActiveStatus() throws Exception {
+        Fixture stockist = registerWorker(WorkerRole.STOCKIST);
+        String uniqueMarker = UUID.randomUUID().toString().substring(0, 8);
+        UUID vendorId = createVendor(stockist, "Filterable Vendor " + uniqueMarker);
+
+        mvc.perform(get("/vendors")
+                        .param("name", uniqueMarker)
+                        .header("Authorization", "Bearer " + stockist.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        mvc.perform(delete("/vendors/{id}", vendorId).header("Authorization", "Bearer " + stockist.accessToken()))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/vendors")
+                        .param("name", uniqueMarker)
+                        .param("active", "false")
+                        .header("Authorization", "Bearer " + stockist.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
     void gettingOrMutatingAnUnknownVendorReturnsNotFound() throws Exception {
         Fixture manager = registerWorker(WorkerRole.MANAGER);
         UUID randomId = UUID.randomUUID();

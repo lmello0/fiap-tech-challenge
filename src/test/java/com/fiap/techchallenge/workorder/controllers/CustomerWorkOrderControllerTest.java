@@ -80,6 +80,32 @@ class CustomerWorkOrderControllerTest {
     final ObjectMapper json = new ObjectMapper();
 
     @Test
+    void aFreshWorkOrderHasNoBudgetYet() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        MvcResult createResult = mvc.perform(post("/work-orders")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "vehicleId": "%s",
+                                  "complaint": "Something is wrong"
+                                }""".formatted(customer.id(), vehicleId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID workOrderId = UUID.fromString(json.readTree(createResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(get("/work-orders/{id}/customer-view", workOrderId)
+                        .header("Authorization", "Bearer " + customer.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECEIVED"))
+                .andExpect(jsonPath("$.budget").doesNotExist());
+    }
+
+    @Test
     void theOwningCustomerCanRefuseTheirSentBudget() throws Exception {
         Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);

@@ -240,6 +240,93 @@ class AppointmentControllerTest {
     }
 
     @Test
+    void aGuestWithNoLastNameCanStillCompleteRegistration() throws Exception {
+        Instant slot = nextWeekdaySlot(16, 30);
+
+        mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "guestName": "Cher",
+                                  "guestPhone": "%s",
+                                  "guestEmail": "%s",
+                                  "guestVehicleMake": "Toyota",
+                                  "guestVehicleModel": "Corolla",
+                                  "guestVehicleYear": 2019,
+                                  "complaint": "Won't start",
+                                  "slotStart": "%s"
+                                }""".formatted(uniquePhone(), uniqueEmail(), slot)))
+                .andExpect(status().isCreated());
+
+        String registrationToken = tokenFor("complete-registration");
+
+        mvc.perform(post("/appointments/guest/complete-registration")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "%s",
+                                  "rawPassword": "%s",
+                                  "documentType": "CPF",
+                                  "documentCode": "%s",
+                                  "licensePlate": "%s",
+                                  "vehicleType": "CAR",
+                                  "color": "Silver",
+                                  "fuelType": "FLEX",
+                                  "transmissionType": "MANUAL"
+                                }""".formatted(registrationToken, PASSWORD, uniqueDocument(), uniquePlate())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void registeringAGuestAtCheckInTwiceIsRejectedTheSecondTime() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Instant slot = nextWeekdaySlot(17, 0);
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/on-behalf")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "guestName": "Second Timer",
+                                  "guestPhone": "%s",
+                                  "guestEmail": "%s",
+                                  "guestVehicleMake": "Honda",
+                                  "guestVehicleModel": "Civic",
+                                  "guestVehicleYear": 2021,
+                                  "complaint": "Brake noise",
+                                  "slotStart": "%s"
+                                }""".formatted(uniquePhone(), uniqueEmail(), slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        String registerGuestPayload = """
+                {
+                  "documentType": "CPF",
+                  "documentCode": "%s",
+                  "licensePlate": "%s",
+                  "vehicleType": "CAR",
+                  "color": "Red",
+                  "fuelType": "HYBRID",
+                  "transmissionType": "AUTOMATIC"
+                }""".formatted(uniqueDocument(), uniquePlate());
+
+        mvc.perform(post("/appointments/{id}/register-guest", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerGuestPayload))
+                .andExpect(status().isOk());
+
+        // The appointment is no longer a guest booking after the first conversion, so this fails on
+        // that check alone -- the payload's document/plate values don't need to be fresh.
+        mvc.perform(post("/appointments/{id}/register-guest", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerGuestPayload))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void aMechanicCannotBookOrCheckInAppointments() throws Exception {
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
         Instant slot = nextWeekdaySlot(16);
@@ -391,6 +478,231 @@ class AppointmentControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void bookingOnBehalfWithBothCustomerAndGuestDetailsIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        mvc.perform(post("/appointments/dropoff/on-behalf")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "vehicleId": "%s",
+                                  "guestName": "Also A Guest",
+                                  "complaint": "x",
+                                  "slotStart": "%s"
+                                }""".formatted(customer.id(), vehicleId, nextWeekdaySlot(9))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void bookingOnBehalfWithNeitherCustomerNorGuestDetailsIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+
+        mvc.perform(post("/appointments/dropoff/on-behalf")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "complaint": "x",
+                                  "slotStart": "%s"
+                                }""".formatted(nextWeekdaySlot(9))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void bookingOnBehalfForAnExistingCustomerWithoutAVehicleIdIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture customer = registerCustomer();
+
+        mvc.perform(post("/appointments/dropoff/on-behalf")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "complaint": "x",
+                                  "slotStart": "%s"
+                                }""".formatted(customer.id(), nextWeekdaySlot(9))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void attendantBooksOnBehalfOfAnExistingCustomer() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        mvc.perform(post("/appointments/dropoff/on-behalf")
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerId": "%s",
+                                  "vehicleId": "%s",
+                                  "complaint": "Squeaky brakes",
+                                  "slotStart": "%s"
+                                }""".formatted(customer.id(), vehicleId, nextWeekdaySlot(8, 0))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customerId").value(customer.id().toString()))
+                .andExpect(jsonPath("$.vehicleId").value(vehicleId.toString()));
+    }
+
+    @Test
+    void aCustomerBooksAndIsRejectedFromBookingAPickupForAVehicleTheyDontOwn() throws Exception {
+        Fixture owner = registerCustomer();
+        Fixture other = registerCustomer();
+        UUID vehicleId = createVehicle(owner);
+
+        mvc.perform(post("/appointments/pickup")
+                        .header("Authorization", "Bearer " + other.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workOrderId": "%s",
+                                  "vehicleId": "%s",
+                                  "slotStart": "%s"
+                                }""".formatted(UUID.randomUUID(), vehicleId, nextWeekdaySlot(9))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void checkingInAnAlreadyCompletedAppointmentIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Instant slot = nextWeekdaySlot(8, 30);
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(guestDropoffPayload(slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(post("/appointments/{id}/check-in", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/appointments/{id}/check-in", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void cancellingAnAlreadyCancelledAppointmentIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Instant slot = nextWeekdaySlot(9, 30);
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(guestDropoffPayload(slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(post("/appointments/{id}/cancel", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message": "First cancel"}"""))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/appointments/{id}/cancel", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message": "Second cancel"}"""))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void reschedulingAnAlreadyCancelledAppointmentIsRejected() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Instant slot = nextWeekdaySlot(10, 30);
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(guestDropoffPayload(slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(post("/appointments/{id}/cancel", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message": "Cancelled"}"""))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/appointments/{id}/reschedule", appointmentId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"newSlotStart": "%s"}""".formatted(nextWeekdaySlot(13))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void bookingASlotThatIsAlreadyFullyBookedIsRejected() throws Exception {
+        // seeded default dropoff capacity is 3 (V33 migration) -- three guest bookings fill the slot.
+        // Dedicated slot: no other test in this class books at 11:30, so the count starts clean.
+        Instant slot = nextWeekdaySlot(11, 30);
+
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(post("/appointments/dropoff/guest")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(guestDropoffPayload(slot)))
+                    .andExpect(status().isCreated());
+        }
+
+        mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(guestDropoffPayload(slot)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void aGuestCannotHaveTwoActiveDropoffBookingsWithTheSameContactDetails() throws Exception {
+        String phone = uniquePhone();
+        String email = uniqueEmail();
+        // The guest-limit check runs before the availability check, so the second slot's
+        // availability is irrelevant -- only the first booking needs a genuinely free slot.
+        Instant firstSlot = nextWeekdaySlot(12, 30);
+        Instant secondSlot = nextWeekdaySlot(13, 30);
+
+        mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "guestName": "Repeat Offender",
+                                  "guestPhone": "%s",
+                                  "guestEmail": "%s",
+                                  "guestVehicleMake": "Toyota",
+                                  "guestVehicleModel": "Corolla",
+                                  "guestVehicleYear": 2019,
+                                  "complaint": "Won't start",
+                                  "slotStart": "%s"
+                                }""".formatted(phone, email, firstSlot)))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "guestName": "Repeat Offender",
+                                  "guestPhone": "%s",
+                                  "guestEmail": "%s",
+                                  "guestVehicleMake": "Toyota",
+                                  "guestVehicleModel": "Corolla",
+                                  "guestVehicleYear": 2019,
+                                  "complaint": "Still won't start",
+                                  "slotStart": "%s"
+                                }""".formatted(phone, email, secondSlot)))
+                .andExpect(status().isConflict());
+    }
+
     // --- token extraction -----------------------------------------------------------------------
 
     private String tokenFor(String pathFragment) {
@@ -442,7 +754,11 @@ class AppointmentControllerTest {
     }
 
     private static Instant nextWeekdaySlot(int hourOfDay) {
-        return ZonedDateTime.of(nextWeekday(), LocalTime.of(hourOfDay, 0), ZoneId.systemDefault()).toInstant();
+        return nextWeekdaySlot(hourOfDay, 0);
+    }
+
+    private static Instant nextWeekdaySlot(int hourOfDay, int minute) {
+        return ZonedDateTime.of(nextWeekday(), LocalTime.of(hourOfDay, minute), ZoneId.systemDefault()).toInstant();
     }
 
     // --- auth fixtures (mirrors inventory/controllers/PartControllerTest.java) --------------------
