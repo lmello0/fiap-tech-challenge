@@ -1,7 +1,19 @@
+x-backend-base: &backend-base
+  build:
+    context: ./apps/backend
+    dockerfile: Dockerfile
+  env_file:
+    - ./apps/backend/.env
+  environment:
+    DB_URL: jdbc:postgresql://postgres:5432/auto_repair_shop
+  ports:
+    - '8080:8080'
+
 services:
   postgres:
     image: 'postgres:18'
     restart: unless-stopped
+    profiles: [ app, sonar ]
     environment:
       TZ: America/Sao_Paulo
       POSTGRES_PASSWORD: secret
@@ -15,10 +27,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped
+    profiles: [ app ]
     environment:
       TZ: America/Sao_Paulo
       MP_SMTP_AUTH_ACCEPT_ANY: 1
@@ -29,15 +43,16 @@ services:
       - '8025:8025'
       - '1025:1025'
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8025/readyz" ]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null --tries=1 http://localhost:8025/readyz || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 3s
 
   sonarqube:
     image: 'sonarqube:community'
     restart: unless-stopped
-#    profiles: [ sonar ]
+    profiles: [ sonar ]
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
       SONAR_JDBC_USERNAME: sonar
@@ -66,7 +81,7 @@ services:
   sonar-analysis:
     image: maven:3.9-amazoncorretto-25
     restart: no
-#    profiles: [ sonar ]
+    profiles: [ sonar ]
     working_dir: /usr/src
     volumes:
       - ./apps/backend:/usr/src
@@ -85,13 +100,17 @@ services:
     entrypoint: [ "/bin/sh", "/scripts/sonar-analysis.sh" ]
 
   backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-    env_file:
-      - ./apps/backend/.env
-    ports:
-      - '8080:8080'
+    <<: *backend-base
+    profiles: [ app ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+
+  backend-pipeline:
+    <<: *backend-base
+    profiles: [ sonar ]
     depends_on:
       postgres:
         condition: service_healthy
