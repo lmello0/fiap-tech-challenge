@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: secret
     volumes:
       - postgres:/var/lib/postgresql/18/docker
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./apps/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - '5432:5432'
     healthcheck:
@@ -28,11 +28,16 @@ services:
     ports:
       - '8025:8025'
       - '1025:1025'
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8025/readyz" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   sonarqube:
     image: 'sonarqube:community'
     restart: unless-stopped
-    profiles: [ sonar ]
+#    profiles: [ sonar ]
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
       SONAR_JDBC_USERNAME: sonar
@@ -61,10 +66,10 @@ services:
   sonar-analysis:
     image: maven:3.9-amazoncorretto-25
     restart: no
-    profiles: [ sonar ]
+#    profiles: [ sonar ]
     working_dir: /usr/src
     volumes:
-      - .:/usr/src
+      - ./apps/backend:/usr/src
       - maven_repository:/root/.m2
       - ./scripts:/scripts:ro
       - /var/run/docker.sock:/var/run/docker.sock
@@ -78,6 +83,22 @@ services:
       sonarqube:
         condition: service_healthy
     entrypoint: [ "/bin/sh", "/scripts/sonar-analysis.sh" ]
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./apps/backend/.env
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      sonar-analysis:
+        condition: service_completed_successfully
 
 volumes:
   postgres:

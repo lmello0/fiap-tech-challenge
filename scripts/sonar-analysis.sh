@@ -2,46 +2,16 @@
 
 set -e
 
-echo "Waiting for SonarQube..."
+SCRIPT_DIR="$(dirname "$0")"
 
-until curl -sf \
-  -u "${SONAR_USER}:${SONAR_PASSWORD}" \
-  "${SONAR_HOST_URL}/api/system/status" \
-  | grep -q '"status":"UP"'; do
-  sleep 5
-done
+sh "${SCRIPT_DIR}/sonar-wait-ready.sh"
 
-echo "SonarQube is ready."
-
-echo "Revoking previous demo token..."
-
-curl -sf \
-  -u "${SONAR_USER}:${SONAR_PASSWORD}" \
-  -X POST \
-  "${SONAR_HOST_URL}/api/user_tokens/revoke" \
-  -d "name=demo-scanner" \
-  || true
-
-echo "Creating demo scanner token..."
-
-RESPONSE=$(curl -sf \
-  -u "${SONAR_USER}:${SONAR_PASSWORD}" \
-  -X POST \
-  "${SONAR_HOST_URL}/api/user_tokens/generate" \
-  -d "name=demo-scanner")
-
-TOKEN=$(echo "$RESPONSE" \
-  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-
-if [ -z "$TOKEN" ]; then
-  echo "Failed to create SonarQube token."
-  echo "$RESPONSE"
-  exit 1
-fi
-
+echo "Provisioning demo scanner token..."
+SONAR_TOKEN=$(sh "${SCRIPT_DIR}/sonar-provision-token.sh")
+export SONAR_TOKEN
 echo "SonarQube token created successfully."
 
-export SONAR_TOKEN="$TOKEN"
+sh "${SCRIPT_DIR}/sonar-provision-quality-gate.sh"
 
 echo "======================================"
 echo " Running Maven tests + Sonar analysis "
