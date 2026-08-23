@@ -38,3 +38,7 @@ build/
 node_modules/
 dist/
 .angular/
+
+### Impeccable ###
+# Screenshot evidence from design review rounds — transient, regenerated on demand.
+.impeccable/review/

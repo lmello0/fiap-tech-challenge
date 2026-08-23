@@ -1,0 +1,516 @@
+:host {
+  display: block;
+}
+
+.plate {
+  border-top: 3px solid var(--section-ink, var(--ink));
+}
+
+.plate__meta {
+  color: var(--ink-3);
+}
+
+.wo__crumb {
+  margin-bottom: 0.9rem;
+}
+
+.wo__crumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.wo__crumb a:hover {
+  text-decoration: underline;
+}
+
+.wo__crumb-arrow {
+  transform: rotate(180deg);
+}
+
+/* --- head ---------------------------------------------------------------- */
+
+.wo__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 1.25rem;
+}
+
+.wo__code {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.wo__title {
+  font-size: var(--step-4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-top: 0.1rem;
+}
+
+.wo__meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+  color: var(--ink-2);
+}
+
+.wo__plate {
+  font-weight: 600;
+  border: 1px solid var(--rule-strong);
+  padding: 0.05rem 0.35rem;
+  letter-spacing: 0.04em;
+}
+
+.wo__doc {
+  color: var(--ink-3);
+}
+
+.wo__toast {
+  margin-bottom: 1.1rem;
+}
+
+/* --- procedure ----------------------------------------------------------- */
+
+.wo__procedure {
+  margin-bottom: 1.25rem;
+}
+
+/* The plate was half empty: the step block sat left while the right half held
+   a single pinned button. The rail's own precondition panel belongs in that
+   void, so the procedure reads across the full sheet. */
+.wo__procedure-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .wo__procedure-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.wo__next {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.wo__next-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.7rem;
+}
+
+.wo__next-title {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.15;
+  margin-top: 0.1rem;
+}
+
+.wo__next-pre {
+  color: var(--ink-2);
+  max-width: 68ch;
+  margin-top: 0.15rem;
+}
+
+.wo__next-lead {
+  font-weight: 600;
+}
+
+.wo__next-tail {
+  margin-top: 0.4rem;
+}
+
+.wo__shortfalls {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.wo__shortfalls li + li {
+  margin-top: 0.2rem;
+}
+
+.wo__inert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px dashed var(--rule-strong);
+  padding: 0.42rem 0.85rem;
+}
+
+.wo__inert-sm {
+  color: var(--ink-3);
+}
+
+.wo__reason {
+  display: block;
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
+.wo__confirm {
+  margin-top: 0.25rem;
+}
+
+.wo__span {
+  grid-column: 1 / -1;
+}
+
+.wo__confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* --- columns -------------------------------------------------------------- */
+
+.wo__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.wo__col {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .wo__cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- prose ---------------------------------------------------------------- */
+
+.wo__prose {
+  max-width: 72ch;
+}
+
+.wo__prose-label {
+  display: block;
+  margin-top: 1rem;
+}
+
+.wo__complaint,
+.wo__diagnosis {
+  margin-top: 0.25rem;
+  font-size: var(--step-1);
+  line-height: 1.55;
+}
+
+.wo__complaint {
+  font-style: italic;
+}
+
+.wo__byline {
+  margin-top: 0.35rem;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+
+.wo__pending {
+  margin-top: 0.25rem;
+  color: var(--ink-3);
+}
+
+/* --- budget --------------------------------------------------------------- */
+
+.wo__budget-notice {
+  margin-bottom: 1rem;
+}
+
+.wo__send-error {
+  margin-top: 0.3rem;
+  font-family: var(--face-mono);
+  font-size: 0.75rem;
+  color: var(--caution-ink);
+}
+
+.wo__resend {
+  margin-left: 0.4rem;
+}
+
+.wo__rowtype {
+  font-family: var(--face-cond);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--rule-strong);
+  padding: 0.05rem 0.3rem;
+  color: var(--ink-2);
+}
+
+.wo__rowtype.is-part {
+  color: var(--sec-inventory);
+  border-color: var(--sec-inventory);
+}
+
+.wo__qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wo__qty-btn {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  background: var(--stock);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.wo__qty-btn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.wo__qty-btn:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.wo__qty-n {
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+.wo__stock-line {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.wo__stock-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.wo__remove {
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.wo__remove:hover {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.wo__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ok);
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.wo__total-row td {
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid var(--ink);
+  font-weight: 600;
+}
+
+.wo__total-label {
+  font-family: var(--face-cond);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+
+.wo__total {
+  font-size: var(--step-1);
+}
+
+.wo__add {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.wo__add-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.wo__send {
+  margin-top: 1.1rem;
+}
+
+/* --- history --------------------------------------------------------------- */
+
+.wo__history-body {
+  padding: 0;
+}
+
+.wo__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wo__entry + .wo__entry {
+  border-top: 1px solid var(--rule);
+}
+
+.wo__entry-btn {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}
+
+.wo__entry-btn:hover {
+  background: color-mix(in srgb, var(--ref) 6%, transparent);
+}
+
+.wo__entry.is-open .wo__entry-btn {
+  background: color-mix(in srgb, var(--ref) 8%, transparent);
+}
+
+.wo__entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.wo__entry-when {
+  font-size: 0.68rem;
+  color: var(--ink-3);
+}
+
+.wo__entry-mark {
+  color: var(--ink-3);
+  transition: transform 90ms linear, color 90ms linear;
+}
+
+.wo__entry-btn:hover .wo__entry-mark {
+  color: var(--ref);
+}
+
+.wo__entry.is-open .wo__entry-mark {
+  transform: rotate(90deg);
+  color: var(--ref);
+}
+
+.wo__entry-summary {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.wo__entry-actor {
+  font-size: 0.72rem;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.wo__system {
+  border: 1px solid var(--rule-strong);
+  padding: 0 0.25rem;
+  font-family: var(--face-cond);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.wo__internal {
+  color: var(--caution-ink);
+  font-family: var(--face-cond);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wo__snapshot {
+  padding: 0 1rem 0.8rem;
+  border-top: 1px dashed var(--rule);
+  margin-top: 0.1rem;
+  padding-top: 0.55rem;
+}
+
+.wo__snapshot-body {
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin-top: 0.2rem;
+}
+
+/* --- vehicle spec ----------------------------------------------------------- */
+
+.wo__spec {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0;
+}
+
+.wo__spec dt {
+  white-space: nowrap;
+}
+
+.wo__spec dd {
+  margin: 0;
+  text-align: right;
+}
+
+.wo__notfound-action {
+  margin-top: 0.9rem;
+}

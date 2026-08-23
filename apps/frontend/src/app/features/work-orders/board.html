@@ -1,0 +1,192 @@
+<div class="board">
+  <div class="board__head">
+    <div>
+      <h1 class="board__title">Shop status</h1>
+      <p class="board__sub">
+        {{ rows().length }} {{ rows().length === 1 ? 'job' : 'jobs' }} on the board ·
+        {{ blockedRows().length }} blocked · {{ waitingOnCustomer() }} waiting on a customer
+      </p>
+    </div>
+
+    <div class="board__filters">
+      <label class="field board__search">
+        <span class="sr-only">Search by order code, customer, or plate</span>
+        <span class="board__search-icon" aria-hidden="true"><app-icon name="search" [size]="15" /></span>
+        <input
+          class="input board__search-input"
+          type="search"
+          placeholder="Order, customer or plate"
+          [value]="query()"
+          (input)="onQuery($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span class="sr-only">Filter by step</span>
+        <select class="input" [value]="statusFilter()" (change)="onStatus($event)">
+          <option value="ALL">All steps</option>
+          @for (s of statuses(); track s.status) {
+            <option [value]="s.status">{{ s.title }} ({{ s.count }})</option>
+          }
+        </select>
+      </label>
+
+      <label class="board__toggle">
+        <input type="checkbox" [checked]="mineOnly()" (change)="mineOnly.set(!mineOnly())" />
+        <span>My jobs</span>
+      </label>
+
+      <label class="board__toggle">
+        <input type="checkbox" [checked]="showClosed()" (change)="showClosed.set(!showClosed())" />
+        <span>Include closed</span>
+      </label>
+    </div>
+  </div>
+
+  @if (toast(); as t) {
+    <div class="board__toast">
+      <app-callout [tier]="t.tone === 'warn' ? 'warning' : 'note'">{{ t.text }}</app-callout>
+    </div>
+  }
+
+  <div class="plate">
+    <div class="plate__head">
+      <p class="plate__title">Procedure 4.1 — Work order lifecycle</p>
+      <p class="plate__meta label">Ten steps, one branch</p>
+    </div>
+
+    <div class="mt-wrap" (scroll)="onScroll($event)">
+      <table class="mt board__table" [class.is-scrolled]="scrolled()">
+        <caption class="sr-only">
+          Every live work order, its position in the ten-step lifecycle, and the next lawful step.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="shrink">#</th>
+            <th scope="col">Order</th>
+            <th scope="col">Vehicle</th>
+            <th scope="col">Customer</th>
+            <th scope="col" class="shrink">Procedure</th>
+            <th scope="col">Step</th>
+            <th scope="col">Mechanic</th>
+            <th scope="col" class="r shrink">In shop</th>
+            <th scope="col" class="shrink">Next step</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.order.id; let i = $index) {
+            <tr class="board__row" [class.is-blocked]="row.block.blocked">
+              <td class="shrink board__n token">{{ i + 1 }}</td>
+              <td>
+                <a class="token board__code" [routerLink]="['/work-orders', row.order.id]">{{
+                  row.order.orderCode
+                }}</a>
+              </td>
+              <td>
+                <span class="token board__plate">{{ row.order.vehiclePlate }}</span>
+                <span class="board__vehicle">{{ row.order.vehicleLabel }}</span>
+              </td>
+              <td class="board__customer">{{ row.order.customerName }}</td>
+              <td class="shrink">
+                <app-step-rail [status]="row.order.status" [compact]="true" [blocked]="row.block.blocked" />
+              </td>
+              <td><app-status-mark [status]="row.order.status" /></td>
+              <!-- A shop knows its mechanics by first name; the full name is on the title. -->
+              <td class="board__mech" [title]="row.order.assignedMechanicName ?? ''">
+                {{ firstName(row.order.assignedMechanicName) }}
+              </td>
+              <td class="r num">{{ row.age }}d</td>
+              <td class="shrink">
+                @if (row.nextLabel && row.canAdvance) {
+                  <button class="btn btn--sm btn--primary" type="button" (click)="advance(row)">
+                    {{ row.nextLabel }}
+                  </button>
+                } @else if (row.inertWord) {
+                  <span class="board__inert" [title]="row.blockedReason">
+                    <app-icon [name]="row.inertIcon" [size]="13" />
+                    {{ row.inertWord }}
+                  </span>
+                } @else {
+                  <span class="board__inert">—</span>
+                }
+              </td>
+            </tr>
+
+            <!-- The callout rides inside the row's own grid, never floating beside it. -->
+            @if (row.block.blocked) {
+              <tr class="board__callout-row">
+                <td></td>
+                <td colspan="7">
+                  <div class="callout callout--warning">
+                    <p class="callout__tier">Warning</p>
+                    <div class="callout__body">
+                      Service cannot start — this order's reservations are short on the shelf.
+                      @for (s of row.block.shortfalls; track s.partId) {
+                        <span class="board__short">
+                          <span class="token">{{ s.sku }}</span> {{ s.partName }} — need
+                          <strong class="num">{{ s.required }}</strong>, have
+                          <strong class="num">{{ s.available }}</strong>, short
+                          <strong class="num">{{ s.short }}</strong
+                          >.
+                          @if (s.inboundPurchaseOrderCode) {
+                            Inbound on <span class="token">{{ s.inboundPurchaseOrderCode }}</span
+                            >.
+                          } @else {
+                            No purchase order covers it yet.
+                          }
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="board__band-pad"></td>
+              </tr>
+            } @else if (row.waitingDays !== null && row.waitingDays >= 2) {
+              <tr class="board__callout-row">
+                <td></td>
+                <td colspan="7">
+                  <div class="callout callout--caution">
+                    <p class="callout__tier">Caution</p>
+                    <div class="callout__body">
+                      The budget has been with the customer for
+                      <strong class="num">{{ row.waitingDays }}</strong> days. Its lines are frozen —
+                      the only outcomes are approval or refusal.
+                    </div>
+                  </div>
+                </td>
+                <td class="board__band-pad"></td>
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td colspan="9">
+                <div class="empty">
+                  <p class="empty__title">No jobs match this filter</p>
+                  <p>
+                    The board is showing nothing because of the filters above, not because the shop is
+                    empty.
+                  </p>
+                  <p class="board__empty-action">
+                    <button class="btn btn--sm" type="button" (click)="clearFilters()">
+                      Clear filters
+                    </button>
+                  </p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="board__legend">
+    <h2 class="board__legend-title">Reading the procedure rail</h2>
+    <p class="board__legend-body">
+      Each tick is one step of the ten. A filled tick is done, the boxed tick is where the job stands,
+      and a hollow tick is not yet reached. Step 5 branches: a refused budget is terminal and its rail
+      stops there. Hover or focus any tick to read that step's precondition and which roles the API
+      will accept.
+    </p>
+  </section>
+</div>

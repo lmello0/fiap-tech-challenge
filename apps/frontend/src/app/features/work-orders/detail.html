@@ -1,0 +1,447 @@
+@if (order(); as o) {
+  <div class="wo">
+    <p class="wo__crumb">
+      <a routerLink="/work-orders"><app-icon name="arrow" [size]="13" class="wo__crumb-arrow" /> Shop status</a>
+    </p>
+
+    <header class="wo__head">
+      <div>
+        <p class="token wo__code">{{ o.orderCode }}</p>
+        <h1 class="wo__title">{{ o.vehicleLabel }}</h1>
+        <p class="wo__meta">
+          <span class="token wo__plate">{{ o.vehiclePlate }}</span>
+          <span>{{ o.customerName }}</span>
+          @if (customer(); as c) {
+            <span class="token wo__doc">{{ c.document }}</span>
+          }
+          <span>In shop {{ daysInShop() }}d</span>
+        </p>
+      </div>
+      <div class="wo__head-status">
+        <app-status-mark [status]="o.status" />
+      </div>
+    </header>
+
+    @if (toast(); as t) {
+      <div class="wo__toast">
+        <app-callout [tier]="t.tone === 'warn' ? 'warning' : 'note'">{{ t.text }}</app-callout>
+      </div>
+    }
+
+    <!-- ---------------------------------------------------------------- -->
+    <!-- The procedure: where this job stands and what may lawfully happen -->
+    <!-- ---------------------------------------------------------------- -->
+
+    <section class="plate wo__procedure">
+      <div class="plate__head">
+        <p class="plate__title">Procedure 4.1 — Work order lifecycle</p>
+        <p class="plate__meta label">Step {{ step()!.n }} of 10</p>
+      </div>
+      <div class="plate__body wo__procedure-body">
+        <app-step-rail [status]="o.status" [blocked]="block().blocked" />
+
+        <div class="wo__next">
+          @if (block().blocked) {
+            <app-callout tier="warning">
+              <p class="wo__next-lead">Service cannot start — reserved parts are short on the shelf.</p>
+              <ul class="wo__shortfalls">
+                @for (s of block().shortfalls; track s.partId) {
+                  <li>
+                    <span class="token">{{ s.sku }}</span> {{ s.partName }} — need
+                    <strong class="num">{{ s.required }}</strong>, have
+                    <strong class="num">{{ s.available }}</strong
+                    >, short <strong class="num">{{ s.short }}</strong
+                    >.
+                    @if (s.inboundPurchaseOrderCode) {
+                      Inbound on <span class="token">{{ s.inboundPurchaseOrderCode }}</span
+                      >.
+                    } @else {
+                      No purchase order covers it yet.
+                    }
+                  </li>
+                }
+              </ul>
+              <p class="wo__next-tail">
+                Nothing has been consumed. Receive the stock or raise a purchase order, then start
+                service.
+              </p>
+            </app-callout>
+          } @else if (next(); as n) {
+            <div class="wo__next-body">
+              <div>
+                <p class="label">Next step</p>
+                <p class="wo__next-title">{{ n.n }} · {{ n.title }}</p>
+                <p class="wo__next-pre">{{ n.precondition }}</p>
+              </div>
+
+              @if (canAdvance()) {
+                <button class="btn btn--primary" type="button" (click)="requestAdvance()">
+                  {{ n.action!.label }}
+                </button>
+              } @else if (o.status === 'WAITING_APPROVAL') {
+                <p class="wo__inert">
+                  <app-icon name="clock" [size]="14" /> Waiting on the customer
+                </p>
+              } @else {
+                <p class="wo__inert">
+                  <app-icon name="lock" [size]="14" />
+                  {{ n.action ? 'Requires ' + roleWord(n) : 'No staff action' }}
+                </p>
+              }
+            </div>
+
+            @if (n.action?.consequence) {
+              <app-callout [tier]="n.action!.tier!">{{ n.action!.consequence }}</app-callout>
+            }
+          } @else if (o.status === 'REFUSED') {
+            <app-callout tier="warning">
+              This work order is closed. The customer refused the budget on
+              {{ when(o.refusedAt) }} and a refused budget is terminal — there is no requoting.
+              @if (o.refusalReason) {
+                <span class="wo__reason">Reason given: “{{ o.refusalReason }}”</span>
+              }
+            </app-callout>
+          } @else {
+            <app-callout tier="note">
+              This work order is complete. The vehicle was delivered on {{ when(o.deliveredAt) }}.
+            </app-callout>
+          }
+        </div>
+
+        @if (confirming()) {
+          <div class="wo__confirm wo__span">
+            <app-callout tier="warning">
+              <p class="wo__next-lead">{{ next()!.action!.consequence }}</p>
+              <p class="wo__confirm-actions">
+                <button class="btn btn--danger btn--sm" type="button" (click)="advance()">
+                  Yes — {{ next()!.action!.label }}
+                </button>
+                <button class="btn btn--sm btn--quiet" type="button" (click)="confirming.set(false)">
+                  Cancel
+                </button>
+              </p>
+            </app-callout>
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="wo__cols">
+      <div class="wo__col">
+        <!-- ------------------------------------------------------------ -->
+        <!-- Complaint and diagnosis                                       -->
+        <!-- ------------------------------------------------------------ -->
+
+        <section class="plate">
+          <div class="plate__head"><p class="plate__title">4.2 — Complaint and diagnosis</p></div>
+          <div class="plate__body wo__prose">
+            <p class="label">Customer complaint</p>
+            <p class="wo__complaint">{{ o.customerComplaint }}</p>
+
+            <p class="label wo__prose-label">Mechanic's diagnosis</p>
+            @if (o.diagnosis) {
+              <p class="wo__diagnosis">{{ o.diagnosis }}</p>
+              <p class="wo__byline">
+                {{ o.assignedMechanicName }} · {{ when(o.diagnosticFinishedAt) }}
+              </p>
+            } @else {
+              <p class="wo__pending">
+                Not recorded yet. Diagnosis is written when a mechanic finishes step 3, and finishing
+                it opens the budget draft.
+              </p>
+            }
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------ -->
+        <!-- The budget                                                    -->
+        <!-- ------------------------------------------------------------ -->
+
+        @if (budget(); as b) {
+          <section class="plate wo__budget">
+            <div class="plate__head">
+              <p class="plate__title">4.3 — Budget</p>
+              <p class="plate__meta label">
+                {{ budgetStatusLabel() }}
+                @if (b.status !== 'DRAFT') {
+                  · lines frozen
+                }
+              </p>
+            </div>
+            <div class="plate__body">
+              @if (b.status === 'WAITING_SEND') {
+                <div class="wo__budget-notice">
+                  <app-callout tier="caution">
+                    <p class="wo__next-lead">Delivery failed. The budget is still waiting to reach the customer.</p>
+                    @if (b.lastSendError) {
+                      <p class="wo__send-error">{{ b.lastSendError }}</p>
+                    }
+                    <p>
+                      Resend as many times as needed — nothing is re-locked and no stock is
+                      re-reserved.
+                      @if (canSend()) {
+                        <button class="btn btn--sm wo__resend" type="button" (click)="resend()">
+                          Resend budget
+                        </button>
+                      }
+                    </p>
+                  </app-callout>
+                </div>
+              }
+
+              <div class="mt-wrap">
+                <table class="mt wo__lines">
+                  <caption class="sr-only">Budget lines with quantities, prices and stock effect.</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="shrink">Type</th>
+                      <th scope="col">Item</th>
+                      <th scope="col" class="r shrink">Qty</th>
+                      <th scope="col" class="r shrink">Unit</th>
+                      <th scope="col" class="r shrink">Total</th>
+                      @if (editable()) {
+                        <th scope="col" class="shrink">On the shelf</th>
+                        <th scope="col" class="shrink"><span class="sr-only">Remove</span></th>
+                      }
+                      @if (canTimeLines()) {
+                        <th scope="col" class="shrink">Execution</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of b.lines; track line.id) {
+                      <tr>
+                        <td class="shrink">
+                          <span class="wo__rowtype" [class.is-part]="line.type === 'PART'">{{
+                            line.type
+                          }}</span>
+                        </td>
+                        <td>{{ line.description }}</td>
+                        <td class="r num">
+                          @if (editable()) {
+                            <span class="wo__qty">
+                              <button
+                                class="wo__qty-btn"
+                                type="button"
+                                [disabled]="line.quantity <= 1"
+                                [attr.aria-label]="'Decrease quantity of ' + line.description"
+                                (click)="changeQuantity(line.id, -1)"
+                              >
+                                <app-icon name="minus" [size]="12" />
+                              </button>
+                              <span class="wo__qty-n">{{ line.quantity }}</span>
+                              <button
+                                class="wo__qty-btn"
+                                type="button"
+                                [attr.aria-label]="'Increase quantity of ' + line.description"
+                                (click)="changeQuantity(line.id, 1)"
+                              >
+                                <app-icon name="plus" [size]="12" />
+                              </button>
+                            </span>
+                          } @else {
+                            {{ line.quantity }}
+                          }
+                        </td>
+                        <td class="r num">{{ money(line.unitPrice) }}</td>
+                        <td class="r num">{{ money(line.lineTotal) }}</td>
+
+                        @if (editable()) {
+                          <td class="shrink wo__stock">
+                            @if (stockAfter(line); as s) {
+                              <span class="wo__stock-line">
+                                <span class="num">{{ s.available }}</span> available
+                              </span>
+                              <span class="wo__stock-sub">
+                                <span class="num">{{ s.onHand }}</span> {{ s.uom }} on hand
+                              </span>
+                            } @else {
+                              <span class="wo__stock-sub">Labour — no stock</span>
+                            }
+                          </td>
+                          <td class="shrink">
+                            <button
+                              class="wo__remove"
+                              type="button"
+                              [attr.aria-label]="'Remove ' + line.description"
+                              (click)="removeLine(line.id)"
+                            >
+                              <app-icon name="cross" [size]="13" />
+                            </button>
+                          </td>
+                        }
+
+                        @if (canTimeLines()) {
+                          <td class="shrink">
+                            @if (line.type !== 'SERVICE') {
+                              <span class="wo__inert-sm">—</span>
+                            } @else if (line.finishedAt) {
+                              <span class="wo__done"><app-icon name="check" [size]="12" /> Done</span>
+                            } @else if (line.startedAt) {
+                              <button class="btn btn--sm" type="button" (click)="finishLine(line.id)">
+                                <app-icon name="stop" [size]="11" /> Finish
+                              </button>
+                            } @else {
+                              <button class="btn btn--sm" type="button" (click)="startLine(line.id)">
+                                <app-icon name="play" [size]="11" /> Start
+                              </button>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td [attr.colspan]="editable() ? 7 : 5">
+                          <div class="empty">
+                            <p class="empty__title">No lines yet</p>
+                            <p>
+                              A draft budget with no lines cannot be sent. Add the parts and services
+                              the diagnosis calls for.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="wo__total-row">
+                      <td [attr.colspan]="editable() ? 4 : 4" class="r wo__total-label">Grand total</td>
+                      <td class="r num wo__total">{{ money(b.grandTotal) }}</td>
+                      @if (editable()) {
+                        <td colspan="2"></td>
+                      }
+                      @if (canTimeLines()) {
+                        <td></td>
+                      }
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              @if (editable()) {
+                <div class="wo__add">
+                  <p class="label">Add to the draft</p>
+                  <div class="wo__add-controls">
+                    <label class="field">
+                      <span class="sr-only">Add a part</span>
+                      <select class="input" (change)="addPart($event)">
+                        <option value="">Add a part…</option>
+                        @for (p of addableParts(); track p.id) {
+                          <option [value]="p.id">
+                            {{ p.sku }} — {{ p.name }} ({{ p.available }} available)
+                          </option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span class="sr-only">Add a service</span>
+                      <select class="input" (change)="addService($event)">
+                        <option value="">Add a service…</option>
+                        @for (s of addableServices(); track s.id) {
+                          <option [value]="s.id">{{ s.name }} — {{ money(s.price) }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                  <app-callout tier="note">
+                    Every change here moves stock immediately: adding or increasing a part line
+                    reserves it, removing or decreasing releases it. Reservations reduce what is
+                    available without moving what is on hand.
+                  </app-callout>
+                </div>
+              }
+
+<!-- Sending lives on the procedure block above: one page, one primary action. -->
+            </div>
+          </section>
+        }
+      </div>
+
+      <!-- -------------------------------------------------------------- -->
+      <!-- The timeline: a navigable axis onto immutable snapshots         -->
+      <!-- -------------------------------------------------------------- -->
+
+      <aside class="wo__col wo__col--side">
+        <section class="plate">
+          <div class="plate__head">
+            <p class="plate__title">4.4 — History</p>
+            <p class="plate__meta label">{{ history().length }} entries</p>
+          </div>
+          <div class="plate__body wo__history-body">
+            <ol class="wo__timeline">
+              @for (entry of history(); track entry.id) {
+                <li class="wo__entry" [class.is-open]="selectedEntry() === entry.id">
+                  <button
+                    class="wo__entry-btn"
+                    type="button"
+                    [attr.aria-expanded]="selectedEntry() === entry.id"
+                    (click)="selectedEntry.set(selectedEntry() === entry.id ? null : entry.id)"
+                  >
+                    <span class="wo__entry-top">
+                      <span class="wo__entry-when token">{{ when(entry.occurredAt) }}</span>
+                      <!-- the axis has to look reachable when it is closed, not only on hover -->
+                      <app-icon name="chevron" [size]="12" class="wo__entry-mark" />
+                    </span>
+                    <span class="wo__entry-summary">{{ entry.summary }}</span>
+                    <span class="wo__entry-actor">
+                      @if (entry.actorIsSystem) {
+                        <span class="wo__system">System</span>
+                      } @else {
+                        {{ entry.actorName ?? 'Unknown actor' }}
+                      }
+                      @if (!entry.customerVisible) {
+                        <span class="wo__internal" title="Not shown on the customer's timeline"
+                          >internal</span
+                        >
+                      }
+                    </span>
+                  </button>
+
+                  @if (selectedEntry() === entry.id) {
+                    <div class="wo__snapshot">
+                      <p class="label">Snapshot</p>
+                      <p class="wo__snapshot-body">
+                        <span class="token">{{ entry.eventType }}</span> recorded against
+                        <span class="token">{{ entry.aggregateType }}</span
+                        >. History is append-only — this entry and the state it froze can never be
+                        edited or removed.
+                      </p>
+                    </div>
+                  }
+                </li>
+              }
+            </ol>
+          </div>
+        </section>
+
+        @if (vehicle(); as v) {
+          <section class="plate">
+            <div class="plate__head"><p class="plate__title">4.5 — Vehicle</p></div>
+            <div class="plate__body">
+              <dl class="wo__spec">
+                <dt class="label">Plate</dt>
+                <dd class="token">{{ v.licensePlate }}</dd>
+                <dt class="label">Make and model</dt>
+                <dd>{{ v.make }} {{ v.model }}</dd>
+                <dt class="label">Year</dt>
+                <dd class="num">{{ v.manufactureYear }}/{{ v.modelYear }}</dd>
+                <dt class="label">Colour</dt>
+                <dd>{{ v.color ?? '—' }}</dd>
+                <dt class="label">Fuel</dt>
+                <dd>{{ fuelLabel(v.fuelType) }}</dd>
+                <dt class="label">Transmission</dt>
+                <dd>{{ transmissionLabel(v.transmissionType) }}</dd>
+              </dl>
+            </div>
+          </section>
+        }
+      </aside>
+    </div>
+  </div>
+} @else {
+  <div class="empty">
+    <p class="empty__title">No such work order</p>
+    <p>This order is not on file. It may have been opened against a different shop.</p>
+    <p class="wo__notfound-action"><a class="btn btn--sm" routerLink="/work-orders">Back to the board</a></p>
+  </div>
+}

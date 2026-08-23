@@ -1,0 +1,94 @@
+@if (session.signedIn()) {
+  <p class="demo-band">
+    <app-icon name="alert" [size]="13" />
+    <span
+      ><strong>Synthetic data.</strong> Every customer, vehicle, plate and price in this console is
+      invented to exercise the interface. No live shop data is present.</span
+    >
+    <span class="demo-band__spacer"></span>
+    <label class="demo-band__switch">
+      <span class="label">View as</span>
+      <select class="demo-band__select" (change)="switchWorker($event)">
+        @for (w of workers(); track w.id) {
+          <option [value]="w.id" [disabled]="!w.active" [selected]="w.id === session.worker()!.id">
+            {{ w.name }} — {{ roleLabel(w.role) }}{{ w.active ? '' : ' (terminated)' }}
+          </option>
+        }
+      </select>
+    </label>
+  </p>
+
+  <header class="masthead">
+    <div class="masthead__id">
+      <p class="masthead__shop">Auto Repair Shop</p>
+      <p class="masthead__doc">Shop Manual · Staff Console</p>
+    </div>
+
+    <div class="masthead__section">
+      <p class="label">Section</p>
+      <p class="masthead__section-name">{{ section()?.title ?? '—' }}</p>
+    </div>
+
+    <div class="masthead__authority">
+      <p class="label">Signed in as</p>
+      <p class="masthead__operator">{{ session.displayName() }}</p>
+      <p class="masthead__stamp token">{{ roleLabel(session.role()!) }} · REV {{ revision }}</p>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="tabs" aria-label="Manual sections">
+      <ul class="tabs__list">
+        @for (s of sections(); track s.path) {
+          <li>
+            <a
+              class="tab"
+              [routerLink]="s.path"
+              routerLinkActive="is-active"
+              [style.--tab-ink]="s.ink"
+            >
+              <span class="tab__bleed" aria-hidden="true"></span>
+              <span class="tab__n token" aria-hidden="true">{{ s.n }}</span>
+              <span class="tab__text">
+                <span class="tab__title">{{ s.title }}</span>
+                <span class="tab__sub">{{ s.sub }}</span>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+
+      <!-- Print furniture: the registration marks a plate is trimmed to. Geometry,
+           not illustration, and it gives the rail's margin a reason to be empty. -->
+      <div class="tabs__margin" aria-hidden="true">
+        <svg class="tabs__reg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M20 4v13M20 23v13M4 20h13M23 20h13" />
+          <circle cx="20" cy="20" r="7.5" />
+        </svg>
+        <p class="tabs__sheet token">SHEET {{ section()?.n ?? '—' }}/9</p>
+      </div>
+
+      <p class="tabs__foot">
+        <span class="label">Revision</span>
+        <span class="token">{{ revision }}</span>
+      </p>
+    </nav>
+
+    <main class="sheet" [style.--sheet-ink]="section()?.ink ?? 'var(--ink)'">
+      <router-outlet />
+    </main>
+  </div>
+} @else {
+  <div class="locked">
+    <div class="plate locked__plate">
+      <div class="plate__head"><h1 class="plate__title">Access refused</h1></div>
+      <div class="plate__body">
+        <app-callout tier="warning">
+          Every facet on this account is deactivated or terminated. A user may sign in only while at
+          least one facet remains active, so this is not a password problem — ask a manager to
+          reactivate the worker facet.
+        </app-callout>
+      </div>
+    </div>
+  </div>
+}

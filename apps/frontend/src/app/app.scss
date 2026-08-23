@@ -1,0 +1,264 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+/* --- the synthetic-data band ------------------------------------------- */
+
+.demo-band__spacer {
+  flex: 1;
+}
+
+.demo-band__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.demo-band__select {
+  background: transparent;
+  border: 1px solid var(--caution);
+  color: var(--caution-ink);
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  padding: 0.05rem 0.3rem;
+}
+
+/* --- masthead -----------------------------------------------------------
+   A manual's header block: who published it, which section is open, and the
+   authority the reader is operating under.                                   */
+
+.masthead {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: end;
+  gap: 2rem;
+  padding: 1.1rem 1.25rem 0.7rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.masthead__shop {
+  font-family: var(--face-cond);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.015em;
+}
+
+.masthead__doc {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-top: 0.15rem;
+}
+
+.masthead__section-name {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.masthead__authority {
+  text-align: right;
+}
+
+.masthead__operator {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* the operator's role, stamped rather than labelled */
+.masthead__stamp {
+  display: inline-block;
+  margin-top: 0.25rem;
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --- shell --------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--tab-w) minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100dvh - 8.5rem);
+}
+
+/* --- bleed tabs ----------------------------------------------------------
+   Real thumb tabs: each one bleeds off the left edge in its section's ink,
+   and the active tab runs into the sheet the way a tabbed page does.        */
+
+.tabs {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 1.25rem;
+  min-height: calc(100dvh - 8.5rem);
+}
+
+.tabs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem 0.55rem 1.25rem;
+  border: 1px solid var(--rule);
+  border-left: 0;
+  border-right: 0;
+  background: color-mix(in srgb, var(--plate) 55%, transparent);
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: background-color 90ms linear, color 90ms linear;
+}
+
+/* the bleed: a solid block of the section's ink running off the page edge */
+.tab__bleed {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 0.5rem;
+  background: var(--tab-ink);
+  opacity: 0.4;
+}
+
+.tab:hover {
+  background: var(--plate);
+  color: var(--ink);
+}
+
+.tab:hover .tab__bleed {
+  opacity: 0.75;
+}
+
+.tab.is-active {
+  background: var(--plate);
+  color: var(--ink);
+  border-color: var(--ink);
+  /* runs into the sheet — no right-hand rule to separate them */
+  margin-right: -1px;
+  z-index: 1;
+}
+
+.tab.is-active .tab__bleed {
+  opacity: 1;
+  width: 0.7rem;
+}
+
+/* the section number, in the manual's own index — carries real information,
+   unlike the category glyph it replaced */
+.tab__n {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  min-width: 0.9rem;
+  text-align: center;
+}
+
+.tab.is-active .tab__n,
+.tab:hover .tab__n {
+  color: var(--tab-ink);
+}
+
+.tab__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tab__title {
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.tab__sub {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab.is-active .tab__sub {
+  color: var(--ink-2);
+}
+
+/* --- the rail's margin: print furniture, not dead space --- */
+
+.tabs__margin {
+  margin-top: 2.75rem;
+  padding: 0 0.7rem 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--rule-strong);
+}
+
+.tabs__reg {
+  width: 2.1rem;
+  height: 2.1rem;
+}
+
+.tabs__sheet {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+.tabs__foot {
+  margin-top: auto;
+  padding: 1rem 0.7rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  color: var(--ink-3);
+}
+
+/* --- the sheet ----------------------------------------------------------- */
+
+.sheet {
+  border-left: 1px solid var(--ink);
+  min-height: calc(100dvh - 8.5rem);
+  padding: 1.25rem 1.25rem 4rem;
+  /* the open section's ink, available to every plate inside it */
+  --section-ink: var(--sheet-ink);
+}
+
+/* --- refused entry -------------------------------------------------------- */
+
+.locked {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 2rem;
+}
+
+.locked__plate {
+  max-width: 46rem;
+}

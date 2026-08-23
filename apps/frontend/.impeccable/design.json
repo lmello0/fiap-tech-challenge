@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T00:00:00Z",
+  "title": "Design System: Shop Manual",
+  "extensions": {
+    "colorMeta": {
+      "stock": {
+        "role": "neutral",
+        "displayName": "Pulp Stock",
+        "canonical": "#eaeae5",
+        "note": "The page itself. Never a flat fill — two wide low-contrast radial washes drift it warm at top-left and cool at bottom-right, background-attachment: fixed.",
+        "tonalRamp": ["#1e1e1c", "#333331", "#4c4c48", "#6a6a65", "#8f8f89", "#b4b4ad", "#d3d3cc", "#f4f4ef"]
+      },
+      "plate": {
+        "role": "neutral",
+        "displayName": "Plate",
+        "canonical": "#f1f0ea",
+        "note": "The working surface a table or form is set on; one step lighter than the stock behind it.",
+        "tonalRamp": ["#232320", "#3a3a35", "#54544d", "#727268", "#979589", "#bcbab0", "#dbd9d0", "#f7f6f1"]
+      },
+      "plate-sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Plate",
+        "canonical": "#e2e2db",
+        "note": "Recessed bands: plate headers, sticky table heads, inert strips.",
+        "tonalRamp": ["#1d1d1a", "#31312e", "#4a4a45", "#676762", "#8b8b84", "#afafa7", "#cecec6", "#efefe9"]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Press Ink",
+        "canonical": "#161a1d",
+        "note": "Blue-black. 12.7:1 on stock. #000 appears nowhere in the build.",
+        "tonalRamp": ["#0a0c0e", "#161a1d", "#252b30", "#373f45", "#4c565d", "#6d787f", "#98a2a8", "#c8ced2"]
+      },
+      "ink-2": {
+        "role": "primary",
+        "displayName": "Secondary Ink",
+        "canonical": "#454c51",
+        "note": "7.4:1. Secondary prose, captions, table-head labels — and completed steps in the rail.",
+        "tonalRamp": ["#14181a", "#22282b", "#333a3e", "#454c51", "#5c656a", "#7c868c", "#a3acb1", "#ccd2d5"]
+      },
+      "ink-3": {
+        "role": "primary",
+        "displayName": "Tertiary Ink",
+        "canonical": "#586065",
+        "note": "5.3:1 — still body-legal. Placeholders, row indices, spent rows.",
+        "tonalRamp": ["#171b1d", "#262c2f", "#3a4145", "#4c5459", "#586065", "#7b848a", "#a4acb1", "#ced4d7"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#c7c6be",
+        "note": "The ordinary dividing rule, at a genuine 1px.",
+        "tonalRamp": ["#1c1c19", "#30302c", "#484842", "#63625b", "#858378", "#a8a69c", "#c7c6be", "#e8e7e1"]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#9a9890",
+        "note": "The heavier of the two rules: field borders, closing rows, the rail's spine, scrollbar thumb.",
+        "tonalRamp": ["#1a1a17", "#2c2c29", "#42423d", "#5b5a54", "#7a786f", "#9a9890", "#bebcb4", "#e0dfd9"]
+      },
+      "warn": {
+        "role": "secondary",
+        "displayName": "Warning Red",
+        "canonical": "#c2321b",
+        "note": "4.6:1. WARNING tier — blocked, destructive, terminal. Also the caret and the global focus ring.",
+        "tonalRamp": ["#2c0b05", "#4a1309", "#6c1d0e", "#8f2613", "#c2321b", "#dc5238", "#ec8571", "#f7c4b8"]
+      },
+      "warn-field": {
+        "role": "secondary",
+        "displayName": "Warning Field",
+        "canonical": "#f6e3de",
+        "note": "The pale ground a warning mark or callout sits on.",
+        "tonalRamp": ["#33150f", "#4e211a", "#6d3227", "#8f4a3d", "#b06d60", "#cd968c", "#e4c0b8", "#f6e3de"]
+      },
+      "caution": {
+        "role": "secondary",
+        "displayName": "Caution Amber",
+        "canonical": "#a86e0d",
+        "note": "3.6:1 — rules and marks only, never body-weight text.",
+        "tonalRamp": ["#291a02", "#3f2804", "#5b3a06", "#7a4f08", "#a86e0d", "#cc8f1f", "#e2b25e", "#f2d7a4"]
+      },
+      "caution-ink": {
+        "role": "secondary",
+        "displayName": "Caution Ink",
+        "canonical": "#7a4f08",
+        "note": "5.9:1. The body-text weight of the same ink; use wherever caution text is below large-text size.",
+        "tonalRamp": ["#221604", "#352105", "#4c3006", "#653f07", "#7a4f08", "#a06a12", "#c79333", "#e5c483"]
+      },
+      "caution-field": {
+        "role": "secondary",
+        "displayName": "Caution Field",
+        "canonical": "#f7ead1",
+        "note": "Ground for the caution callout, the caution status mark, and the synthetic-data band.",
+        "tonalRamp": ["#2e2209", "#45340e", "#604a15", "#7f651f", "#a0862f", "#c2ac60", "#dfcd9c", "#f7ead1"]
+      },
+      "ref": {
+        "role": "tertiary",
+        "displayName": "Reference Blue",
+        "canonical": "#1f4e79",
+        "note": "7.2:1. NOTE tier, links, accent-color, row hover wash, primary-button hover. Also the Work Orders section ink.",
+        "tonalRamp": ["#081522", "#0e2338", "#153650", "#1f4e79", "#2c6ba3", "#528cc0", "#8bb3d7", "#c6d9ec"]
+      },
+      "ref-field": {
+        "role": "tertiary",
+        "displayName": "Reference Field",
+        "canonical": "#dfe7ef",
+        "note": "Ground for the note callout and the in-progress status mark.",
+        "tonalRamp": ["#111d29", "#1b2e40", "#28435a", "#385a76", "#4f7594", "#7b9bb6", "#aec3d6", "#dfe7ef"]
+      },
+      "ok": {
+        "role": "tertiary",
+        "displayName": "Satisfied Green",
+        "canonical": "#2f6350",
+        "note": "5.7:1. A precondition met, a service line done, an active record. Never a completed step — those fill in press ink.",
+        "tonalRamp": ["#0b1c16", "#122c23", "#1c4234", "#2f6350", "#3f8a6e", "#5eae8f", "#93cbb4", "#c9e4d8"]
+      },
+      "ok-field": {
+        "role": "tertiary",
+        "displayName": "Satisfied Field",
+        "canonical": "#dde8e2",
+        "note": "Ground for the satisfied status mark and active-record state.",
+        "tonalRamp": ["#0f201a", "#183228", "#24483a", "#33634f", "#478069", "#71a390", "#a7c6b8", "#dde8e2"]
+      },
+      "sec-work-orders": {
+        "role": "tertiary",
+        "displayName": "Section 4 — Work Orders",
+        "canonical": "#1f4e79",
+        "note": "Bleed tab, tab numeral and the 3px rule across every plate in the section.",
+        "tonalRamp": ["#081522", "#0e2338", "#153650", "#1f4e79", "#2c6ba3", "#528cc0", "#8bb3d7", "#c6d9ec"]
+      },
+      "sec-schedule": {
+        "role": "tertiary",
+        "displayName": "Section 5 — Schedule",
+        "canonical": "#2f6350",
+        "note": "Muted, same value range as the other five so the index reads as a thumb index.",
+        "tonalRamp": ["#0b1c16", "#122c23", "#1c4234", "#2f6350", "#3f8a6e", "#5eae8f", "#93cbb4", "#c9e4d8"]
+      },
+      "sec-inventory": {
+        "role": "tertiary",
+        "displayName": "Section 6 — Inventory",
+        "canonical": "#8a5a1e",
+        "tonalRamp": ["#221607", "#35220b", "#4c3210", "#684415", "#8a5a1e", "#ad7a3a", "#cba473", "#e6cfb0"]
+      },
+      "sec-customers": {
+        "role": "tertiary",
+        "displayName": "Section 7 — Customers",
+        "canonical": "#6b3a5b",
+        "tonalRamp": ["#1c0f18", "#2b1725", "#3e2135", "#542d47", "#6b3a5b", "#8f5a7c", "#b58aa6", "#dcc2d1"]
+      },
+      "sec-vehicles": {
+        "role": "tertiary",
+        "displayName": "Section 8 — Vehicles",
+        "canonical": "#3f4e63",
+        "tonalRamp": ["#111620", "#1b2231", "#283246", "#33415a", "#3f4e63", "#617289", "#93a2b4", "#c8d0da"]
+      },
+      "sec-workers": {
+        "role": "tertiary",
+        "displayName": "Section 9 — Workers",
+        "canonical": "#5c5344",
+        "tonalRamp": ["#181510", "#26221a", "#383226", "#4a4234", "#5c5344", "#7f7462", "#a89d8b", "#d2cabb"]
+      },
+      "highlighter": {
+        "role": "neutral",
+        "displayName": "Highlighter",
+        "canonical": "#f3d98a",
+        "note": "::selection only — a marker drawn across the page instead of the OS blue.",
+        "tonalRamp": ["#2f2408", "#48370c", "#664d12", "#87661a", "#a98325", "#c9a44b", "#e2c26c", "#f3d98a"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The section title at the top of a sheet. One per page." },
+      "headline": { "displayName": "Headline", "purpose": "The masthead shop name and second-level headings." },
+      "title": { "displayName": "Title", "purpose": "The open section's name in the masthead; the next-step title on a work order." },
+      "plate-title": { "displayName": "Plate Title", "purpose": "The numbered plate heading — '5.1 — Booked appointments'." },
+      "body": { "displayName": "Body", "purpose": "Prose and table data. Prose blocks held to a 68–82ch measure." },
+      "label": { "displayName": "Label", "purpose": "The small-caps register: field labels, table heads, callout tiers, buttons, stamps. Tracking widens with authority (0.045em buttons → 0.14em callout tier)." },
+      "identifier": { "displayName": "Identifier", "purpose": "Azeret Mono, strictly for order codes, plates, SKUs, part numbers, timestamps, endpoints and step numerals. Never prose, never a label." }
+    },
+    "shadows": [
+      {
+        "name": "scrolled-overlap",
+        "value": "-6px 0 7px -5px rgb(22 26 29 / 28%)",
+        "purpose": "The only shadow in the system. On the pinned action column of the work-order board, and only while the table is genuinely scrolled — it reports that columns pass beneath, it does not simulate depth. Absent at 1440px where every column is visible."
+      }
+    ],
+    "motion": [
+      {
+        "name": "stamp",
+        "value": "90ms linear",
+        "purpose": "Every transition in the build. Applied to background-color, border-color, color, and rotation transforms only. No easing curves, no translate, no scale, no fade, no keyframes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms !important",
+        "purpose": "prefers-reduced-motion: reduce collapses every transition and animation globally, and forces scroll-behavior: auto."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-desk",
+        "value": "1180px",
+        "purpose": "The system's only breakpoint (max-width). Collapses the work-order detail's two-column grids to one column. Desktop-only is a product constraint: min 1280, target 1440–1920 — this is not the first rung of a responsive ladder."
+      }
+    ],
+    "structuralRules": [
+      { "name": "hairline", "value": "1px solid var(--rule)", "purpose": "The default divider between rows, blocks and panels." },
+      { "name": "hairline-strong", "value": "1px solid var(--rule-strong)", "purpose": "A closing or bounding rule: field borders, last table row, rail spine, dashed empty state." },
+      { "name": "structural-close", "value": "2px solid var(--ink)", "purpose": "Closes the masthead and the work-order head." },
+      { "name": "section-rule", "value": "3px solid var(--section-ink, var(--ink))", "purpose": "Across the top of every plate, in the open section's ink." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "btn-primary",
+      "description": "The next lawful step. One per row, one per plate. Solid ink at rest, reference blue on hover.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">START SERVICE</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--ink, #161a1d); background: transparent; color: var(--ink, #161a1d); font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.045em; text-transform: uppercase; padding: 0.42rem 0.85rem; border-radius: 0; cursor: pointer; transition: background-color 90ms linear, color 90ms linear; } .ds-btn-primary { background: var(--ink, #161a1d); color: var(--ink-inv, #f1f0ea); } .ds-btn-primary:hover { background: var(--ref, #1f4e79); border-color: var(--ref, #1f4e79); } .ds-btn-primary:focus-visible { outline: 2px solid var(--warn, #c2321b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "btn",
+      "description": "The ordinary action. Hollow at rest; fills in solid ink on hover, the way a stamp lands.",
+      "html": "<button class=\"ds-btn-default\">CLEAR FILTERS</button>",
+      "css": ".ds-btn-default { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--ink, #161a1d); background: transparent; color: var(--ink, #161a1d); font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.045em; text-transform: uppercase; padding: 0.42rem 0.85rem; border-radius: 0; cursor: pointer; transition: background-color 90ms linear, color 90ms linear; } .ds-btn-default:hover { background: var(--ink, #161a1d); color: var(--ink-inv, #f1f0ea); } .ds-btn-default:focus-visible { outline: 2px solid var(--warn, #c2321b); outline-offset: 2px; } .ds-btn-default:disabled { border-color: var(--rule-strong, #9a9890); color: var(--ink-3, #586065); cursor: not-allowed; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "btn-danger",
+      "description": "Destructive or terminal. Warning-red outline at rest, solid warning field on hover.",
+      "html": "<button class=\"ds-btn-danger\">SEND BUDGET</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--warn, #c2321b); background: transparent; color: var(--warn, #c2321b); font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.045em; text-transform: uppercase; padding: 0.42rem 0.85rem; border-radius: 0; cursor: pointer; transition: background-color 90ms linear, color 90ms linear; } .ds-btn-danger:hover { background: var(--warn, #c2321b); color: var(--ink-inv, #f1f0ea); } .ds-btn-danger:focus-visible { outline: 2px solid var(--warn, #c2321b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A cut-out in the plate: stock ground, strong-hairline border, small-caps label above. Focus darkens the border to full ink under the global warning-red ring.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">Search work orders</span><input class=\"ds-input\" type=\"text\" placeholder=\"Code, plate or customer\"></label>",
+      "css": ".ds-field { display: block; } .ds-label { display: block; margin-bottom: 0.25rem; font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2, #454c51); } .ds-input { width: 100%; background: var(--stock, #eaeae5); border: 1px solid var(--rule-strong, #9a9890); border-radius: 0; padding: 0.4rem 0.55rem; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; color: var(--ink, #161a1d); } .ds-input::placeholder { color: var(--ink-3, #586065); } .ds-input:focus-visible { border-color: var(--ink, #161a1d); outline: 2px solid var(--warn, #c2321b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Plate",
+      "kind": "card",
+      "refersTo": "plate",
+      "description": "The only container in the system. Hairline box, sunk head band closed by an ink rule, 3px section-ink rule across the top. No shadow, ever.",
+      "html": "<section class=\"ds-plate\"><div class=\"ds-plate-head\"><p class=\"ds-plate-title\">4.1 — Shop status</p><p class=\"ds-plate-meta\">18 listed</p></div><div class=\"ds-plate-body\">Every open work order, in the order they were received.</div></section>",
+      "css": ".ds-plate { background: var(--plate, #f1f0ea); border: 1px solid var(--rule, #c7c6be); border-top: 3px solid var(--ref, #1f4e79); border-radius: 0; } .ds-plate-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.75rem 1rem 0.6rem; border-bottom: 1px solid var(--ink, #161a1d); background: var(--plate-sunk, #e2e2db); } .ds-plate-title { font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 1rem; font-weight: 600; letter-spacing: 0.01em; margin: 0; } .ds-plate-meta { margin: 0; font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3, #586065); } .ds-plate-body { padding: 1rem; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; color: var(--ink, #161a1d); }"
+    },
+    {
+      "name": "Manual Table",
+      "kind": "custom",
+      "refersTo": "table-cell",
+      "description": "The recurring data surface, identical in every section. Sticky sunk head closed by an ink rule, hairline row divisions, no zebra striping, a 5% reference wash on hover.",
+      "html": "<table class=\"ds-mt\"><thead><tr><th>Order</th><th>Vehicle</th><th class=\"ds-mt-r\">Total</th></tr></thead><tbody><tr><td class=\"ds-mt-token\">WO-2026-0743</td><td>Toyota Corolla XEI</td><td class=\"ds-mt-r\">1 284,00</td></tr><tr><td class=\"ds-mt-token\">WO-2026-0744</td><td>Chevrolet Onix LTZ</td><td class=\"ds-mt-r\">612,50</td></tr></tbody></table>",
+      "css": ".ds-mt { width: 100%; border-collapse: collapse; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--ink, #161a1d); background: var(--plate, #f1f0ea); } .ds-mt thead th { background: var(--plate-sunk, #e2e2db); font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-2, #454c51); text-align: left; white-space: nowrap; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--ink, #161a1d); } .ds-mt tbody td { padding: 0.6rem 0.6rem; border-bottom: 1px solid var(--rule, #c7c6be); vertical-align: top; } .ds-mt tbody tr:last-child td { border-bottom: 1px solid var(--rule-strong, #9a9890); } .ds-mt tbody tr:hover td { background: color-mix(in srgb, var(--ref, #1f4e79) 5%, transparent); } .ds-mt-r { text-align: right; } .ds-mt-token { font-family: 'Azeret Mono', ui-monospace, 'Cascadia Mono', monospace; font-size: 0.8125em; font-weight: 500; letter-spacing: -0.02em; font-variant-ligatures: none; }"
+    },
+    {
+      "name": "Callout",
+      "kind": "custom",
+      "refersTo": "callout-warning",
+      "description": "Three severity tiers and only three. A full 1px box in the tier's ink over its pale field, with the tier word printed — never a fat coloured left border, never colour alone.",
+      "html": "<div class=\"ds-callout ds-callout-warning\"><p class=\"ds-callout-tier\">WARNING</p><div class=\"ds-callout-body\">Sending freezes this budget's lines permanently. There is no requoting — the customer may only approve or refuse.</div></div><div class=\"ds-callout ds-callout-caution\"><p class=\"ds-callout-tier\">CAUTION</p><div class=\"ds-callout-body\">Waiting on the customer since 14 August.</div></div><div class=\"ds-callout ds-callout-note\"><p class=\"ds-callout-tier\">NOTE</p><div class=\"ds-callout-body\">Every line re-quantified while in draft reserves or releases stock immediately.</div></div>",
+      "css": ".ds-callout { border: 1px solid currentColor; border-radius: 0; padding: 0.6rem 0.8rem; display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.7rem; align-items: start; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; margin-bottom: 0.6rem; } .ds-callout-tier { margin: 0; font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding-top: 0.1em; white-space: nowrap; } .ds-callout-body { color: var(--ink, #161a1d); } .ds-callout-warning { color: var(--warn, #c2321b); background: var(--warn-field, #f6e3de); } .ds-callout-caution { color: var(--caution-ink, #7a4f08); background: var(--caution-field, #f7ead1); } .ds-callout-note { color: var(--ref, #1f4e79); background: var(--ref-field, #dfe7ef); }"
+    },
+    {
+      "name": "Status Mark",
+      "kind": "chip",
+      "refersTo": "status-mark-ref",
+      "description": "A work order's status set as a printed mark, not a rounded pill. Five tones over the eleven statuses; the word is always printed alongside the tone.",
+      "html": "<span class=\"ds-mark ds-mark-ink\">Vehicle received</span> <span class=\"ds-mark ds-mark-caution\">Sent for approval</span> <span class=\"ds-mark ds-mark-ref\">Service under way</span> <span class=\"ds-mark ds-mark-ok\">Service finished</span> <span class=\"ds-mark ds-mark-warn\">Budget refused</span>",
+      "css": ".ds-mark { display: inline-flex; font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; padding: 0.1rem 0.4rem; border: 1px solid currentColor; border-radius: 0; white-space: nowrap; margin-right: 0.3rem; } .ds-mark-ink { color: var(--ink-2, #454c51); } .ds-mark-warn { color: var(--warn, #c2321b); background: var(--warn-field, #f6e3de); } .ds-mark-caution { color: var(--caution-ink, #7a4f08); background: var(--caution-field, #f7ead1); } .ds-mark-ref { color: var(--ref, #1f4e79); background: var(--ref-field, #dfe7ef); } .ds-mark-ok { color: var(--ok, #2f6350); background: var(--ok-field, #dde8e2); }"
+    },
+    {
+      "name": "Step Rail",
+      "kind": "custom",
+      "refersTo": "step-tick",
+      "description": "The signature component. A work order's whole life as a numbered procedure. Done fills in press ink, not chroma; the current step gets the inspector's stamp — a ruled box at 2px offset. Hovering a tick states that step's precondition and the roles the backend will accept.",
+      "html": "<div class=\"ds-rail\"><ol class=\"ds-rail-ticks\"><li class=\"ds-rail-wrap\"><button class=\"ds-tick is-done\">1</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick is-done\">2</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick is-done\">3</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick is-here\">4</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick\">5</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick\">6</button></li><li class=\"ds-rail-wrap\"><button class=\"ds-tick\">7</button></li></ol><div class=\"ds-rail-panel\"><p class=\"ds-rail-title\"><span class=\"ds-rail-n\">Step 4</span> Budget in draft</p><p class=\"ds-rail-pre\">Diagnosis is recorded. Finishing diagnostics opens the budget draft, seeded with the mechanic's initial lines.</p><p class=\"ds-rail-roles\"><span class=\"ds-rail-lab\">Performed by</span> Mechanic or Manager <span class=\"ds-rail-ep\">POST /work-orders/{id}/diagnostics/finish</span></p></div></div>",
+      "css": ".ds-rail-ticks { display: flex; align-items: center; gap: 0; list-style: none; padding: 0; margin: 0; } .ds-rail-wrap { display: flex; align-items: center; } .ds-rail-wrap + .ds-rail-wrap::before { content: ''; display: block; width: 0.55rem; height: 1px; background: var(--rule-strong, #9a9890); } .ds-tick { display: grid; place-items: center; width: 1.35rem; height: 1.35rem; padding: 0; border: 1px solid var(--rule-strong, #9a9890); border-radius: 0; background: var(--plate, #f1f0ea); color: var(--ink-3, #586065); font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 0.62rem; font-weight: 500; cursor: pointer; transition: background-color 90ms linear, border-color 90ms linear, color 90ms linear; } .ds-tick:hover { border-color: var(--ink, #161a1d); color: var(--ink, #161a1d); } .ds-tick:focus-visible { outline: 2px solid var(--warn, #c2321b); outline-offset: 2px; } .ds-tick.is-done { background: var(--ink-2, #454c51); border-color: var(--ink-2, #454c51); color: var(--ink-inv, #f1f0ea); } .ds-tick.is-here { background: var(--ink, #161a1d); border-color: var(--ink, #161a1d); color: var(--ink-inv, #f1f0ea); outline: 1px solid var(--ink, #161a1d); outline-offset: 2px; } .ds-rail-panel { margin-top: 0.85rem; border-top: 1px solid var(--rule, #c7c6be); padding-top: 0.7rem; max-width: 68ch; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; } .ds-rail-title { margin: 0; font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 1rem; font-weight: 600; display: flex; align-items: baseline; gap: 0.5rem; color: var(--ink, #161a1d); } .ds-rail-n, .ds-rail-lab { font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3, #586065); } .ds-rail-pre { margin: 0.2rem 0 0; color: var(--ink-2, #454c51); } .ds-rail-roles { margin: 0.4rem 0 0; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; color: var(--ink-2, #454c51); } .ds-rail-ep { font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 0.8125em; font-weight: 500; letter-spacing: -0.02em; color: var(--ink-3, #586065); }"
+    },
+    {
+      "name": "Bleed Tab",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "The thumb index. Each tab bleeds a block of its section's ink off the left edge and is numbered to the manual's own index — no category glyphs. The active tab runs into the sheet with no rule between them.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab is-active\" style=\"--tab-ink: #1f4e79\" href=\"#\"><span class=\"ds-tab-bleed\"></span><span class=\"ds-tab-n\">4</span><span class=\"ds-tab-text\"><span class=\"ds-tab-title\">Work Orders</span><span class=\"ds-tab-sub\">Intake to delivery</span></span></a><a class=\"ds-tab\" style=\"--tab-ink: #2f6350\" href=\"#\"><span class=\"ds-tab-bleed\"></span><span class=\"ds-tab-n\">5</span><span class=\"ds-tab-text\"><span class=\"ds-tab-title\">Schedule</span><span class=\"ds-tab-sub\">Appointments and calendar</span></span></a><a class=\"ds-tab\" style=\"--tab-ink: #8a5a1e\" href=\"#\"><span class=\"ds-tab-bleed\"></span><span class=\"ds-tab-n\">6</span><span class=\"ds-tab-text\"><span class=\"ds-tab-title\">Inventory</span><span class=\"ds-tab-sub\">Parts, stock and purchasing</span></span></a></nav>",
+      "css": ".ds-tabs { display: flex; flex-direction: column; gap: 2px; width: 13.5rem; } .ds-tab { position: relative; display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem 0.55rem 1.25rem; border: 1px solid var(--rule, #c7c6be); border-left: 0; border-right: 0; border-radius: 0; background: color-mix(in srgb, var(--plate, #f1f0ea) 55%, transparent); color: var(--ink-2, #454c51); text-decoration: none; transition: background-color 90ms linear, color 90ms linear; } .ds-tab-bleed { position: absolute; left: 0; top: -1px; bottom: -1px; width: 0.5rem; background: var(--tab-ink); opacity: 0.4; } .ds-tab:hover { background: var(--plate, #f1f0ea); color: var(--ink, #161a1d); } .ds-tab:hover .ds-tab-bleed { opacity: 0.75; } .ds-tab.is-active { background: var(--plate, #f1f0ea); color: var(--ink, #161a1d); border-color: var(--ink, #161a1d); } .ds-tab.is-active .ds-tab-bleed { opacity: 1; width: 0.7rem; } .ds-tab-n { font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 0.78rem; font-weight: 600; color: var(--ink-3, #586065); min-width: 0.9rem; text-align: center; } .ds-tab.is-active .ds-tab-n, .ds-tab:hover .ds-tab-n { color: var(--tab-ink); } .ds-tab-text { display: flex; flex-direction: column; min-width: 0; } .ds-tab-title { font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.03em; line-height: 1.2; } .ds-tab-sub { font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.7rem; color: var(--ink-3, #586065); line-height: 1.3; }"
+    },
+    {
+      "name": "Empty State",
+      "kind": "custom",
+      "refersTo": "empty",
+      "description": "A dashed strong-hairline box — dashed rules mark absence in this system, never emphasis. Carries a single action to undo whatever emptied it.",
+      "html": "<div class=\"ds-empty\"><p class=\"ds-empty-title\">No work orders match</p><p class=\"ds-empty-body\">Four filters are active. Clearing them shows all 18 open orders.</p><button class=\"ds-empty-action\">CLEAR FILTERS</button></div>",
+      "css": ".ds-empty { padding: 2.5rem 1rem; text-align: center; color: var(--ink-2, #454c51); border: 1px dashed var(--rule-strong, #9a9890); border-radius: 0; font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; } .ds-empty-title { font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 1rem; font-weight: 600; color: var(--ink, #161a1d); margin: 0 0 0.3rem; } .ds-empty-body { margin: 0; } .ds-empty-action { margin-top: 0.8rem; border: 1px solid var(--ink, #161a1d); background: transparent; color: var(--ink, #161a1d); font-family: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.045em; text-transform: uppercase; padding: 0.24rem 0.5rem; border-radius: 0; cursor: pointer; transition: background-color 90ms linear, color 90ms linear; } .ds-empty-action:hover { background: var(--ink, #161a1d); color: var(--ink-inv, #f1f0ea); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Workshop Manual",
+    "overview": "This is a factory service manual that happens to be a live console. The whole interface is a printed document: uncoated pulp stock underneath, blue-black press ink on top, hairline rules to divide, and standing furniture — plates, tables, callouts, thumb tabs, registration marks — that behaves identically in every section. A table in the storeroom is the same table as in work orders, because a manual is one system, not six themed screens.\n\nThe organising idea is that a work order is a job at a numbered step, not a ticket in a queue. Eleven statuses are printed as a numbered procedure with preconditions and permitted roles, and every surface reads from that same procedure. The console therefore never presents a status as a decorated pill or a lane in a board; it presents it as where the job stands in the manual, with the next lawful step and the person allowed to take it stated in plain words.\n\nDensity is high and unapologetic — this is a workstation for people who read twenty rows at a glance, not a marketing surface. It refuses the generic admin arrangement outright: no stat tiles, no white cards floating on grey, no sidebar of decorative glyphs, no rounded chrome. Nothing lifts off the page, because paper does not lift.",
+    "keyCharacteristics": [
+      "Zero corner radius on every surface, control and mark.",
+      "Pure black is absent; ink is a blue-black #161a1d.",
+      "One superfamily (Barlow / Barlow Semi Condensed) carries display and caption alike; mono is a functional register for identifiers only.",
+      "Colour appears only as functional severity — four declared spots plus a six-ink section index.",
+      "Depth is declared once, as a 1px border. There are no ambient shadows.",
+      "Motion is a single crisp 90ms linear step; nothing floats, nothing bounces.",
+      "Browser surfaces (selection, caret, accent, scrollbar, focus ring) are painted from the palette rather than left to the OS."
+    ],
+    "rules": [
+      { "name": "The Functional Spot Rule", "body": "Colour is severity or section index, never decoration. If a hue is on the screen it is answering \"how bad is this?\" or \"which section am I in?\". There is no brand accent, no chart palette, no tint-for-interest anywhere in the build.", "section": "colors" },
+      { "name": "The Filled-in-Ink Rule", "body": "A completed step fills in press ink (ink-2), not in chroma. Done is not a severity, so it does not get a spot colour; filled-versus-hollow carries the state and the ink's value carries the rank.", "section": "colors" },
+      { "name": "The Two Rules Rule", "body": "There are exactly two rule weights, rule and rule-strong, both at a true 1px, plus two structural exceptions: the 2px ink rule under the masthead and the work-order head, and the 3px section-ink rule across the top of a plate.", "section": "colors" },
+      { "name": "The Printed Word Rule", "body": "No tier is carried by colour alone. Callouts print WARNING / CAUTION / NOTE; status marks print the step's title; blocked rows print their shortfall. Tone is a second channel, never the only one.", "section": "colors" },
+      { "name": "The Identifier-Only Mono Rule", "body": "Azeret Mono marks a string you would read back to someone over the phone — a code, a plate, a SKU, a timestamp, an endpoint. It never sets prose, never sets a label, and never appears for texture.", "section": "typography" },
+      { "name": "The One Superfamily Rule", "body": "Display and caption are the same family. There is no second display face, no serif, and no system-UI font stack standing in for a designed one.", "section": "typography" },
+      { "name": "The Pinned Action Rule", "body": "When a table overflows, the column that must never be the casualty is the next lawful step. The action column is sticky to the right edge with its own ground and left rule, and the middle of the table scrolls beneath it.", "section": "layout" },
+      { "name": "The Print Furniture Rule", "body": "Empty margin gets furniture, not filler. Registration marks, sheet numbers and revision stamps are geometry that says where you are in the document; they are never illustration.", "section": "layout" },
+      { "name": "The Border-Is-The-Elevation Rule", "body": "If a surface needs to separate from what is under it, it gets a 1px rule and a ground value. It does not get a shadow.", "section": "elevation" },
+      { "name": "The Earned Shadow Rule", "body": "The only shadow permitted is one that reports a fact the reader cannot otherwise see, and it disappears the moment that fact stops being true.", "section": "elevation" },
+      { "name": "The Zero Radius Rule", "body": "No corner in this system is rounded. Not a button, not a badge, not a select, not a focus ring.", "section": "shapes" },
+      { "name": "The Mitred Icon Rule", "body": "Icons are square-capped and mitre-joined at 1.75 stroke in a 24px box. No rounded caps, no filled glyphs, no two-tone icons, and no icon font.", "section": "shapes" },
+      { "name": "The Stamp Rule", "body": "State changes are a crisp mechanical step, like a stamp landing. Nothing eases, nothing floats, nothing bounces.", "section": "components" }
+    ],
+    "dos": [
+      "Do set every new surface on a plate: plate ground, 1px hairline, 3px section-ink top rule, sunk head band closed by an ink rule, numbered title.",
+      "Do number things to the manual's own index — sections 4–9, plates 5.1, 6.2, steps 1–10 — so a reference is citable.",
+      "Do carry state on two channels: the printed word plus the tone. A status prints its title; a callout prints WARNING / CAUTION / NOTE.",
+      "Do use ink-2 for anything completed or spent, and reserve the four spot colours for live severity.",
+      "Do keep the mono face for identifiers only — codes, plates, SKUs, timestamps, endpoints, part numbers.",
+      "Do hold a 1px rule (rule) as the default divider and rule-strong for a closing or bounding rule.",
+      "Do pin the action column when a table overflows, and show the overlap cue only while the table is genuinely scrolled.",
+      "Do print a control only when the signed-in role could actually perform it; where it cannot, hold the slot with a dashed inert marker so the layout does not shift between operators.",
+      "Do keep transitions at 90ms linear on colour properties.",
+      "Do theme the browser's own surfaces — selection, caret, accent, scrollbar, focus ring — from these tokens."
+    ],
+    "donts": [
+      "Don't round a corner. Anywhere. --radius is 0 and there is no border-radius in the build.",
+      "Don't add a shadow. Elevation is the border. The one exception is the scrolled-overlap cue on a pinned column, and it must vanish when nothing is hidden.",
+      "Don't use #000 or a neutral grey ramp; ink is #161a1d and its two lighter values.",
+      "Don't introduce a colour for decoration, brand warmth, or variety. If a hue is not severity or a section index, it does not belong.",
+      "Don't fill a completed step in green. Completion is press ink; green is reserved for a satisfied precondition or an active record.",
+      "Don't put category glyphs in the section navigation. The tab number carries the information.",
+      "Don't set body copy, labels or headings in Azeret Mono, and don't add a second display face.",
+      "Don't zebra-stripe a table or tint alternating rows; rule them.",
+      "Don't use a fat coloured left border for a callout — the tier gets a full 1px box and a printed tier word.",
+      "Don't animate with easing, translation, scale or fade. No floating panels, no lift-on-hover, no bounce.",
+      "Don't design a mobile layout for this console. Desktop-only (min 1280, target 1440–1920) is a product constraint; the single 1180px breakpoint exists to collapse two-column grids, not to begin a responsive ladder.",
+      "Don't use body-weight text in caution (#a86e0d) — it clears only 3.6:1. Use caution-ink (#7a4f08) for anything below large-text size."
+    ]
+  }
+}

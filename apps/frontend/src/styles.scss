@@ -1,0 +1,518 @@
+/* ===========================================================================
+   THE WORKSHOP MANUAL — global stock, ink and furniture
+   Everything here is the printed page itself: the stock it is printed on, the
+   ink it is printed with, and the standing furniture (rules, tabs, stamps,
+   callouts) every plate in the manual is set on.
+   =========================================================================== */
+
+:root {
+  /* --- stock -------------------------------------------------------------
+     Uncoated pulp, never a flat fill. The ground drifts warm at one corner
+     and cool at another so it reads as printed rather than rendered.        */
+  --stock: #eaeae5;
+  --stock-warm: #efece3;
+  --stock-cool: #e4e8e6;
+  --plate: #f1f0ea; /* the working surface a table or form is set on */
+  --plate-sunk: #e2e2db; /* recessed: table headers, inert bands */
+
+  /* --- ink ---------------------------------------------------------------
+     Blue-black press ink. #000 never appears anywhere in this build.        */
+  --ink: #161a1d; /* 12.7:1 on stock */
+  --ink-2: #454c51; /* secondary prose, captions — 7.4:1 */
+  --ink-3: #586065; /* tertiary, placeholder — 5.3:1, still body-legal */
+  --ink-inv: #f1f0ea; /* type printed on a solid ink field */
+
+  /* --- rules -------------------------------------------------------------
+     Hairlines at a genuine 1px. Two weights only.                           */
+  --rule: #c7c6be;
+  --rule-strong: #9a9890;
+
+  /* --- functional spot colour -------------------------------------------
+     Severity, never decoration. Maps to the manual's three callout tiers.   */
+  --warn: #c2321b; /* WARNING  — blocked, destructive, terminal. 4.6:1 */
+  --warn-field: #f6e3de;
+  --caution: #a86e0d; /* CAUTION  — rules and marks only: 3.6:1, large text */
+  --caution-ink: #7a4f08; /* the body-text weight of the same ink. 5.9:1 */
+  --caution-field: #f7ead1;
+  --ref: #1f4e79; /* NOTE     — reference, active, informational. 7.2:1 */
+  --ref-field: #dfe7ef;
+  --ok: #2f6350; /* completed, satisfied precondition. 5.7:1 */
+  --ok-field: #dde8e2;
+
+  /* --- section inks ------------------------------------------------------
+     Bleed tabs on a real service manual are colour-coded by section. Muted,
+     same value range, so six of them read as a thumb index and not a rainbow. */
+  --sec-work-orders: #1f4e79;
+  --sec-schedule: #2f6350;
+  --sec-inventory: #8a5a1e;
+  --sec-customers: #6b3a5b;
+  --sec-vehicles: #3f4e63;
+  --sec-workers: #5c5344;
+
+  /* --- type --------------------------------------------------------------
+     One superfamily carries display and caption alike. The mono is a
+     functional register for identifiers only — never a costume.             */
+  --face: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+  --face-cond: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, sans-serif;
+  --face-mono: 'Azeret Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --step--1: 0.75rem;
+  --step-0: 0.875rem;
+  --step-1: 1rem;
+  --step-2: 1.25rem;
+  --step-3: 1.625rem;
+  --step-4: 2.25rem;
+  --step-5: 3rem;
+
+  /* --- measure -----------------------------------------------------------  */
+  --tab-w: 13.5rem;
+  --radius: 0; /* a printed page has no rounded corners */
+}
+
+/* ---------------------------------------------------------------------------
+   Reset
+   --------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--face);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  color: var(--ink);
+  background-color: var(--stock);
+  /* The stock drifts warm at the top-left and cool at the bottom-right. Two
+     very wide, very low-contrast washes — printed paper, not a gradient. */
+  background-image:
+    radial-gradient(120rem 90rem at 4% -10%, var(--stock-warm) 0%, transparent 62%),
+    radial-gradient(110rem 80rem at 98% 108%, var(--stock-cool) 0%, transparent 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   Browser surfaces — the parts nobody draws still carry the design
+   --------------------------------------------------------------------------- */
+
+::selection {
+  /* a highlighter drawn across the page, not the OS blue */
+  background: #f3d98a;
+  color: var(--ink);
+}
+
+:root {
+  caret-color: var(--warn);
+  accent-color: var(--ref);
+  scrollbar-color: var(--rule-strong) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border: 3px solid var(--stock);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+}
+
+:focus-visible {
+  /* a hand-drawn box around the field being filled */
+  outline: 2px solid var(--warn);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--ref);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Type furniture
+   --------------------------------------------------------------------------- */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--face-cond);
+  font-weight: 600;
+  line-height: 1.1;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: var(--step-4);
+}
+h2 {
+  font-size: var(--step-3);
+}
+h3 {
+  font-size: var(--step-2);
+}
+h4 {
+  font-size: var(--step-1);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* The label register: every small caps label in the manual. */
+.label {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* The identifier register: order codes, SKUs, plates, part numbers. */
+.token {
+  font-family: var(--face-mono);
+  font-size: 0.8125em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: none;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reader-invisible, screen-reader-audible. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion — paper-native. One crisp step, nothing floats, nothing bounces.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===========================================================================
+   STANDING FURNITURE
+   The plates, tables, callouts and controls every section of the manual is
+   set on. Global rather than per-component because the manual is one system:
+   a table in the storeroom section is the same table as in work orders.
+   =========================================================================== */
+
+/* --- the plate ---------------------------------------------------------- */
+
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--rule);
+}
+
+.plate__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--ink);
+  background: var(--plate-sunk);
+}
+
+.plate__title {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.plate__body {
+  padding: 1rem;
+}
+
+/* --- the manual table --------------------------------------------------- */
+
+.mt-wrap {
+  overflow-x: auto;
+}
+
+.mt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--step-0);
+}
+
+.mt caption {
+  text-align: left;
+  padding: 0.5rem 0;
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+
+.mt thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--plate-sunk);
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  text-align: left;
+  white-space: nowrap;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.mt tbody td {
+  padding: 0.6rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+/* No zebra striping — a manual rules its rows, it does not tint them. */
+.mt tbody tr:hover td {
+  background: color-mix(in srgb, var(--ref) 5%, transparent);
+}
+
+.mt tbody tr:last-child td {
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.mt .r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mt .shrink {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* --- callouts ------------------------------------------------------------
+   The manual's three severity tiers. A 1px rule all the way round and a
+   printed tier word — never a fat coloured left border.                     */
+
+.callout {
+  border: 1px solid currentColor;
+  padding: 0.6rem 0.8rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.7rem;
+  align-items: start;
+  font-size: var(--step-0);
+}
+
+.callout__tier {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding-top: 0.1em;
+  white-space: nowrap;
+}
+
+.callout__body {
+  color: var(--ink);
+}
+
+.callout--warning {
+  color: var(--warn);
+  background: var(--warn-field);
+}
+
+.callout--caution {
+  color: var(--caution-ink);
+  background: var(--caution-field);
+}
+
+.callout--note {
+  color: var(--ref);
+  background: var(--ref-field);
+}
+
+/* --- controls ------------------------------------------------------------
+   Filled, bounded, zero radius. Every actionable thing is unmistakably one.  */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  padding: 0.42rem 0.85rem;
+  cursor: pointer;
+  transition: background-color 90ms linear, color 90ms linear;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+
+.btn:disabled {
+  border-color: var(--rule-strong);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--ref);
+  border-color: var(--ref);
+}
+
+.btn--danger {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--warn);
+  color: var(--ink-inv);
+}
+
+.btn--sm {
+  font-size: var(--step--1);
+  padding: 0.24rem 0.5rem;
+}
+
+.btn--quiet {
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ref);
+}
+
+/* --- fields --------------------------------------------------------------- */
+
+.field {
+  display: block;
+}
+
+.field > .label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.input,
+select.input,
+textarea.input {
+  width: 100%;
+  background: var(--stock);
+  border: 1px solid var(--rule-strong);
+  padding: 0.4rem 0.55rem;
+  font-size: var(--step-0);
+}
+
+.input::placeholder {
+  color: var(--ink-3);
+}
+
+.input:focus-visible {
+  border-color: var(--ink);
+}
+
+/* --- empty and inert states --------------------------------------------- */
+
+.empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--ink-2);
+  border: 1px dashed var(--rule-strong);
+}
+
+.empty__title {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+/* --- the synthetic-data band -------------------------------------------- */
+
+.demo-band {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 1.25rem;
+  background: var(--caution-field);
+  border-bottom: 1px solid var(--caution);
+  color: var(--caution-ink);
+  font-size: var(--step--1);
+}

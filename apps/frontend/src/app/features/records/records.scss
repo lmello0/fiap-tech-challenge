@@ -1,0 +1,123 @@
+:host {
+  display: block;
+}
+
+.plate {
+  border-top: 3px solid var(--section-ink, var(--ink));
+}
+
+.plate__meta {
+  color: var(--ink-3);
+}
+
+.rec__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.rec__title {
+  font-size: var(--step-4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.rec__sub {
+  margin-top: 0.35rem;
+  color: var(--ink-2);
+}
+
+.rec__search {
+  min-width: 20rem;
+}
+
+.rec__notice {
+  margin-bottom: 1.25rem;
+  max-width: 82ch;
+}
+
+.rec__name {
+  font-weight: 500;
+}
+
+.rec__muted {
+  color: var(--ink-2);
+}
+
+.rec__doctype {
+  margin-left: 0.35rem;
+  font-family: var(--face-cond);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--ink-3);
+}
+
+.rec__state {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  padding: 0.05rem 0.35rem;
+  white-space: nowrap;
+  color: var(--ok);
+  background: var(--ok-field);
+}
+
+.rec__state.is-off {
+  color: var(--warn);
+  background: var(--warn-field);
+}
+
+tr.is-inactive td {
+  color: var(--ink-3);
+}
+
+/* --- vehicles ------------------------------------------------------------- */
+
+.rec__plate {
+  font-weight: 600;
+  border: 1px solid var(--rule-strong);
+  padding: 0.05rem 0.35rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.rec__spec {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+
+/* --- workers -------------------------------------------------------------- */
+
+.rec__role {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  padding: 0.05rem 0.35rem;
+  white-space: nowrap;
+}
+
+.rec__role.is-mechanic {
+  color: var(--sec-work-orders);
+  background: var(--ref-field);
+}
+.rec__role.is-attendant {
+  color: var(--sec-customers);
+}
+.rec__role.is-manager {
+  color: var(--warn);
+  background: var(--warn-field);
+}
+.rec__role.is-stockist {
+  color: var(--sec-inventory);
+}

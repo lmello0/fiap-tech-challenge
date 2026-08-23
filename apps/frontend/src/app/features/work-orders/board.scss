@@ -1,0 +1,237 @@
+:host {
+  display: block;
+}
+
+.board__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.board__title {
+  font-size: var(--step-4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.board__sub {
+  margin-top: 0.35rem;
+  color: var(--ink-2);
+}
+
+.board__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.board__search {
+  position: relative;
+}
+
+.board__search-icon {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.board__search-input {
+  padding-left: 1.85rem;
+  min-width: 17rem;
+}
+
+.board__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.board__toast {
+  margin-bottom: 1rem;
+}
+
+/* --- the plate header ---------------------------------------------------- */
+
+.plate__meta {
+  color: var(--ink-3);
+}
+
+/* the open section's ink, ruled under the plate head */
+.plate {
+  border-top: 3px solid var(--section-ink, var(--ink));
+}
+
+/* --- the board table ------------------------------------------------------ */
+
+.board__table {
+  min-width: 72rem;
+}
+
+/* The overlap cue: while the table is actually scrolled, the pinned column
+   casts a rule and a soft shadow to its left, so an operator at the minimum
+   width can see that columns pass beneath it. Absent when nothing is hidden —
+   a permanent shadow at 1440, where every column is visible, would be a lie. */
+.board__table.is-scrolled thead th:last-child,
+.board__table.is-scrolled tbody td:last-child {
+  border-left-color: var(--ink);
+  box-shadow: -6px 0 7px -5px rgb(22 26 29 / 28%);
+}
+
+/* The action column never leaves the screen.
+   At the minimum supported width the table still overflows, and the one column
+   that must never be the casualty of that is the next lawful step — so it is
+   pinned to the right edge while the middle of the table scrolls under it. */
+.board__table thead th:last-child,
+.board__table tbody td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--plate);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.board__table thead th:last-child {
+  z-index: 3;
+  background: var(--plate-sunk);
+}
+
+.board__row:hover td:last-child {
+  background: color-mix(in srgb, var(--ref) 5%, var(--plate));
+}
+
+.board__row.is-blocked td:last-child {
+  background: color-mix(in srgb, var(--warn) 5%, var(--plate));
+}
+
+.board__row.is-blocked:hover td:last-child {
+  background: color-mix(in srgb, var(--warn) 9%, var(--plate));
+}
+
+/* the frozen spacer under the pinned column on a callout band row */
+.board__band-pad {
+  position: sticky;
+  right: 0;
+  background: var(--plate);
+  border-left: 1px solid var(--rule-strong);
+  padding: 0 !important;
+}
+
+.board__row.is-blocked + .board__callout-row .board__band-pad {
+  background: color-mix(in srgb, var(--warn) 5%, var(--plate));
+}
+
+.board__n {
+  color: var(--ink-3);
+  font-size: 0.7rem;
+  padding-top: 0.75rem !important;
+}
+
+.board__code {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.board__plate {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.board__vehicle {
+  display: block;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.board__mech {
+  white-space: nowrap;
+}
+
+/* Row rhythm at the minimum supported width: without a floor the long fleet
+   name wraps to three lines and its row stands 1.6x its neighbours, breaking
+   the horizontal read the rail depends on. */
+.board__customer {
+  min-width: 8.75rem;
+}
+
+.board__inert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.is-blocked .board__inert {
+  color: var(--warn);
+}
+
+/* the announced change: a blocked row restyles in place, columns unmoved */
+.board__row.is-blocked td {
+  background: color-mix(in srgb, var(--warn) 5%, transparent);
+}
+
+.board__row.is-blocked:hover td {
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+}
+
+/* --- inline callout rows -------------------------------------------------- */
+
+.board__callout-row > td {
+  padding: 0 0.75rem 0.7rem !important;
+  border-bottom: 1px solid var(--rule) !important;
+}
+
+.board__callout-row .callout {
+  font-size: 0.82rem;
+}
+
+.board__short {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.board__empty-action {
+  margin-top: 0.8rem;
+}
+
+/* --- the legend ----------------------------------------------------------- */
+
+.board__legend {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--rule-strong);
+  padding-top: 1.25rem;
+  max-width: 74ch;
+}
+
+.board__legend-title {
+  font-size: var(--step-1);
+  letter-spacing: 0.02em;
+}
+
+.board__legend-body {
+  margin-top: 0.4rem;
+  color: var(--ink-2);
+}
+
+
+
+
