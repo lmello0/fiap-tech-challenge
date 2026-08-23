@@ -13,7 +13,7 @@ services:
   postgres:
     image: 'postgres:18'
     restart: unless-stopped
-    profiles: [ app, sonar ]
+    profiles: [ app, sonar, services ]
     environment:
       TZ: America/Sao_Paulo
       POSTGRES_PASSWORD: secret
@@ -32,7 +32,7 @@ services:
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped
-    profiles: [ app ]
+    profiles: [ app, sonar, services ]
     environment:
       TZ: America/Sao_Paulo
       MP_SMTP_AUTH_ACCEPT_ANY: 1
