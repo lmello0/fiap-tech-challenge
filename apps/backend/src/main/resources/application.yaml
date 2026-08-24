@@ -117,6 +117,10 @@ app:
       document-code: ${BOOTSTRAP_MANAGER_DOCUMENT_CODE:}
       phone: ${BOOTSTRAP_MANAGER_PHONE:}
 
+    cors:
+      allowed-origins:
+        - "http://localhost:4200"
+
 management:
   endpoints:
     web:
