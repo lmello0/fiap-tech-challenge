@@ -2,6 +2,7 @@ package com.fiap.techchallenge.user.controllers;
 
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.shared.responses.PageResponse;
+import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.UpdateUserProfileCommand;
 import com.fiap.techchallenge.user.api.queries.UserFilterQuery;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
@@ -50,6 +51,18 @@ public interface CustomerControllerSwaggerDoc {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping("/{id}")
     ResponseEntity<UserInfo> getById(@Parameter(description = "Customer id") @PathVariable UUID id);
+
+    @Operation(
+            summary = "Create a customer",
+            description = "Requires the ATTENDANT or MANAGER role."
+    )
+    @CommonApiResponses
+    @ApiResponse(responseCode = "400", description = "The request body failed validation.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "The email or document is already registered to another account.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping
+    ResponseEntity<UserInfo> create(@Valid @RequestBody CreateUserCommand command);
 
     @Operation(
             summary = "Update a customer's profile",

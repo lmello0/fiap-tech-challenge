@@ -2,6 +2,7 @@ package com.fiap.techchallenge.user.controllers;
 
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.user.api.UserService;
+import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
 import com.fiap.techchallenge.user.api.commands.UpdateUserProfileCommand;
 import com.fiap.techchallenge.user.api.queries.UserFilterQuery;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
@@ -30,6 +31,12 @@ public class CustomerController implements CustomerControllerSwaggerDoc {
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER', 'MECHANIC')")
     public ResponseEntity<UserInfo> getById(UUID id) {
         return ResponseEntity.ok(service.getById(id));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
+    public ResponseEntity<UserInfo> create(CreateUserCommand command) {
+        return ResponseEntity.ok(service.createCustomer(command));
     }
 
     @Override
