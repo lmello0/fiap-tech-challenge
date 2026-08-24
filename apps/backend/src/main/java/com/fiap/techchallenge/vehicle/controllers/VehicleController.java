@@ -28,7 +28,7 @@ public class VehicleController implements VehicleControllerSwaggerDoc {
     private final VehicleService vehicleService;
 
     @Override
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER', 'MECHANIC')")
     public ResponseEntity<PageResponse<VehicleInfo>> getAllVehicles(
             VehicleFilterQuery filter,
             Pageable pageable,
@@ -42,7 +42,7 @@ public class VehicleController implements VehicleControllerSwaggerDoc {
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ATTENDANT', 'MANAGER', 'MECHANIC')")
     public ResponseEntity<VehicleInfo> getById(UUID id, Authentication authentication) {
         VehicleInfo vehicle = vehicleService.getById(id);
         requireOwnershipOrStaff(vehicle, authentication);
@@ -89,7 +89,9 @@ public class VehicleController implements VehicleControllerSwaggerDoc {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(authority -> authority.equals("ROLE_" + WorkerRole.ATTENDANT)
-                        || authority.equals("ROLE_" + WorkerRole.MANAGER));
+                        || authority.equals("ROLE_" + WorkerRole.MANAGER)
+                        || authority.equals("ROLE_" + WorkerRole.MECHANIC)
+                );
     }
 
     /** A mismatch throws not-found rather than access-denied, so as not to reveal that another

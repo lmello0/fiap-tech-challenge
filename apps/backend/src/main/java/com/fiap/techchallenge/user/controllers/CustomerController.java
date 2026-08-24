@@ -21,13 +21,13 @@ public class CustomerController implements CustomerControllerSwaggerDoc {
     private final UserService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER', 'MECHANIC')")
     public ResponseEntity<PageResponse<UserInfo>> list(UserFilterQuery filter, Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(service.listCustomers(filter, pageable)));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER', 'MECHANIC')")
     public ResponseEntity<UserInfo> getById(UUID id) {
         return ResponseEntity.ok(service.getById(id));
     }
