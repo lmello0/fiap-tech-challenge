@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,7 +105,7 @@ class WorkOrderSpecificationsTest {
         Path<Object> statusPath = mockPath("status");
         when(cb.equal(statusPath, WorkOrderStatus.IN_PROGRESS)).thenReturn(predicate);
 
-        Specification<WorkOrder> spec = WorkOrderSpecifications.withStatus(WorkOrderStatus.IN_PROGRESS);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.withStatus(Set.of(WorkOrderStatus.IN_PROGRESS));
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(statusPath, WorkOrderStatus.IN_PROGRESS);

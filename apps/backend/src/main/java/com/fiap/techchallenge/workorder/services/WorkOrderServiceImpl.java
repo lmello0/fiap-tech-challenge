@@ -82,13 +82,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public Page<WorkOrderInfo> getAllWorkOrders(WorkOrderFilterQuery filter, Pageable pageable) {
         Specification<WorkOrder> spec = Specification
                 .where(WorkOrderSpecifications.belongsToCustomerId(filter.customerId()))
-                .and(WorkOrderSpecifications.belongsToCustomerName(filter.customerName()))
+                .and(WorkOrderSpecifications.belongsToCustomerNameLike(filter.customerName()))
                 .and(WorkOrderSpecifications.ofVehicleId(filter.vehicleId()))
-                .and(WorkOrderSpecifications.ofVehiclePlate(filter.vehiclePlate()))
-                .and(WorkOrderSpecifications.ofVehicleMake(filter.vehicleMake()))
-                .and(WorkOrderSpecifications.ofVehicleModel(filter.vehicleModel()))
+                .and(WorkOrderSpecifications.ofVehiclePlateLike(filter.vehiclePlate()))
+                .and(WorkOrderSpecifications.ofVehicleMakeLike(filter.vehicleMake()))
+                .and(WorkOrderSpecifications.ofVehicleModelLike(filter.vehicleModel()))
                 .and(WorkOrderSpecifications.withMechanicId(filter.mechanicId()))
-                .and(WorkOrderSpecifications.withMechanicName(filter.mechanicName()))
+                .and(WorkOrderSpecifications.withMechanicNameLike(filter.mechanicName()))
                 .and(WorkOrderSpecifications.withStatus(filter.status()))
                 .and(WorkOrderSpecifications.withCode(filter.code()))
                 .and(WorkOrderSpecifications.createdBetween(filter.createdAt(), filter.finishedAt()));
@@ -176,8 +176,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public WorkOrderInfo startDiagnostics(UUID workOrderId, StartDiagnosticsCommand command) {
         WorkOrder wo = load(workOrderId);
 
+        UserInfo mechanic = userService.getById(command.mechanicId());
+
         wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.IN_DIAGNOSTICS));
         wo.setAssignedMechanicId(command.mechanicId());
+        wo.setMechanicName(mechanic.firstName() + " " + mechanic.lastName());
         wo.setDiagnosticStartedAt(Instant.now());
 
         events.publishEvent(new WorkOrderDiagnosticsStartedEvent(

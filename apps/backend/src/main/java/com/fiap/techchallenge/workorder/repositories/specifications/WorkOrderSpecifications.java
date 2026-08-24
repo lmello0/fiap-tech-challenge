@@ -5,6 +5,7 @@ import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -15,9 +16,9 @@ public class WorkOrderSpecifications {
                 customerId == null ? null : cb.equal(root.get("customerId"), customerId);
     }
 
-    public static Specification<WorkOrder> belongsToCustomerName(String customerName) {
+    public static Specification<WorkOrder> belongsToCustomerNameLike(String customerName) {
         return (root, query, cb) ->
-                customerName == null ? null : cb.equal(root.get("customerName"), customerName);
+                customerName == null ? null : cb.like(cb.lower(root.get("customerName")), "%" + customerName.toLowerCase(Locale.ROOT) + "%");
     }
 
     public static Specification<WorkOrder> ofVehicleId(UUID vehicleId) {
@@ -25,19 +26,19 @@ public class WorkOrderSpecifications {
                 vehicleId == null ? null : cb.equal(root.get("vehicleId"), vehicleId);
     }
 
-    public static Specification<WorkOrder> ofVehiclePlate(String vehiclePlate) {
+    public static Specification<WorkOrder> ofVehiclePlateLike(String vehiclePlate) {
         return (root, query, cb) ->
-                vehiclePlate == null ? null : cb.equal(root.get("vehiclePlate"), vehiclePlate);
+                vehiclePlate == null ? null : cb.like(cb.lower(root.get("vehiclePlate")), "%" + vehiclePlate.toLowerCase(Locale.ROOT) + "%");
     }
 
-    public static Specification<WorkOrder> ofVehicleMake(String vehicleMake) {
+    public static Specification<WorkOrder> ofVehicleMakeLike(String vehicleMake) {
         return (root, query, cb) ->
-                vehicleMake == null ? null : cb.equal(root.get("vehicleMake"), vehicleMake);
+                vehicleMake == null ? null : cb.like(cb.lower(root.get("vehicleMake")), "%" + vehicleMake.toLowerCase(Locale.ROOT) + "%");
     }
 
-    public static Specification<WorkOrder> ofVehicleModel(String vehicleModel) {
+    public static Specification<WorkOrder> ofVehicleModelLike(String vehicleModel) {
         return (root, query, cb) ->
-                vehicleModel == null ? null : cb.equal(root.get("vehicleModel"), vehicleModel);
+                vehicleModel == null ? null : cb.like(cb.lower(root.get("vehicleModel")), "%" + vehicleModel.toLowerCase(Locale.ROOT) + "%");
     }
 
     public static Specification<WorkOrder> withMechanicId(UUID mechanicId) {
@@ -45,19 +46,19 @@ public class WorkOrderSpecifications {
                 mechanicId == null ? null : cb.equal(root.get("mechanicId"), mechanicId);
     }
 
-    public static Specification<WorkOrder> withMechanicName(String mechanicName) {
+    public static Specification<WorkOrder> withMechanicNameLike(String mechanicName) {
         return (root, query, cb) ->
-                mechanicName == null ? null : cb.equal(root.get("mechanicName"), mechanicName);
+                mechanicName == null ? null : cb.like(cb.lower(root.get("mechanicName")), "%" + mechanicName.toLowerCase(Locale.ROOT) + "%");
     }
 
     public static Specification<WorkOrder> withStatus(Set<WorkOrderStatus> statuses) {
         return (root, query, cb) ->
-                statuses == null || statuses.isEmpty() ? null : cb.in(root.get("status").in(statuses));
+                statuses == null || statuses.isEmpty() ? null : root.get("status").in(statuses);
     }
 
     public static Specification<WorkOrder> withCode(String code) {
         return (root, query, cb) ->
-                code == null ? null : cb.equal(root.get("code"), code);
+                code == null ? null : cb.like(cb.lower(root.get("orderCode")), "%" + code.toLowerCase(Locale.ROOT) + "%");
     }
 
     public static Specification<WorkOrder> createdBetween(LocalDate start, LocalDate end) {
