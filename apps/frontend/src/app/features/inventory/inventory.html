@@ -1,0 +1,1114 @@
+<div class="inv">
+      <header class="inv__head">
+        <div>
+          <h1 class="inv__title">Inventory</h1>
+          <p class="inv__sub">
+            @if (tab() === 'services') {
+              {{ services().length }} {{ services().length === 1 ? 'service' : 'services' }} in the
+              labour catalogue
+            } @else {
+              {{ parts().length }} {{ parts().length === 1 ? 'part' : 'parts' }} in the catalogue ·
+              {{ belowMin().length }} at or below reorder point ·
+              {{ negative().length }} oversubscribed
+            }
+          </p>
+        </div>
+        @if (canWrite()) {
+          <div class="rec__tools">
+            @if (tab() === 'parts') {
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="openPart() === 'new' || isDemo()"
+                (click)="newPart()"
+              >
+                New part
+              </button>
+            }
+            @if (tab() === 'services') {
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="openService() === 'new' || isDemo()"
+                (click)="newService()"
+              >
+                New service
+              </button>
+            }
+            @if (tab() === 'vendors') {
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="openVendor() === 'new' || isDemo()"
+                (click)="newVendor()"
+              >
+                New vendor
+              </button>
+            }
+            @if (tab() === 'purchasing') {
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="placingOrder() || isDemo() || activeVendors().length === 0"
+                (click)="startOrder()"
+              >
+                Place order
+              </button>
+            }
+          </div>
+        }
+        @if (readOnly()) {
+          <p class="inv__readonly">
+            <app-icon name="lock" [size]="13" /> Read-only — a mechanic may look up parts and stock but
+            not change them
+          </p>
+        }
+      </header>
+
+      <nav class="inv__tabs" aria-label="Inventory views">
+        @for (t of tabs; track t.id) {
+          <button
+            class="inv__tab"
+            type="button"
+            [class.is-active]="tab() === t.id"
+            [attr.aria-current]="tab() === t.id ? 'page' : null"
+            (click)="tab.set(t.id)"
+          >
+            {{ t.label }}
+          </button>
+        }
+      </nav>
+
+      @switch (tab()) {
+        @case ('parts') {
+          <section class="plate">
+            <div class="plate__head">
+              <p class="plate__title">6.1 — Part catalogue and stock position</p>
+              <p class="plate__meta label">Available = on hand − reserved</p>
+            </div>
+            <div class="mt-wrap">
+              <table class="mt">
+                <caption class="sr-only">Parts with price, cost and stock position.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="shrink">SKU</th>
+                    <th scope="col">Part</th>
+                    <th scope="col">Brand</th>
+                    <th scope="col" class="r shrink">On hand</th>
+                    <th scope="col" class="r shrink">Reserved</th>
+                    <th scope="col" class="r shrink">Available</th>
+                    <th scope="col" class="r shrink">Sale</th>
+                    <th scope="col" class="r shrink">Avg cost</th>
+                    <th scope="col" class="shrink">Reorder</th>
+                    @if (canWrite()) {
+                      <th scope="col" class="shrink r">Entry</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (openPart() === 'new') {
+                    <tr class="inv__band-row">
+                      <td [attr.colspan]="canWrite() ? 10 : 9">
+                        <app-entry-band
+                          heading="New part"
+                          endpoint="POST /parts"
+                          saveLabel="Record part"
+                          [busy]="busy()"
+                          [error]="bandError()"
+                          [canSave]="pf().valid()"
+                          hint="A new part starts at zero on hand — correct the shelf next."
+                          (save)="savePart()"
+                          (cancel)="closeBands()"
+                        >
+                          <ng-container *ngTemplateOutlet="partFields" />
+                        </app-entry-band>
+                      </td>
+                    </tr>
+                  }
+                  @for (p of parts(); track p.id) {
+                    <tr [class.is-inactive]="!p.active" [class.is-editing]="openPart() === p.id || adjusting() === p.id">
+                      <td class="shrink token">{{ p.sku }}</td>
+                      <td>
+                        {{ p.name }}
+                        @if (!p.active) {
+                          <span class="inv__flag">withdrawn</span>
+                        }
+                      </td>
+                      <td class="inv__brand">{{ p.brand ?? '—' }}</td>
+                      <td class="r num">{{ p.quantityOnHand }} {{ uom(p.unitOfMeasure) }}</td>
+                      <td class="r num">{{ p.quantityReserved }}</td>
+                      <td class="r num">
+                        <span [class.inv__short]="p.available < 0" [class.inv__low]="p.available >= 0 && isLow(p.id, p.available)">{{
+                          p.available
+                        }}</span>
+                      </td>
+                      <td class="r num">{{ money(p.salePrice) }}</td>
+                      <td class="r num inv__cost">{{ p.averageCost === null ? '—' : money(p.averageCost) }}</td>
+                      <td class="shrink">
+                        @if (canWrite()) {
+                          <button
+                            class="inv__rule-btn"
+                            type="button"
+                            [disabled]="isDemo()"
+                            (click)="openPolicy() === p.id ? closeAllBands() : openPolicyFor(p)"
+                          >
+                            @if (rule(p.id); as r) {
+                              <span class="inv__rule" [class.is-off]="!r.enabled">
+                                {{ r.min }}→{{ r.max ?? '—' }}
+                              </span>
+                            } @else {
+                              <span class="inv__norule">set…</span>
+                            }
+                          </button>
+                        } @else if (rule(p.id); as r) {
+                          <span class="inv__rule" [class.is-off]="!r.enabled">
+                            {{ r.min }}→{{ r.max ?? '—' }}
+                          </span>
+                        } @else {
+                          <span class="inv__norule">none</span>
+                        }
+                      </td>
+                      @if (canWrite()) {
+                        <td class="shrink r">
+                          <div class="rec__actions">
+                            <button
+                              class="btn btn--sm btn--quiet"
+                              type="button"
+                              [disabled]="isDemo()"
+                              (click)="openPart() === p.id ? closeBands() : editPart(p)"
+                            >
+                              {{ openPart() === p.id ? 'Close' : 'Edit' }}
+                            </button>
+                            <button
+                              class="btn btn--sm"
+                              type="button"
+                              [disabled]="isDemo()"
+                              (click)="adjusting() === p.id ? closeBands() : openAdjust(p)"
+                            >
+                              Adjust
+                            </button>
+                            @if (p.active) {
+                              <button
+                                class="btn btn--sm btn--danger"
+                                type="button"
+                                [disabled]="isDemo()"
+                                (click)="withdrawing() === p.id ? closeBands() : withdrawing.set(p.id)"
+                              >
+                                Withdraw
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+
+                    @if (openPart() === p.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="10">
+                          <app-entry-band
+                            [heading]="'Editing — ' + p.sku"
+                            [endpoint]="'PATCH /parts/' + p.id.slice(0, 8) + '…'"
+                            saveLabel="Save changes"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="pf().valid()"
+                            (save)="savePart()"
+                            (cancel)="closeBands()"
+                          >
+                            <ng-container *ngTemplateOutlet="partFields" />
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    <!-- Correcting the shelf is a different act from editing the
+                         catalogue record, and gets its own band and its own call. -->
+                    @if (adjusting() === p.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="10">
+                          <app-entry-band
+                            [heading]="'Correct the shelf — ' + p.name"
+                            [endpoint]="'POST /parts/' + p.id.slice(0, 8) + '…/stock/adjustments'"
+                            saveLabel="Record adjustment"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="af().valid()"
+                            (save)="saveAdjust()"
+                            (cancel)="closeBands()"
+                          >
+                            <div class="band__grid">
+                              <app-form-field
+                                label="Quantity"
+                                [errors]="af.quantity().errors()"
+                                [touched]="af.quantity().touched()"
+                                help="Signed: positive adds, negative removes."
+                              >
+                                <input class="input" type="number" [formField]="af.quantity" />
+                              </app-form-field>
+
+                              <app-form-field
+                                label="Reason"
+                                [errors]="af.reason().errors()"
+                                [touched]="af.reason().touched()"
+                                help="A physical count, breakage, or stock on the wrong rack."
+                              >
+                                <input class="input" type="text" [formField]="af.reason" />
+                              </app-form-field>
+
+                              <p class="band__note">
+                                On the shelf now:
+                                <strong class="num">{{ p.quantityOnHand }}</strong> on hand,
+                                <strong class="num">{{ p.quantityReserved }}</strong> reserved,
+                                <strong class="num">{{ p.available }}</strong> available.
+                                @if (adjustPreview(); as a) {
+                                  After this correction it reads
+                                  <strong class="num">{{ a.onHand }} {{ a.uom }}</strong> on hand and
+                                  <strong class="num">{{ a.available }}</strong> available.
+                                }
+                                The movement is appended to the ledger and cannot be reversed except
+                                by another adjustment.
+                              </p>
+                            </div>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    @if (openPolicy() === p.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="10">
+                          <app-entry-band
+                            [heading]="'Reorder threshold — ' + p.name"
+                            [endpoint]="rule(p.id) ? 'PATCH /stock-policies/{id}' : 'POST /stock-policies'"
+                            saveLabel="Save threshold"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="plf().valid()"
+                            (save)="savePolicy(p.id)"
+                            (cancel)="closeAllBands()"
+                          >
+                            <div class="band__grid band__grid--three">
+                              <app-form-field
+                                label="Minimum"
+                                [errors]="plf.minQuantity().errors()"
+                                [touched]="plf.minQuantity().touched()"
+                                help="Available at or below this signals a reorder."
+                              >
+                                <input class="input" type="number" [formField]="plf.minQuantity" />
+                              </app-form-field>
+
+                              <app-form-field
+                                label="Restock to"
+                                [optional]="true"
+                                [errors]="plf.maxQuantity().errors()"
+                                [touched]="plf.maxQuantity().touched()"
+                                help="The level an automatic order aims for."
+                              >
+                                <input class="input" type="number" [formField]="plf.maxQuantity" />
+                              </app-form-field>
+
+                              <app-form-field
+                                label="Order from"
+                                [errors]="plf.vendorId().errors()"
+                                [touched]="plf.vendorId().touched()"
+                              >
+                                <select class="input" [formField]="plf.vendorId">
+                                  <option value="">No vendor</option>
+                                  @for (v of activeVendors(); track v.id) {
+                                    <option [value]="v.id">{{ v.name }}</option>
+                                  }
+                                </select>
+                              </app-form-field>
+
+                              <app-form-field label="Automatic reordering" [wide]="true">
+                                <label class="inv__check">
+                                  <input type="checkbox" [formField]="plf.autoReorderEnabled" />
+                                  <span
+                                    >Place an order with the vendor automatically when this part
+                                    falls to the minimum.</span
+                                  >
+                                </label>
+                              </app-form-field>
+
+                              <p class="band__note">
+                                The threshold is evaluated the moment it is saved, so a part already
+                                at or below the minimum signals a reorder straight away. This part
+                                has <strong class="num">{{ p.available }}</strong> available now.
+                                @if (rule(p.id)) {
+                                  <button
+                                    class="btn btn--sm btn--danger inv__policy-delete"
+                                    type="button"
+                                    [disabled]="busy()"
+                                    (click)="deletePolicy(p.id)"
+                                  >
+                                    Remove threshold
+                                  </button>
+                                }
+                              </p>
+                            </div>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    @if (withdrawing() === p.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="10">
+                          <app-entry-band
+                            [heading]="'Withdraw ' + p.sku + ' from the catalogue?'"
+                            [endpoint]="'DELETE /parts/' + p.id.slice(0, 8) + '…'"
+                            saveLabel="Withdraw part"
+                            busyLabel="Withdrawing…"
+                            tone="danger"
+                            [busy]="busy()"
+                            (save)="withdrawPart(p)"
+                            (cancel)="closeBands()"
+                          >
+                            <p class="rec__confirm">
+                              It stops being offered on new budget lines. Stock on hand, existing
+                              reservations and the movement ledger are untouched.
+                            </p>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+                  } @empty {
+                    @if (openPart() !== 'new') {
+                      <tr>
+                        <td [attr.colspan]="canWrite() ? 10 : 9">
+                          <div class="empty">
+                            <p class="empty__title">No parts in the catalogue</p>
+                            <p>
+                              A budget line for a part draws on this catalogue, and starting service
+                              consumes what it reserved — so the shop needs at least one part on the
+                              shelf before a job can run.
+                            </p>
+                            @if (canWrite() && !isDemo()) {
+                              <p class="rec__empty-action">
+                                <button class="btn btn--sm btn--primary" type="button" (click)="newPart()">
+                                  Record the first part
+                                </button>
+                              </p>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          @if (negative().length) {
+            <div class="inv__notice">
+              <app-callout tier="warning">
+                <p class="inv__notice-lead">
+                  {{ negative().length }}
+                  {{ negative().length === 1 ? 'part is' : 'parts are' }} reserved beyond what is on
+                  the shelf.
+                </p>
+                <p>
+                  Every work order holding one of these reservations is blocked from starting service
+                  until stock is received. Nothing has been consumed.
+                </p>
+              </app-callout>
+            </div>
+          }
+        }
+
+        @case ('services') {
+          <section class="plate">
+            <div class="plate__head">
+              <p class="plate__title">6.2 — Labour catalogue</p>
+              <p class="plate__meta label">Estimated until the shop has measured it</p>
+            </div>
+            <div class="mt-wrap">
+              <table class="mt">
+                <caption class="sr-only">Repair services with price and execution time.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="shrink">Code</th>
+                    <th scope="col">Service</th>
+                    <th scope="col" class="r shrink">Price</th>
+                    <th scope="col" class="r shrink">Duration</th>
+                    <th scope="col" class="shrink">Basis</th>
+                    @if (canWrite()) {
+                      <th scope="col" class="shrink r">Entry</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (openService() === 'new') {
+                    <tr class="inv__band-row">
+                      <td [attr.colspan]="canWrite() ? 6 : 5">
+                        <app-entry-band
+                          heading="New repair service"
+                          endpoint="POST /services"
+                          saveLabel="Record service"
+                          [busy]="busy()"
+                          [error]="bandError()"
+                          [canSave]="sf().valid()"
+                          (save)="saveService()"
+                          (cancel)="closeBands()"
+                        >
+                          <ng-container *ngTemplateOutlet="serviceFields" />
+                        </app-entry-band>
+                      </td>
+                    </tr>
+                  }
+                  @for (s of services(); track s.id) {
+                    <tr [class.is-inactive]="!s.active" [class.is-editing]="openService() === s.id">
+                      <td class="shrink token">{{ s.code }}</td>
+                      <td>
+                        {{ s.name }}
+                        @if (!s.active) {
+                          <span class="inv__flag">withdrawn</span>
+                        }
+                        @if (s.description) {
+                          <span class="inv__brand">{{ s.description }}</span>
+                        }
+                      </td>
+                      <td class="r num">{{ money(s.price) }}</td>
+                      <td class="r num">{{ minutes(s.executionMinutes) }}</td>
+                      <td class="shrink">
+                        <span class="inv__basis" [class.is-measured]="!s.estimated">
+                          {{ s.estimated ? 'estimate' : 'measured over ' + s.executionCount }}
+                        </span>
+                      </td>
+                      @if (canWrite()) {
+                        <td class="shrink r">
+                          <div class="rec__actions">
+                            <button
+                              class="btn btn--sm btn--quiet"
+                              type="button"
+                              [disabled]="isDemo()"
+                              (click)="openService() === s.id ? closeBands() : editService(s)"
+                            >
+                              {{ openService() === s.id ? 'Close' : 'Edit' }}
+                            </button>
+                            @if (s.active) {
+                              <button
+                                class="btn btn--sm btn--danger"
+                                type="button"
+                                [disabled]="isDemo()"
+                                (click)="withdrawing() === s.id ? closeBands() : withdrawing.set(s.id)"
+                              >
+                                Withdraw
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+
+                    @if (openService() === s.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="6">
+                          <app-entry-band
+                            [heading]="'Editing — ' + s.code"
+                            [endpoint]="'PATCH /services/' + s.id.slice(0, 8) + '…'"
+                            saveLabel="Save changes"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="sf().valid()"
+                            (save)="saveService()"
+                            (cancel)="closeBands()"
+                          >
+                            <ng-container *ngTemplateOutlet="serviceFields" />
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    @if (withdrawing() === s.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="6">
+                          <app-entry-band
+                            [heading]="'Withdraw ' + s.code + '?'"
+                            [endpoint]="'DELETE /services/' + s.id.slice(0, 8) + '…'"
+                            saveLabel="Withdraw service"
+                            busyLabel="Withdrawing…"
+                            tone="danger"
+                            [busy]="busy()"
+                            (save)="withdrawService(s)"
+                            (cancel)="closeBands()"
+                          >
+                            <p class="rec__confirm">
+                              It stops being offered on new budget lines. Budgets that already carry
+                              it are unaffected — a sent budget is frozen regardless.
+                            </p>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+                  } @empty {
+                    @if (openService() !== 'new') {
+                      <tr>
+                        <td [attr.colspan]="canWrite() ? 6 : 5">
+                          <div class="empty">
+                            <p class="empty__title">No services in the catalogue</p>
+                            <p>
+                              Labour is quoted from this catalogue. A budget needs at least one line,
+                              and a diagnosis usually starts with one of these.
+                            </p>
+                            @if (canWrite() && !isDemo()) {
+                              <p class="rec__empty-action">
+                                <button class="btn btn--sm btn--primary" type="button" (click)="newService()">
+                                  Record the first service
+                                </button>
+                              </p>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        @case ('vendors') {
+          <section class="plate">
+            <div class="plate__head">
+              <p class="plate__title">6.3 — Vendors</p>
+              <p class="plate__meta label">Parts are ordered from these</p>
+            </div>
+            <div class="mt-wrap">
+              <table class="mt">
+                <caption class="sr-only">Vendors parts can be purchased from.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Vendor</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col" class="shrink">State</th>
+                    @if (canWrite()) {
+                      <th scope="col" class="shrink r">Entry</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (openVendor() === 'new') {
+                    <tr class="inv__band-row">
+                      <td [attr.colspan]="canWrite() ? 4 : 3">
+                        <app-entry-band
+                          heading="New vendor"
+                          endpoint="POST /vendors"
+                          saveLabel="Record vendor"
+                          [busy]="busy()"
+                          [error]="bandError()"
+                          [canSave]="vf().valid()"
+                          (save)="saveVendor()"
+                          (cancel)="closeAllBands()"
+                        >
+                          <ng-container *ngTemplateOutlet="vendorFields" />
+                        </app-entry-band>
+                      </td>
+                    </tr>
+                  }
+                  @for (v of vendors(); track v.id) {
+                    <tr [class.is-inactive]="!v.active" [class.is-editing]="openVendor() === v.id">
+                      <td class="rec__name">{{ v.name }}</td>
+                      <td class="inv__brand">{{ v.email ?? '—' }}</td>
+                      <td class="shrink">
+                        <span class="rec__state" [class.is-off]="!v.active">{{
+                          v.active ? 'Active' : 'Deactivated'
+                        }}</span>
+                      </td>
+                      @if (canWrite()) {
+                        <td class="shrink r">
+                          <div class="rec__actions">
+                            <button
+                              class="btn btn--sm btn--quiet"
+                              type="button"
+                              [disabled]="isDemo()"
+                              (click)="openVendor() === v.id ? closeAllBands() : editVendor(v)"
+                            >
+                              {{ openVendor() === v.id ? 'Close' : 'Edit' }}
+                            </button>
+                            @if (v.active) {
+                              <button
+                                class="btn btn--sm btn--danger"
+                                type="button"
+                                [disabled]="isDemo()"
+                                (click)="deactivatingVendor.set(deactivatingVendor() === v.id ? null : v.id)"
+                              >
+                                Deactivate
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+
+                    @if (openVendor() === v.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="4">
+                          <app-entry-band
+                            [heading]="'Editing — ' + v.name"
+                            [endpoint]="'PATCH /vendors/' + v.id.slice(0, 8) + '…'"
+                            saveLabel="Save changes"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="vf().valid()"
+                            (save)="saveVendor()"
+                            (cancel)="closeAllBands()"
+                          >
+                            <ng-container *ngTemplateOutlet="vendorFields" />
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    @if (deactivatingVendor() === v.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="4">
+                          <app-entry-band
+                            [heading]="'Deactivate ' + v.name + '?'"
+                            [endpoint]="'DELETE /vendors/' + v.id.slice(0, 8) + '…'"
+                            saveLabel="Deactivate vendor"
+                            busyLabel="Deactivating…"
+                            tone="danger"
+                            [busy]="busy()"
+                            (save)="deactivateVendor(v)"
+                            (cancel)="deactivatingVendor.set(null)"
+                          >
+                            <p class="rec__confirm">
+                              They stop being offered for new orders and for automatic reordering.
+                              Orders already placed with them are unaffected.
+                            </p>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+                  } @empty {
+                    @if (openVendor() !== 'new') {
+                      <tr>
+                        <td [attr.colspan]="canWrite() ? 4 : 3">
+                          <div class="empty">
+                            <p class="empty__title">No vendors on record</p>
+                            <p>
+                              Parts are ordered from a vendor, so purchasing and automatic reordering
+                              both need at least one.
+                            </p>
+                            @if (canWrite() && !isDemo()) {
+                              <p class="rec__empty-action">
+                                <button class="btn btn--sm btn--primary" type="button" (click)="newVendor()">
+                                  Record the first vendor
+                                </button>
+                              </p>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        @case ('purchasing') {
+          <section class="plate">
+            <div class="plate__head">
+              <p class="plate__title">6.4 — Purchase orders</p>
+              <p class="plate__meta label">Stock moves on receipt, not on placement</p>
+            </div>
+            <div class="mt-wrap">
+              <table class="mt">
+                <caption class="sr-only">Purchase orders and their receipt progress.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="shrink">Order</th>
+                    <th scope="col">Vendor</th>
+                    <th scope="col">Lines</th>
+                    <th scope="col" class="shrink">Placed</th>
+                    <th scope="col" class="shrink">Expected</th>
+                    <th scope="col" class="shrink">Status</th>
+                    @if (canWrite()) {
+                      <th scope="col" class="shrink r">Entry</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (placingOrder()) {
+                    <tr class="inv__band-row">
+                      <td colspan="9">
+                        <app-entry-band
+                          heading="Place a purchase order"
+                          endpoint="POST /purchase-orders"
+                          saveLabel="Place order"
+                          [busy]="busy()"
+                          [error]="bandError()"
+                          [canSave]="of().valid()"
+                          hint="Placing forwards it to the vendor. Nothing reaches the shelf until it is received."
+                          (save)="placeOrder()"
+                          (cancel)="closeAllBands()"
+                        >
+                          <div class="band__grid">
+                            <app-form-field
+                              label="Vendor"
+                              [errors]="of.vendorId().errors()"
+                              [touched]="of.vendorId().touched()"
+                            >
+                              <select class="input" [formField]="of.vendorId">
+                                <option value="" disabled>Choose a vendor…</option>
+                                @for (v of activeVendors(); track v.id) {
+                                  <option [value]="v.id">{{ v.name }}</option>
+                                }
+                              </select>
+                            </app-form-field>
+
+                            <app-form-field label="Add a part" [optional]="true">
+                              <select class="input" (change)="addOrderLine($event)">
+                                <option value="">Choose a part…</option>
+                                @for (p of orderableParts(); track p.id) {
+                                  <option [value]="p.id">
+                                    {{ p.sku }} — {{ p.name }} ({{ p.available }} available)
+                                  </option>
+                                }
+                              </select>
+                            </app-form-field>
+
+                            <div class="inv__order-lines span-2">
+                              <p class="label">Order lines</p>
+                              @for (line of orderDraft().lines; track line.partId) {
+                                <div class="inv__order-row">
+                                  <span class="token">{{ partSku(line.partId) }}</span>
+                                  <span class="inv__order-name">{{ partName(line.partId) }}</span>
+                                  <span class="wo__seed-qty">
+                                    <button class="btn btn--sm btn--quiet" type="button" (click)="changeOrderQuantity($index, -1)">−</button>
+                                    <span class="num">{{ line.quantity }}</span>
+                                    <button class="btn btn--sm btn--quiet" type="button" (click)="changeOrderQuantity($index, 1)">+</button>
+                                  </span>
+                                  <span class="inv__order-hint">
+                                    @if (suggestedQuantity(line.partId); as want) {
+                                      restock to target needs {{ want }}
+                                    } @else {
+                                      no reorder threshold set
+                                    }
+                                  </span>
+                                  <button class="btn btn--sm btn--danger" type="button" (click)="removeOrderLine($index)">
+                                    Remove
+                                  </button>
+                                </div>
+                              } @empty {
+                                <p class="wo__seed-empty">
+                                  No lines yet. An order needs at least one.
+                                </p>
+                              }
+                            </div>
+                          </div>
+                        </app-entry-band>
+                      </td>
+                    </tr>
+                  }
+                  @for (po of purchaseOrders(); track po.id) {
+                    <tr>
+                      <td class="shrink token">{{ po.code }}</td>
+                      <td>{{ vendorName(po.vendorId) }}</td>
+                      <td>
+                        @for (l of po.lines; track l.partId) {
+                          <span class="inv__poline">
+                            <span class="token">{{ partSku(l.partId) }}</span> {{ partName(l.partId) }} —
+                            <span class="num">{{ l.received }}</span> of
+                            <span class="num">{{ l.quantity }}</span> received
+                          </span>
+                        }
+                      </td>
+                      <td class="shrink">{{ date(po.placedAt) }}</td>
+                      <td class="shrink">{{ po.expectedAt ? date(po.expectedAt) : '—' }}</td>
+                      <td class="shrink">
+                        <span class="inv__status" [class]="'is-' + po.status.toLowerCase()">{{
+                          poLabel(po.status)
+                        }}</span>
+                      </td>
+                      @if (canWrite()) {
+                        <td class="shrink r">
+                          <div class="rec__actions">
+                            @if (canReceive(po)) {
+                              <button
+                                class="btn btn--sm btn--primary"
+                                type="button"
+                                [disabled]="isDemo()"
+                                (click)="receiving() === po.id ? closeAllBands() : openReceipt(po)"
+                              >
+                                {{ receiving() === po.id ? 'Close' : 'Receive' }}
+                              </button>
+                              <button
+                                class="btn btn--sm btn--danger"
+                                type="button"
+                                [disabled]="isDemo()"
+                                (click)="cancelling.set(cancelling() === po.id ? null : po.id)"
+                              >
+                                Cancel
+                              </button>
+                            } @else {
+                              <span class="inv__settled label">settled</span>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+
+                    @if (receiving() === po.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="7">
+                          <app-entry-band
+                            [heading]="'Record a receipt — ' + po.code"
+                            [endpoint]="'POST /purchase-orders/' + po.id.slice(0, 8) + '…/receipts'"
+                            saveLabel="Record receipt"
+                            [busy]="busy()"
+                            [error]="bandError()"
+                            [canSave]="receiptLines().length > 0"
+                            hint="Only lines with a quantity are sent."
+                            (save)="recordReceipt(po)"
+                            (cancel)="closeAllBands()"
+                          >
+                            <div class="inv__receipt">
+                              <p class="label">What arrived</p>
+                              @for (l of po.lines; track l.id) {
+                                <div class="inv__receipt-row">
+                                  <span class="token">{{ partSku(l.partId) }}</span>
+                                  <span class="inv__order-name">{{ partName(l.partId) }}</span>
+                                  <span class="inv__receipt-owed num"
+                                    >{{ l.received }} of {{ l.quantity }} in</span
+                                  >
+                                  <label class="inv__receipt-field">
+                                    <span class="label">Received now</span>
+                                    <input
+                                      class="input"
+                                      type="number"
+                                      min="0"
+                                      [value]="receipt()[l.id]?.quantity ?? 0"
+                                      (input)="setReceiptQuantity(l.id, $any($event.target).value)"
+                                    />
+                                  </label>
+                                  <label class="inv__receipt-field">
+                                    <span class="label">Unit cost</span>
+                                    <input
+                                      class="input"
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      [value]="receipt()[l.id]?.unitCost ?? 0"
+                                      (input)="setReceiptCost(l.id, $any($event.target).value)"
+                                    />
+                                  </label>
+                                </div>
+                              }
+                              <p class="band__note">
+                                Receiving raises on hand and moves this part's moving-average cost,
+                                so the unit cost should be what the invoice actually says. The order
+                                settles as fully received only when every line is complete.
+                              </p>
+                            </div>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+
+                    @if (cancelling() === po.id) {
+                      <tr class="inv__band-row">
+                        <td colspan="7">
+                          <app-entry-band
+                            [heading]="'Cancel ' + po.code + '?'"
+                            [endpoint]="'POST /purchase-orders/' + po.id.slice(0, 8) + '…/cancellation'"
+                            saveLabel="Cancel order"
+                            busyLabel="Cancelling…"
+                            tone="danger"
+                            [busy]="busy()"
+                            (save)="cancelOrder(po)"
+                            (cancel)="cancelling.set(null)"
+                          >
+                            <p class="rec__confirm">
+                              <strong class="num">{{ outstanding(po) }}</strong> still outstanding on
+                              this order. Anything already received stays on the shelf — cancelling
+                              only stops what has not arrived.
+                            </p>
+                          </app-entry-band>
+                        </td>
+                      </tr>
+                    }
+                  } @empty {
+                    @if (!placingOrder()) {
+                      <tr>
+                        <td [attr.colspan]="canWrite() ? 7 : 6">
+                          <div class="empty">
+                            <p class="empty__title">No purchase orders</p>
+                            <p>
+                              An order is how stock reaches the shelf without a manual correction.
+                              @if (activeVendors().length === 0) {
+                                There is no vendor to order from yet.
+                              }
+                            </p>
+                            @if (canWrite() && !isDemo() && activeVendors().length > 0) {
+                              <p class="rec__empty-action">
+                                <button class="btn btn--sm btn--primary" type="button" (click)="startOrder()">
+                                  Place the first order
+                                </button>
+                              </p>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        @case ('ledger') {
+          <section class="plate">
+            <div class="plate__head">
+              <p class="plate__title">6.3 — Stock movements</p>
+              <p class="plate__meta label">Append-only — reservations are not movements</p>
+            </div>
+            <div class="mt-wrap">
+              <table class="mt">
+                <caption class="sr-only">Every real change in a part's quantity on hand.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="shrink">When</th>
+                    <th scope="col" class="shrink">Type</th>
+                    <th scope="col">Part</th>
+                    <th scope="col" class="r shrink">Qty</th>
+                    <th scope="col" class="r shrink">Unit cost</th>
+                    <th scope="col">Against</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of movements(); track m.id) {
+                    <tr>
+                      <td class="shrink">{{ date(m.occurredAt) }}</td>
+                      <td class="shrink">
+                        <span class="inv__mv" [class]="'is-' + m.type.toLowerCase()">{{
+                          mvLabel(m.type)
+                        }}</span>
+                      </td>
+                      <td>
+                        <span class="token">{{ partSku(m.partId) }}</span> {{ partName(m.partId) }}
+                      </td>
+                      <td class="r num" [class.inv__short]="m.quantity < 0">
+                        {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}
+                      </td>
+                      <td class="r num inv__cost">{{ m.unitCost ? money(m.unitCost) : '—' }}</td>
+                      <td>
+                        @if (m.referenceLabel) {
+                          <span class="token">{{ m.referenceLabel }}</span>
+                        } @else if (m.reason) {
+                          <span class="inv__reason">{{ m.reason }}</span>
+                        } @else {
+                          —
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      }
+    </div>
+
+<ng-template #partFields>
+  <div class="band__grid band__grid--three">
+    <app-form-field
+      label="SKU"
+      [errors]="pf.sku().errors()"
+      [touched]="pf.sku().touched()"
+      [help]="pf.sku().disabled() ? 'The SKU is the part’s identity in the ledger.' : 'Uppercase, e.g. BRK-PAD-0142.'"
+    >
+      <input class="input" type="text" autocomplete="off" [formField]="pf.sku" />
+    </app-form-field>
+
+    <app-form-field label="Name" [errors]="pf.name().errors()" [touched]="pf.name().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="pf.name" />
+    </app-form-field>
+
+    <app-form-field label="Brand" [optional]="true">
+      <input class="input" type="text" autocomplete="off" [formField]="pf.brand" />
+    </app-form-field>
+
+    <app-form-field label="Unit of measure">
+      <select class="input" [formField]="pf.unitOfMeasure">
+        @for (u of uoms; track u[0]) {
+          <option [value]="u[0]">{{ u[1] }}</option>
+        }
+      </select>
+    </app-form-field>
+
+    <app-form-field
+      label="Sale price"
+      [errors]="pf.salePrice().errors()"
+      [touched]="pf.salePrice().touched()"
+      help="What the customer is charged, in BRL."
+    >
+      <input class="input" type="number" step="0.01" [formField]="pf.salePrice" />
+    </app-form-field>
+
+    <app-form-field label="Description" [optional]="true" [wide]="true">
+      <input class="input" type="text" autocomplete="off" [formField]="pf.description" />
+    </app-form-field>
+  </div>
+</ng-template>
+
+<ng-template #serviceFields>
+  <div class="band__grid band__grid--three">
+    <app-form-field
+      label="Code"
+      [errors]="sf.code().errors()"
+      [touched]="sf.code().touched()"
+      [help]="sf.code().disabled() ? 'The code cannot be changed.' : 'Uppercase, e.g. SVC-BRK-01.'"
+    >
+      <input class="input" type="text" autocomplete="off" [formField]="sf.code" />
+    </app-form-field>
+
+    <app-form-field label="Name" [errors]="sf.name().errors()" [touched]="sf.name().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="sf.name" />
+    </app-form-field>
+
+    <app-form-field
+      label="Price"
+      [errors]="sf.price().errors()"
+      [touched]="sf.price().touched()"
+    >
+      <input class="input" type="number" step="0.01" [formField]="sf.price" />
+    </app-form-field>
+
+    <app-form-field
+      label="Estimated minutes"
+      [errors]="sf.estimatedMinutes().errors()"
+      [touched]="sf.estimatedMinutes().touched()"
+      help="Replaced by the measured average once the shop has run it."
+    >
+      <input class="input" type="number" [formField]="sf.estimatedMinutes" />
+    </app-form-field>
+
+    <app-form-field label="Description" [optional]="true" [wide]="true">
+      <input class="input" type="text" autocomplete="off" [formField]="sf.description" />
+    </app-form-field>
+  </div>
+</ng-template>
+
+<ng-template #vendorFields>
+  <div class="band__grid">
+    <app-form-field label="Name" [errors]="vf.name().errors()" [touched]="vf.name().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="vf.name" />
+    </app-form-field>
+
+    <app-form-field
+      label="Contact email"
+      [optional]="true"
+      help="Where an automatic reorder is sent."
+    >
+      <input class="input" type="email" autocomplete="off" [formField]="vf.contactEmail" />
+    </app-form-field>
+  </div>
+</ng-template>

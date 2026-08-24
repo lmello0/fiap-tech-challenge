@@ -235,3 +235,24 @@
 
 
 
+
+.board__band-row > td {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.board__empty-note {
+  color: var(--ink-3);
+  max-width: 56ch;
+  margin-inline: auto;
+}
+
+/* The lookup column sits immediately left of the term it applies to, so the
+   two read as one control: "look up [plate] [ABC1D23]". */
+.board__lookup-select {
+  min-width: 8.5rem;
+}
+
+.board__loading {
+  color: var(--ink-3);
+}

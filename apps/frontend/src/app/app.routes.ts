@@ -4,6 +4,13 @@ import { Session } from './core/auth/session';
 import { sectionsFor } from './core/nav';
 import type { WorkerRole } from './core/domain/enums';
 
+/** Nothing behind the cover is reachable without a Worker facet. */
+const signedIn: CanMatchFn = () => {
+  const session = inject(Session);
+  const router = inject(Router);
+  return session.signedIn() ? true : router.createUrlTree(['sign-in']);
+};
+
 /**
  * Mirrors the backend's `@PreAuthorize` on each section. A role that reaches a
  * route it cannot use is sent to the first section it can — never shown an
@@ -23,8 +30,13 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'work-orders' },
 
   {
+    path: 'sign-in',
+    loadComponent: () => import('./features/sign-in/sign-in').then((m) => m.SignIn),
+  },
+
+  {
     path: 'work-orders',
-    canMatch: [allow('ATTENDANT', 'MECHANIC', 'MANAGER')],
+    canMatch: [signedIn, allow('ATTENDANT', 'MECHANIC', 'MANAGER')],
     children: [
       {
         path: '',
@@ -38,27 +50,27 @@ export const routes: Routes = [
   },
   {
     path: 'schedule',
-    canMatch: [allow('ATTENDANT', 'MANAGER')],
+    canMatch: [signedIn, allow('ATTENDANT', 'MANAGER')],
     loadComponent: () => import('./features/schedule/schedule').then((m) => m.Schedule),
   },
   {
     path: 'inventory',
-    canMatch: [allow('MECHANIC', 'STOCKIST', 'MANAGER')],
+    canMatch: [signedIn, allow('MECHANIC', 'STOCKIST', 'MANAGER')],
     loadComponent: () => import('./features/inventory/inventory').then((m) => m.Inventory),
   },
   {
     path: 'customers',
-    canMatch: [allow('ATTENDANT', 'MANAGER')],
+    canMatch: [signedIn, allow('ATTENDANT', 'MANAGER')],
     loadComponent: () => import('./features/records/customers').then((m) => m.Customers),
   },
   {
     path: 'vehicles',
-    canMatch: [allow('ATTENDANT', 'MANAGER')],
+    canMatch: [signedIn, allow('ATTENDANT', 'MANAGER')],
     loadComponent: () => import('./features/records/vehicles').then((m) => m.Vehicles),
   },
   {
     path: 'workers',
-    canMatch: [allow('MANAGER')],
+    canMatch: [signedIn, allow('MANAGER')],
     loadComponent: () => import('./features/records/workers').then((m) => m.Workers),
   },
 

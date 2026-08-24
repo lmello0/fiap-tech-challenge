@@ -121,3 +121,18 @@ tr.is-inactive td {
 .rec__role.is-stockist {
   color: var(--sec-inventory);
 }
+
+/* A generated password is meant to be read aloud, so it is never masked. */
+.rec__password {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.rec__password .input {
+  font-family: var(--face-mono);
+}
+
+.rec__password .btn {
+  flex: none;
+}

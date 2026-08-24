@@ -1,0 +1,292 @@
+<div class="rec">
+  <header class="rec__head">
+    <div>
+      <h1 class="rec__title">Vehicles</h1>
+      <p class="rec__sub">{{ rows().length }} on record</p>
+    </div>
+    <div class="rec__tools">
+      <label class="field">
+        <span class="sr-only">Search vehicles</span>
+        <input
+          class="input rec__search"
+          type="search"
+          placeholder="Plate, make, model or owner"
+          [value]="q()"
+          (input)="onQuery($event)"
+        />
+      </label>
+      @if (canWrite()) {
+        <button
+          class="btn btn--primary"
+          type="button"
+          [disabled]="open() === 'new' || isDemo() || owners().length === 0"
+          (click)="openNew()"
+        >
+          New vehicle
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (canWrite() && owners().length === 0 && !isDemo()) {
+    <div class="rec__notice">
+      <app-callout tier="caution" heading="No owner to register against">
+        A vehicle belongs to a customer, so there is nothing to record one against yet. Add a
+        customer in section 7 first.
+      </app-callout>
+    </div>
+  }
+
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">8.1 — Vehicles on record</p>
+      <p class="plate__meta label">Attendant or manager</p>
+    </div>
+    <div class="mt-wrap">
+      <table class="mt">
+        <caption class="sr-only">Vehicles with plate, specification and owner.</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="shrink">Plate</th>
+            <th scope="col">Vehicle</th>
+            <th scope="col" class="shrink">Type</th>
+            <th scope="col" class="shrink">Years</th>
+            <th scope="col">Colour</th>
+            <th scope="col">Fuel</th>
+            <th scope="col">Owner</th>
+            @if (canWrite()) {
+              <th scope="col" class="shrink r">Entry</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @if (open() === 'new') {
+            <tr class="rec__band-row">
+              <td [attr.colspan]="canWrite() ? 8 : 7">
+                <app-entry-band
+                  heading="New vehicle"
+                  endpoint="POST /vehicles"
+                  saveLabel="Record vehicle"
+                  [busy]="busy()"
+                  [error]="bandError()"
+                  [canSave]="f().valid()"
+                  (save)="save()"
+                  (cancel)="close()"
+                >
+                  <ng-container *ngTemplateOutlet="fields" />
+                </app-entry-band>
+              </td>
+            </tr>
+          }
+
+          @for (v of rows(); track v.id) {
+            <tr [class.is-inactive]="!v.active" [class.is-editing]="open() === v.id">
+              <td class="shrink">
+                <span class="token rec__plate">{{ v.licensePlate }}</span>
+              </td>
+              <td>
+                {{ v.make }} {{ v.model }}
+                <span class="rec__spec">{{ transmission(v.transmissionType) }}</span>
+              </td>
+              <td class="shrink rec__muted">{{ typeLabel(v.vehicleType) }}</td>
+              <td class="shrink num rec__muted">{{ v.manufactureYear }}/{{ v.modelYear }}</td>
+              <td class="rec__muted">{{ v.color ?? '—' }}</td>
+              <td class="rec__muted">{{ fuelLabel(v.fuelType) }}</td>
+              <td>{{ ownerName(v) }}</td>
+              @if (canWrite()) {
+                <td class="shrink r">
+                  <div class="rec__actions">
+                    <button
+                      class="btn btn--sm btn--quiet"
+                      type="button"
+                      [disabled]="isDemo()"
+                      (click)="open() === v.id ? close() : openEdit(v)"
+                    >
+                      {{ open() === v.id ? 'Close' : 'Edit' }}
+                    </button>
+                    @if (v.active) {
+                      <button
+                        class="btn btn--sm btn--danger"
+                        type="button"
+                        [disabled]="isDemo()"
+                        (click)="confirming.set(confirming() === v.id ? null : v.id)"
+                      >
+                        Deactivate
+                      </button>
+                    }
+                  </div>
+                </td>
+              }
+            </tr>
+
+            @if (open() === v.id) {
+              <tr class="rec__band-row">
+                <td colspan="8">
+                  <app-entry-band
+                    [heading]="'Editing — ' + v.licensePlate"
+                    [endpoint]="'PATCH /vehicles/' + v.id.slice(0, 8) + '…'"
+                    saveLabel="Save changes"
+                    [busy]="busy()"
+                    [error]="bandError()"
+                    [canSave]="f().valid()"
+                    (save)="save()"
+                    (cancel)="close()"
+                  >
+                    <ng-container *ngTemplateOutlet="fields" />
+                  </app-entry-band>
+                </td>
+              </tr>
+            }
+
+            @if (confirming() === v.id) {
+              <tr class="rec__band-row">
+                <td colspan="8">
+                  <app-entry-band
+                    [heading]="'Deactivate ' + v.licensePlate + '?'"
+                    [endpoint]="'DELETE /vehicles/' + v.id.slice(0, 8) + '…'"
+                    saveLabel="Deactivate vehicle"
+                    busyLabel="Deactivating…"
+                    tone="danger"
+                    [busy]="busy()"
+                    (save)="deactivate(v)"
+                    (cancel)="confirming.set(null)"
+                  >
+                    <p class="rec__confirm">
+                      The vehicle stops being available for new work orders. Its record and every
+                      work order already raised against it stay exactly as they are.
+                    </p>
+                  </app-entry-band>
+                </td>
+              </tr>
+            }
+          } @empty {
+            @if (open() !== 'new') {
+              <tr>
+                <td [attr.colspan]="canWrite() ? 8 : 7">
+                  @if (store.vehicles().length) {
+                    <div class="empty">
+                      <p class="empty__title">No vehicle matches that search</p>
+                      <p>
+                        Plates are stored without a separator — try
+                        <span class="token">RJP7A41</span>.
+                      </p>
+                    </div>
+                  } @else {
+                    <div class="empty">
+                      <p class="empty__title">No vehicles on record</p>
+                      <p>A work order is opened against a vehicle, so this is the second record the shop needs.</p>
+                      @if (canWrite() && !isDemo() && owners().length > 0) {
+                        <p class="rec__empty-action">
+                          <button class="btn btn--sm btn--primary" type="button" (click)="openNew()">
+                            Record the first vehicle
+                          </button>
+                        </p>
+                      }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<ng-template #fields>
+  <div class="band__grid band__grid--three">
+    <app-form-field
+      label="Owner"
+      [wide]="true"
+      [errors]="f.customerId().errors()"
+      [touched]="f.customerId().touched()"
+      [help]="f.customerId().disabled() ? 'A vehicle cannot be moved between customers.' : ''"
+    >
+      <select class="input" [formField]="f.customerId">
+        <option value="" disabled>Choose the owner…</option>
+        @for (c of owners(); track c.id) {
+          <option [value]="c.id">{{ c.name }}</option>
+        }
+      </select>
+    </app-form-field>
+
+    <app-form-field
+      label="Plate"
+      [errors]="f.licensePlate().errors()"
+      [touched]="f.licensePlate().touched()"
+      help="Mercosul or the older pattern."
+    >
+      <input
+        class="input rec__plate-input"
+        type="text"
+        autocapitalize="characters"
+        autocomplete="off"
+        [formField]="f.licensePlate"
+      />
+    </app-form-field>
+
+    <app-form-field label="Type">
+      <select class="input" [formField]="f.vehicleType">
+        @for (t of vehicleTypes; track t[0]) {
+          <option [value]="t[0]">{{ t[1] }}</option>
+        }
+      </select>
+    </app-form-field>
+
+    <app-form-field label="Colour" [errors]="f.color().errors()" [touched]="f.color().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="f.color" />
+    </app-form-field>
+
+    <app-form-field label="Make" [errors]="f.make().errors()" [touched]="f.make().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="f.make" />
+    </app-form-field>
+
+    <app-form-field label="Model" [errors]="f.model().errors()" [touched]="f.model().touched()">
+      <input class="input" type="text" autocomplete="off" [formField]="f.model" />
+    </app-form-field>
+
+    <app-form-field
+      label="Version"
+      [optional]="true"
+      [errors]="f.version().errors()"
+      [touched]="f.version().touched()"
+    >
+      <input class="input" type="text" autocomplete="off" [formField]="f.version" />
+    </app-form-field>
+
+    <app-form-field
+      label="Model year"
+      [errors]="f.modelYear().errors()"
+      [touched]="f.modelYear().touched()"
+    >
+      <input class="input" type="number" inputmode="numeric" [formField]="f.modelYear" />
+    </app-form-field>
+
+    <app-form-field
+      label="Built"
+      [optional]="true"
+      [errors]="f.manufactureYear().errors()"
+      [touched]="f.manufactureYear().touched()"
+      help="Defaults to the model year."
+    >
+      <input class="input" type="number" inputmode="numeric" [formField]="f.manufactureYear" />
+    </app-form-field>
+
+    <app-form-field label="Fuel">
+      <select class="input" [formField]="f.fuelType">
+        @for (t of fuelTypes; track t[0]) {
+          <option [value]="t[0]">{{ t[1] }}</option>
+        }
+      </select>
+    </app-form-field>
+
+    <app-form-field label="Transmission">
+      <select class="input" [formField]="f.transmissionType">
+        @for (t of transmissions; track t[0]) {
+          <option [value]="t[0]">{{ t[1] }}</option>
+        }
+      </select>
+    </app-form-field>
+  </div>
+</ng-template>

@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { FormField, form, minLength, required, schema, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { ShopStore } from '../../core/data/shop-store';
 import { Session } from '../../core/auth/session';
@@ -15,10 +16,35 @@ import { StepRail } from '../../shared/ui/step-rail';
 import { StatusMark } from '../../shared/ui/status-mark';
 import { Callout } from '../../shared/ui/callout';
 import { Icon } from '../../shared/ui/icon';
+import { EntryBand } from '../../shared/ui/entry-band';
+import { FormFieldRow } from '../../shared/ui/form-field';
+
+/** One seeded budget line, as the diagnosis form collects it. */
+interface SeedLine {
+  kind: 'SERVICE' | 'PART';
+  refId: string;
+  quantity: number;
+}
+
+interface DiagnosisDraft {
+  diagnosis: string;
+  lines: SeedLine[];
+}
+
+const diagnosisSchema = schema<DiagnosisDraft>((p) => {
+  required(p.diagnosis, { message: 'A written diagnosis is required.' });
+  minLength(p.diagnosis, 10, { message: 'Say what is wrong, in a sentence the customer could read.' });
+  // The API refuses an empty budget, so the form does too — and says why.
+  validate(p.lines, (ctx) =>
+    ctx.value().length === 0
+      ? { kind: 'lines', message: 'A budget needs at least one line.' }
+      : null,
+  );
+});
 
 @Component({
   selector: 'app-work-order-detail',
-  imports: [RouterLink, StepRail, StatusMark, Callout, Icon],
+  imports: [RouterLink, StepRail, StatusMark, Callout, Icon, EntryBand, FormFieldRow, FormField],
   templateUrl: './detail.html',
   styleUrl: './detail.scss',
 })
@@ -28,6 +54,31 @@ export class WorkOrderDetail {
 
   private readonly store = inject(ShopStore);
   protected readonly session = inject(Session);
+
+  constructor() {
+    // The Timeline is the one read the board does not already hold, so it is
+    // fetched per order rather than with everything else. Re-runs when the
+    // route's id changes, which is how the previous/next links move between orders.
+    effect((onCleanup) => {
+      const id = this.id();
+      if (!id) return;
+
+      // The board's query may not include this order — it is reachable by link —
+      // so the detail view makes sure of its own record before reading it.
+      //
+      // The second read is guarded because the first is awaited: navigating away
+      // (or signing out) between them would otherwise send a request for a view
+      // that no longer exists, against a session that may no longer be valid.
+      let live = true;
+      onCleanup(() => {
+        live = false;
+      });
+
+      void this.store.ensureWorkOrder(id).then(() => {
+        if (live) void this.store.loadHistory(id);
+      });
+    });
+  }
 
   protected readonly order = computed(() => this.store.workOrder(this.id()));
   protected readonly budget = computed(() => this.store.budgetFor(this.id()));
@@ -103,10 +154,10 @@ export class WorkOrderDetail {
     return { onHand: part.quantityOnHand, available: part.available, uom: UOM_ABBR[part.unitOfMeasure] };
   }
 
-  protected advance(): void {
+  protected async advance(): Promise<void> {
     const o = this.order();
     if (!o) return;
-    const result = this.store.advance(o.id);
+    const result = await this.store.advance(o.id);
     this.confirming.set(false);
     this.toast.set(
       result.ok
@@ -119,74 +170,98 @@ export class WorkOrderDetail {
   protected requestAdvance(): void {
     // A frozen or destructive step is confirmed against its consequence first.
     if (this.next()?.action?.tier === 'warning') this.confirming.set(true);
-    else this.advance();
+    else void this.advance();
   }
 
-  protected resend(): void {
+  protected async resend(): Promise<void> {
     const b = this.budget();
     if (!b) return;
-    this.store.resendBudget(b.id);
-    this.toast.set({ tone: 'ok', text: 'Budget resent. Nothing was re-locked or re-reserved.' });
+    const result = await this.store.resendBudget(b.id);
+    this.toast.set(
+      result.ok
+        ? { tone: 'ok', text: 'Budget resent. Nothing was re-locked or re-reserved.' }
+        : { tone: 'warn', text: result.error ?? 'The budget could not be resent.' },
+    );
     setTimeout(() => this.toast.set(null), 7000);
   }
 
-  protected removeLine(lineId: string): void {
+  protected async removeLine(lineId: string): Promise<void> {
     const b = this.budget();
-    if (b) this.store.removeLine(b.id, lineId);
+    if (b) await this.report(this.store.removeLine(b.id, lineId));
   }
 
-  protected changeQuantity(lineId: string, delta: number): void {
+  protected async changeQuantity(lineId: string, delta: number): Promise<void> {
     const b = this.budget();
     const line = b?.lines.find((l) => l.id === lineId);
-    if (b && line) this.store.setLineQuantity(b.id, lineId, line.quantity + delta);
+    if (b && line) await this.report(this.store.setLineQuantity(b.id, lineId, line.quantity + delta));
   }
 
-  protected addPart(event: Event): void {
+  protected async addPart(event: Event): Promise<void> {
     const select = event.target as HTMLSelectElement;
     const part = this.store.part(select.value);
     const b = this.budget();
-    if (part && b) {
-      this.store.addLine(b.id, {
-        type: 'PART',
-        description: part.name,
-        quantity: 1,
-        unitPrice: part.salePrice,
-        partId: part.id,
-        serviceId: null,
-        startedAt: null,
-        finishedAt: null,
-      });
-    }
     select.value = '';
+    if (part && b) {
+      await this.report(
+        this.store.addLine(b.id, {
+          type: 'PART',
+          quantity: 1,
+          partId: part.id,
+          description: part.name,
+          unitPrice: part.salePrice,
+        }),
+      );
+    }
   }
 
-  protected addService(event: Event): void {
+  protected async addService(event: Event): Promise<void> {
     const select = event.target as HTMLSelectElement;
     const service = this.store.services().find((s) => s.id === select.value);
     const b = this.budget();
-    if (service && b) {
-      this.store.addLine(b.id, {
-        type: 'SERVICE',
-        description: service.name,
-        quantity: 1,
-        unitPrice: service.price,
-        partId: null,
-        serviceId: service.id,
-        startedAt: null,
-        finishedAt: null,
-      });
-    }
     select.value = '';
+    if (service && b) {
+      await this.report(
+        this.store.addLine(b.id, {
+          type: 'SERVICE',
+          quantity: 1,
+          serviceId: service.id,
+          description: service.name,
+          unitPrice: service.price,
+        }),
+      );
+    }
   }
 
-  protected startLine(lineId: string): void {
+  protected async startLine(lineId: string): Promise<void> {
     const b = this.budget();
-    if (b) this.store.startLine(b.id, lineId);
+    if (b) await this.report(this.store.startLine(b.id, lineId));
   }
 
-  protected finishLine(lineId: string): void {
+  protected async finishLine(lineId: string): Promise<void> {
     const b = this.budget();
-    if (b) this.store.finishLine(b.id, lineId);
+    if (b) await this.report(this.store.finishLine(b.id, lineId));
+  }
+
+  /** A refused edit is said out loud; a successful one is visible in the table. */
+  private async report(work: Promise<{ ok: boolean; error?: string }>): Promise<void> {
+    const result = await work;
+    if (result.ok) return;
+    this.toast.set({ tone: 'warn', text: result.error ?? 'That edit was refused.' });
+    setTimeout(() => this.toast.set(null), 7000);
+  }
+
+  /**
+   * How long the vehicle has been here — or was, once it has gone. A closed
+   * order that still reads "in shop" describes a car that is not on the premises.
+   */
+  protected dwellLabel(): string {
+    const o = this.order();
+    if (!o) return '';
+    const days = this.daysInShop();
+    const span = days === 0 ? 'same day' : `${days}d`;
+    if (o.status === 'DELIVERED') return `Closed in ${span}`;
+    if (o.status === 'REFUSED') return `Refused after ${span}`;
+    return days === 0 ? 'In shop today' : `In shop ${span}`;
   }
 
   protected daysInShop(): number {
@@ -196,6 +271,10 @@ export class WorkOrderDetail {
   }
 
   /** "an attendant or manager" — reads as prose in the inert notice. */
+  protected roleLabel(role: keyof typeof WORKER_ROLE_LABEL): string {
+    return WORKER_ROLE_LABEL[role];
+  }
+
   protected roleWord(step: LifecycleStep): string {
     const roles = step.action?.roles ?? [];
     return roles.map((r) => WORKER_ROLE_LABEL[r].toLowerCase()).join(' or ');
@@ -223,5 +302,166 @@ export class WorkOrderDetail {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  /* ---------------------------------------------------------------------
+     Step 3 — take the job.
+
+     The backend assigns the mechanic as part of starting diagnostics, so the
+     picker and the action are one band. `/workers` is MANAGER-only, so a
+     mechanic sees only themselves here; that is the role matrix, not a gap.
+     --------------------------------------------------------------------- */
+
+  protected readonly isDemo = this.store.isDemo;
+  protected readonly assigning = signal(false);
+  protected readonly diagnosing = signal(false);
+  protected readonly bandBusy = signal(false);
+  protected readonly bandError = signal<string | null>(null);
+
+  protected readonly mechanics = computed(() => {
+    const roster = this.store
+      .workers()
+      .filter((w) => w.active && (w.role === 'MECHANIC' || w.role === 'MANAGER'));
+    if (roster.length > 0) return roster;
+    // Without the roster, the only person this operator can assign is themselves.
+    const me = this.session.worker();
+    return me ? [me] : [];
+  });
+
+  protected readonly assignee = signal<string>('');
+
+  protected openAssign(): void {
+    const current = this.order()?.assignedMechanicId;
+    this.assignee.set(current ?? this.session.worker()?.id ?? this.mechanics()[0]?.id ?? '');
+    this.bandError.set(null);
+    this.assigning.set(true);
+  }
+
+  protected onAssignee(event: Event): void {
+    this.assignee.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected async confirmAssign(): Promise<void> {
+    const o = this.order();
+    const who = this.assignee();
+    if (!o || !who) return;
+    this.bandBusy.set(true);
+    this.bandError.set(null);
+    const result = await this.store.startDiagnostics(o.id, who);
+    this.bandBusy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'Diagnostics could not be started.');
+      return;
+    }
+    this.assigning.set(false);
+    this.toast.set({ tone: 'ok', text: 'Diagnostics started. The job is now step 3.' });
+    setTimeout(() => this.toast.set(null), 6000);
+  }
+
+  /* ---------------------------------------------------------------------
+     Step 4 — record the diagnosis and open the budget.
+
+     One call does both: the backend records the diagnosis and drafts the budget
+     atomically, seeded with these lines. Adding a part line reserves stock the
+     moment this saves, which is why the shelf position is shown against each.
+     --------------------------------------------------------------------- */
+
+  protected readonly diagnosisDraft = signal<DiagnosisDraft>({ diagnosis: '', lines: [] });
+  protected readonly df = form(this.diagnosisDraft, diagnosisSchema);
+
+  protected readonly availableParts = computed(() => this.store.parts().filter((p) => p.active));
+  protected readonly availableServices = computed(() =>
+    this.store.services().filter((s) => s.active),
+  );
+
+  protected readonly hasCatalogue = computed(
+    () => this.availableParts().length > 0 || this.availableServices().length > 0,
+  );
+
+  protected openDiagnosis(): void {
+    this.diagnosisDraft.set({ diagnosis: this.order()?.diagnosis ?? '', lines: [] });
+    this.bandError.set(null);
+    this.diagnosing.set(true);
+  }
+
+  protected closeBands(): void {
+    this.assigning.set(false);
+    this.diagnosing.set(false);
+    this.bandError.set(null);
+  }
+
+  protected addSeedLine(kind: 'SERVICE' | 'PART', event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const refId = select.value;
+    select.value = '';
+    if (!refId) return;
+    this.diagnosisDraft.update((d) => ({ ...d, lines: [...d.lines, { kind, refId, quantity: 1 }] }));
+  }
+
+  protected removeSeedLine(index: number): void {
+    this.diagnosisDraft.update((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== index) }));
+  }
+
+  protected changeSeedQuantity(index: number, delta: number): void {
+    this.diagnosisDraft.update((d) => ({
+      ...d,
+      lines: d.lines.map((l, i) =>
+        i === index ? { ...l, quantity: Math.max(1, l.quantity + delta) } : l,
+      ),
+    }));
+  }
+
+  protected seedLabel(line: SeedLine): string {
+    return line.kind === 'PART'
+      ? (this.store.part(line.refId)?.name ?? 'Unknown part')
+      : (this.store.services().find((s) => s.id === line.refId)?.name ?? 'Unknown service');
+  }
+
+  protected seedUnitPrice(line: SeedLine): number {
+    return line.kind === 'PART'
+      ? (this.store.part(line.refId)?.salePrice ?? 0)
+      : (this.store.services().find((s) => s.id === line.refId)?.price ?? 0);
+  }
+
+  /** What this line will do to the shelf the moment the budget is drafted. */
+  protected seedShelf(line: SeedLine): string | null {
+    if (line.kind !== 'PART') return null;
+    const part = this.store.part(line.refId);
+    if (!part) return null;
+    const after = part.available - line.quantity;
+    return `${part.available} available → ${after} after reserving`;
+  }
+
+  protected readonly seedTotal = computed(() =>
+    this.diagnosisDraft().lines.reduce((sum, l) => sum + l.quantity * this.seedUnitPrice(l), 0),
+  );
+
+  protected async saveDiagnosis(): Promise<void> {
+    const o = this.order();
+    if (!o || this.df().invalid()) return;
+    this.bandBusy.set(true);
+    this.bandError.set(null);
+    const d = this.diagnosisDraft();
+    const result = await this.store.finishDiagnostics(
+      o.id,
+      d.diagnosis.trim(),
+      d.lines.map((l) => ({
+        type: l.kind,
+        quantity: l.quantity,
+        partId: l.kind === 'PART' ? l.refId : undefined,
+        serviceId: l.kind === 'SERVICE' ? l.refId : undefined,
+      })),
+    );
+    this.bandBusy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'The diagnosis could not be recorded.');
+      return;
+    }
+    this.diagnosing.set(false);
+    this.toast.set({
+      tone: 'ok',
+      text: 'Diagnosis recorded and the budget drafted. Parts on it are now reserved.',
+    });
+    setTimeout(() => this.toast.set(null), 7000);
   }
 }

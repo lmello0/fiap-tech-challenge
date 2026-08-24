@@ -14,16 +14,21 @@ import type {
   WorkOrderStatus,
   WorkerRole,
 } from './enums';
+import type { StockStatus } from '../api/dto';
 
 /* ---------------------------------------------------------------------------
    Read models.
 
-   These are the ENRICHED shapes specified in the design brief (§7), not what
-   `WorkOrderInfo` and `AppointmentInfo` return today. The backend currently
-   hands back bare UUIDs for customer, vehicle and mechanic; the fields marked
-   `— enriched` below are the ones the backend is adding in parallel. Every
-   enriched field is optional at the type level so this console renders
-   correctly against either contract: `core/data/enrich.ts` fills the gap.
+   What the console works in, which is not quite what the API returns. The wire
+   shapes live in `core/api/dto.ts`, one-for-one with the backend's records, and
+   `core/data/mappers.ts` is the only thing that crosses between them.
+
+   Fields marked `— enriched` are not on the wire at all. `WorkOrderInfo` and
+   `AppointmentInfo` carry bare UUIDs for customer, vehicle and mechanic, so the
+   labels every screen prints are resolved client-side by `core/data/enrich.ts`
+   — one request per distinct id, cached for the session. They stay optional at
+   the type level because enrichment can be refused: a role that may not read
+   `/customers` gets the id-only rendering rather than a blank or a guess.
    --------------------------------------------------------------------------- */
 
 export interface WorkOrder {
@@ -79,8 +84,6 @@ export interface Budget {
   createdAt: string;
   sentAt: string | null;
   resolvedAt: string | null;
-  /** Present when a send attempt failed and the budget is stuck in WAITING_SEND. */
-  lastSendError?: string | null;
 }
 
 /* ---------------------------------------------------------------------------
@@ -97,13 +100,11 @@ export interface Shortfall {
   partId: string;
   sku: string;
   partName: string;
-  required: number;
-  available: number;
+  /** How much the reservation is missing — the endpoint's own number. */
   short: number;
-  unitOfMeasure: UnitOfMeasure;
-  /** An open purchase order that would cover it, when one exists. */
-  inboundPurchaseOrderCode?: string | null;
-  inboundEta?: string | null;
+  /** Joined from the stock standing the store already holds, not a second call. */
+  available: number;
+  required: number;
 }
 
 export interface WorkOrderBlock {
@@ -150,10 +151,13 @@ export interface Part {
   brand: string | null;
   unitOfMeasure: UnitOfMeasure;
   salePrice: number;
-  averageCost: number;
+  /** Null until the part has actually been purchased — an adjustment carries no cost. */
+  averageCost: number | null;
   quantityOnHand: number;
   quantityReserved: number;
   available: number;
+  /** The ledger's own verdict against this part's reorder policy, if it has one. */
+  stockStatus: StockStatus;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -161,21 +165,22 @@ export interface Part {
 
 export interface RepairService {
   id: string;
+  code: string;
   name: string;
   description: string | null;
   price: number;
-  /** Rolling average over recent executions; falls back to the seeded estimate. */
-  executionMinutes: number;
+  /** Rolling average over recent executions, else the seeded estimate; null when neither exists. */
+  executionMinutes: number | null;
+  /** True while the duration above is still only an estimate. */
   estimated: boolean;
+  executionCount: number;
   active: boolean;
 }
 
 export interface Vendor {
   id: string;
   name: string;
-  document: string;
   email: string | null;
-  phone: string | null;
   active: boolean;
 }
 
@@ -187,7 +192,8 @@ export interface PurchaseOrder {
   status: PurchaseOrderStatus;
   placedAt: string;
   expectedAt: string | null;
-  lines: { partId: string; sku: string; partName: string; quantity: number; received: number; unitCost: number }[];
+  /** `id` is how a receipt addresses the line it is settling. */
+  lines: { id: string; partId: string; quantity: number; received: number; unitCost: number }[];
 }
 
 export interface StockMovement {
@@ -205,8 +211,7 @@ export interface StockMovement {
 export interface ReorderRule {
   id: string;
   partId: string;
-  sku?: string;
-  partName?: string;
+  vendorId: string;
   min: number;
   max: number;
   enabled: boolean;
@@ -220,7 +225,6 @@ export interface Customer {
   documentType: DocumentType;
   phone: string | null;
   active: boolean;
-  vehicleCount?: number;
   createdAt: string;
 }
 
@@ -231,8 +235,8 @@ export interface Vehicle {
   licensePlate: string;
   make: string;
   model: string;
-  modelYear: number;
-  manufactureYear: number;
+  modelYear: number | null;
+  manufactureYear: number | null;
   color: string | null;
   vehicleType: VehicleType;
   fuelType: FuelType;
@@ -244,10 +248,14 @@ export interface Worker {
   id: string;
   name: string;
   email: string;
+  /** Needed to edit the profile: the update command requires at least one number. */
+  phone: string | null;
   role: WorkerRole;
-  hiredAt: string;
-  startedAt: string | null;
+  /** The shop's own staff number, e.g. `ARS-000001`. */
+  registration: string | null;
+  hiredAt: string | null;
   terminatedAt: string | null;
+  /** A Worker facet is active until it is terminated. */
   active: boolean;
 }
 
@@ -255,20 +263,26 @@ export interface HistoryEntry {
   id: string;
   aggregateType: string;
   aggregateId: string;
+  /** The backend's stable code, e.g. `WORK_ORDER_APPROVED`. */
   eventType: string;
   /** A `User`, or the system itself for scheduled jobs and startup tasks. */
   actorName: string | null;
   actorIsSystem: boolean;
-  customerVisible: boolean;
+  /**
+   * True when `actorName` is a role rather than a person. The API's `actorLabel`
+   * currently carries the granted authority (`ROLE_CUSTOMER`), not a name, so the
+   * timeline says which authority acted and does not pretend to know who.
+   */
+  actorIsRole: boolean;
   occurredAt: string;
+  /** The console's sentence for `eventType`. The wire carries no prose. */
   summary: string;
 }
 
 export interface SchedulingSettings {
-  openDays: number[];
+  /** `HH:mm`. The shop has opening hours and closure days — no weekday schedule. */
   openFrom: string;
   openTo: string;
-  slotMinutes: number;
   dropoffCapacityPerSlot: number;
   pickupCapacityPerSlot: number;
 }
@@ -276,13 +290,12 @@ export interface SchedulingSettings {
 export interface Closure {
   date: string;
   message: string | null;
-  cancelledAppointments: number;
 }
 
 export interface Page<T> {
   content: T[];
   totalElements: number;
   totalPages: number;
-  number: number;
+  page: number;
   size: number;
 }

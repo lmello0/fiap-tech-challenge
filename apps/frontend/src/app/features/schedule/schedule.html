@@ -1,0 +1,562 @@
+<div class="sch">
+      <header class="sch__head">
+        <div>
+          <h1 class="sch__title">Schedule</h1>
+          <p class="sch__sub">
+            @if (settings(); as s) {
+              {{ s.openFrom }}–{{ s.openTo }} · drop-off capacity
+              {{ s.dropoffCapacityPerSlot }}, pickup {{ s.pickupCapacityPerSlot }} per slot
+            } @else {
+              Opening hours not loaded
+            }
+          </p>
+        </div>
+        @if (canAct()) {
+          <button
+            class="btn btn--primary"
+            type="button"
+            [disabled]="booking() || isDemo()"
+            (click)="openBooking()"
+          >
+            Book drop-off
+          </button>
+        }
+        @if (canManage()) {
+          <button
+            class="btn"
+            type="button"
+            [disabled]="editingSettings() || isDemo()"
+            (click)="openSettings()"
+          >
+            Shop hours
+          </button>
+        }
+        <label class="field">
+          <span class="sr-only">Filter by status</span>
+          <select class="input" [value]="filter()" (change)="onFilter($event)">
+            <option value="ALL">All appointments</option>
+            @for (s of statuses; track s) {
+              <option [value]="s">{{ label(s) }}</option>
+            }
+          </select>
+        </label>
+      </header>
+
+      @if (editingSettings()) {
+        <div class="sch__band">
+          <app-entry-band
+            heading="Shop hours and slot capacity"
+            endpoint="PUT /scheduling/settings"
+            saveLabel="Save hours"
+            [busy]="busy()"
+            [error]="bandError()"
+            [canSave]="stf().valid()"
+            (save)="saveSettings()"
+            (cancel)="close()"
+          >
+            <div class="band__grid">
+              <app-form-field
+                label="Opens"
+                [errors]="stf.businessStartTime().errors()"
+                [touched]="stf.businessStartTime().touched()"
+              >
+                <input class="input" type="time" [formField]="stf.businessStartTime" />
+              </app-form-field>
+
+              <app-form-field
+                label="Closes"
+                [errors]="stf.businessEndTime().errors()"
+                [touched]="stf.businessEndTime().touched()"
+              >
+                <input class="input" type="time" [formField]="stf.businessEndTime" />
+              </app-form-field>
+
+              <app-form-field
+                label="Drop-offs per slot"
+                [errors]="stf.dropoffSlotCapacity().errors()"
+                [touched]="stf.dropoffSlotCapacity().touched()"
+              >
+                <input class="input" type="number" [formField]="stf.dropoffSlotCapacity" />
+              </app-form-field>
+
+              <app-form-field
+                label="Pickups per slot"
+                [errors]="stf.pickupSlotCapacity().errors()"
+                [touched]="stf.pickupSlotCapacity().touched()"
+              >
+                <input class="input" type="number" [formField]="stf.pickupSlotCapacity" />
+              </app-form-field>
+
+              <p class="band__note">
+                Drop-off and pickup capacity are counted separately, so a full drop-off slot does
+                not block a pickup at the same time. Changing hours does not move appointments
+                already booked outside them.
+              </p>
+            </div>
+          </app-entry-band>
+        </div>
+      }
+
+      @if (booking()) {
+        <div class="sch__band">
+          <app-entry-band
+            heading="Book a drop-off"
+            endpoint="POST /appointments/dropoff/on-behalf"
+            saveLabel="Book slot"
+            [busy]="busy()"
+            [error]="bandError()"
+            [canSave]="bf().valid()"
+            (save)="book()"
+            (cancel)="close()"
+          >
+            <div class="band__grid">
+              <div class="sch__who span-2">
+                <span class="label">Booking for</span>
+                <label class="sch__radio">
+                  <input
+                    type="radio"
+                    name="who"
+                    [checked]="!bookingDraft().forGuest"
+                    (change)="setGuest(false)"
+                  />
+                  <span>A customer on file</span>
+                </label>
+                <label class="sch__radio">
+                  <input
+                    type="radio"
+                    name="who"
+                    [checked]="bookingDraft().forGuest"
+                    (change)="setGuest(true)"
+                  />
+                  <span>A walk-in — details taken now, registered at check-in</span>
+                </label>
+              </div>
+
+              @if (bookingDraft().forGuest) {
+                <app-form-field
+                  label="Name"
+                  [errors]="bf.guestName().errors()"
+                  [touched]="bf.guestName().touched()"
+                >
+                  <input class="input" type="text" [formField]="bf.guestName" />
+                </app-form-field>
+
+                <app-form-field
+                  label="Phone"
+                  [errors]="bf.guestPhone().errors()"
+                  [touched]="bf.guestPhone().touched()"
+                >
+                  <input class="input" type="tel" [formField]="bf.guestPhone" />
+                </app-form-field>
+
+                <app-form-field
+                  label="Email"
+                  [errors]="bf.guestEmail().errors()"
+                  [touched]="bf.guestEmail().touched()"
+                  help="The booking link is sent here, so a walk-in still needs one."
+                >
+                  <input class="input" type="email" [formField]="bf.guestEmail" />
+                </app-form-field>
+
+                <app-form-field label="Make" [optional]="true">
+                  <input class="input" type="text" [formField]="bf.guestVehicleMake" />
+                </app-form-field>
+
+                <app-form-field label="Model" [optional]="true">
+                  <input class="input" type="text" [formField]="bf.guestVehicleModel" />
+                </app-form-field>
+
+                <app-form-field label="Year" [optional]="true">
+                  <input class="input" type="number" [formField]="bf.guestVehicleYear" />
+                </app-form-field>
+              } @else {
+                <app-form-field
+                  label="Customer"
+                  [errors]="bf.customerId().errors()"
+                  [touched]="bf.customerId().touched()"
+                >
+                  <select class="input" [formField]="bf.customerId" (change)="onOwnerChange()">
+                    <option value="" disabled>Choose the customer…</option>
+                    @for (c of customers(); track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                </app-form-field>
+
+                <app-form-field
+                  label="Vehicle"
+                  [errors]="bf.vehicleId().errors()"
+                  [touched]="bf.vehicleId().touched()"
+                  [help]="ownedVehicles().length === 0 ? 'This customer has no active vehicle on record.' : ''"
+                >
+                  <select class="input" [formField]="bf.vehicleId">
+                    <option value="" disabled>Choose the vehicle…</option>
+                    @for (v of ownedVehicles(); track v.id) {
+                      <option [value]="v.id">{{ v.licensePlate }} — {{ v.make }} {{ v.model }}</option>
+                    }
+                  </select>
+                </app-form-field>
+              }
+
+              <app-form-field
+                label="Date"
+                [errors]="bf.date().errors()"
+                [touched]="bf.date().touched()"
+              >
+                <input class="input" type="date" [formField]="bf.date" (change)="onDateChange()" />
+              </app-form-field>
+
+              <app-form-field
+                label="Slot"
+                [errors]="bf.slotStart().errors()"
+                [touched]="bf.slotStart().touched()"
+                [help]="loadingSlots() ? 'Reading open slots…' : (slots().length === 0 ? 'No drop-off slots left on that date.' : slots().length + ' open')"
+              >
+                <select class="input" [formField]="bf.slotStart">
+                  <option value="" disabled>Choose a slot…</option>
+                  @for (slot of slots(); track slot) {
+                    <option [value]="slot">{{ slotTime(slot) }}</option>
+                  }
+                </select>
+              </app-form-field>
+
+              <app-form-field
+                label="Reported complaint"
+                [wide]="true"
+                [errors]="bf.complaint().errors()"
+                [touched]="bf.complaint().touched()"
+              >
+                <textarea class="input" rows="2" [formField]="bf.complaint"></textarea>
+              </app-form-field>
+            </div>
+          </app-entry-band>
+        </div>
+      }
+
+      <section class="plate">
+        <div class="plate__head">
+          <p class="plate__title">5.1 — Booked appointments</p>
+          <p class="plate__meta label">{{ rows().length }} listed</p>
+        </div>
+        <div class="mt-wrap">
+          <table class="mt">
+            <caption class="sr-only">Appointments with slot, party, vehicle and status.</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="shrink">Slot</th>
+                <th scope="col" class="shrink">Type</th>
+                <th scope="col">Party</th>
+                <th scope="col">Vehicle</th>
+                <th scope="col">Complaint</th>
+                <th scope="col" class="shrink">Status</th>
+                <th scope="col" class="shrink">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of rows(); track a.id) {
+                <tr>
+                  <td class="shrink token sch__slot">{{ slot(a.slotStart) }}</td>
+                  <td class="shrink">
+                    <span class="sch__type" [class.is-pickup]="a.type === 'PICKUP'">{{ a.type }}</span>
+                  </td>
+                  <td>
+                    @if (a.guestName) {
+                      <span class="sch__party">{{ a.guestName }}</span>
+                      <span class="sch__guest">Guest — not yet a customer</span>
+                    } @else {
+                      <span class="sch__party">{{ a.customerName }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (a.vehiclePlate) {
+                      <span class="token sch__plate">{{ a.vehiclePlate }}</span>
+                      <span class="sch__vehicle">{{ a.vehicleLabel }}</span>
+                    } @else {
+                      <span class="sch__vehicle"
+                        >{{ a.guestVehicleMake }} {{ a.guestVehicleModel }} {{ a.guestVehicleYear }}</span
+                      >
+                      <span class="sch__guest">Given inline on the booking</span>
+                    }
+                  </td>
+                  <td class="sch__complaint">{{ a.complaint ?? '—' }}</td>
+                  <td class="shrink">
+                    <span class="sch__status" [class]="'is-' + a.status.toLowerCase()">{{
+                      label(a.status)
+                    }}</span>
+                    @if (a.cancelReason) {
+                      <span class="sch__reason">{{ reason(a.cancelReason) }}</span>
+                    }
+                  </td>
+                  <td class="shrink">
+                    @if (a.status === 'SCHEDULED' && canAct()) {
+                      <div class="rec__actions">
+                        <button
+                          class="btn btn--sm btn--primary"
+                          type="button"
+                          [disabled]="isDemo()"
+                          (click)="checkIn(a.id)"
+                        >
+                          Check in
+                        </button>
+                        <button
+                          class="btn btn--sm btn--quiet"
+                          type="button"
+                          [disabled]="isDemo()"
+                          (click)="rescheduling() === a.id ? close() : openReschedule(a)"
+                        >
+                          Move
+                        </button>
+                        <button
+                          class="btn btn--sm btn--danger"
+                          type="button"
+                          [disabled]="isDemo()"
+                          (click)="cancelling() === a.id ? close() : openCancel(a)"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    } @else if (a.status === 'COMPLETED') {
+                      <span class="sch__done"
+                        ><app-icon name="check" [size]="12" /> {{ time(a.checkedInAt!) }}</span
+                      >
+                    } @else {
+                      <span class="sch__inert">—</span>
+                    }
+                  </td>
+                </tr>
+
+                @if (rescheduling() === a.id) {
+                  <tr class="sch__band-row">
+                    <td colspan="7">
+                      <app-entry-band
+                        [heading]="'Move the ' + slot(a.slotStart) + ' booking'"
+                        [endpoint]="'POST /appointments/' + a.id.slice(0, 8) + '…/reschedule'"
+                        saveLabel="Move booking"
+                        [busy]="busy()"
+                        [error]="bandError()"
+                        [canSave]="rescheduleTo() !== ''"
+                        (save)="confirmReschedule(a)"
+                        (cancel)="close()"
+                      >
+                        <div class="band__grid">
+                          <app-form-field
+                            label="New date"
+                            help="Open slots are re-read for the date you pick."
+                          >
+                            <input
+                              class="input"
+                              type="date"
+                              [value]="a.slotStart.slice(0, 10)"
+                              (change)="reloadSlotsFor(a, $any($event.target).value)"
+                            />
+                          </app-form-field>
+
+                          <app-form-field
+                            label="New slot"
+                            [help]="loadingSlots() ? 'Reading open slots…' : slots().length + ' open'"
+                          >
+                            <select class="input" [value]="rescheduleTo()" (change)="onRescheduleSlot($event)">
+                              <option value="" disabled [selected]="rescheduleTo() === ''">
+                                Choose a slot…
+                              </option>
+                              @for (s of slots(); track s) {
+                                <option [value]="s" [selected]="s === rescheduleTo()">
+                                  {{ slotTime(s) }}
+                                </option>
+                              }
+                            </select>
+                          </app-form-field>
+
+                          <p class="band__note">
+                            Moving supersedes this booking rather than editing it: the original is
+                            marked rescheduled and a new one takes the slot, so the trail stays intact.
+                          </p>
+                        </div>
+                      </app-entry-band>
+                    </td>
+                  </tr>
+                }
+
+                @if (cancelling() === a.id) {
+                  <tr class="sch__band-row">
+                    <td colspan="7">
+                      <app-entry-band
+                        [heading]="'Cancel the ' + slot(a.slotStart) + ' booking?'"
+                        [endpoint]="'POST /appointments/' + a.id.slice(0, 8) + '…/cancel'"
+                        saveLabel="Cancel booking"
+                        busyLabel="Cancelling…"
+                        tone="danger"
+                        [busy]="busy()"
+                        (save)="confirmCancel(a)"
+                        (cancel)="close()"
+                      >
+                        <div class="band__grid">
+                          <app-form-field
+                            label="Message to the customer"
+                            [optional]="true"
+                            [wide]="true"
+                            help="Sent with the cancellation. Leave blank for no explanation."
+                          >
+                            <input
+                              class="input"
+                              type="text"
+                              [value]="cancelMessage()"
+                              (input)="onCancelMessage($event)"
+                            />
+                          </app-form-field>
+                        </div>
+                      </app-entry-band>
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr>
+                  <td colspan="7">
+                    <div class="empty">
+                      <p class="empty__title">Nothing booked in this view</p>
+                      <p>Change the status filter to see appointments outside it.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="plate sch__closures">
+        <div class="plate__head">
+          <p class="plate__title">5.2 — Closures</p>
+          @if (canManage()) {
+            <button
+              class="btn btn--sm"
+              type="button"
+              [disabled]="addingClosure() || isDemo()"
+              (click)="openClosure()"
+            >
+              Close a date
+            </button>
+          } @else {
+            <p class="plate__meta label">Manager only</p>
+          }
+        </div>
+        <div class="plate__body">
+          <app-callout tier="caution">
+            Closing a date that already has appointments cancels them and notifies the affected
+            customers and guests. A closure is a one-off decision, not a recurring holiday.
+          </app-callout>
+
+          <table class="mt sch__closure-table">
+            <caption class="sr-only">Dates the shop is closed.</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="shrink">Date</th>
+                <th scope="col">Message to customers</th>
+                @if (canManage()) {
+                  <th scope="col" class="shrink r">Entry</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @if (addingClosure()) {
+                <tr class="sch__band-row">
+                  <td [attr.colspan]="canManage() ? 3 : 2">
+                    <app-entry-band
+                      heading="Close a date"
+                      endpoint="POST /scheduling/closures"
+                      saveLabel="Close this date"
+                      tone="danger"
+                      [busy]="busy()"
+                      [error]="bandError()"
+                      [canSave]="clf().valid()"
+                      (save)="saveClosure()"
+                      (cancel)="close()"
+                    >
+                      <div class="band__grid">
+                        <app-form-field
+                          label="Date"
+                          [errors]="clf.date().errors()"
+                          [touched]="clf.date().touched()"
+                        >
+                          <input class="input" type="date" [formField]="clf.date" />
+                        </app-form-field>
+
+                        <app-form-field
+                          label="Message to customers"
+                          [optional]="true"
+                          help="Sent with each cancellation."
+                        >
+                          <input class="input" type="text" [formField]="clf.message" />
+                        </app-form-field>
+
+                        @if (closureDraft().date && bookedOn(closureDraft().date) > 0) {
+                          <p class="band__note sch__will-cancel">
+                            <strong class="num">{{ bookedOn(closureDraft().date) }}</strong>
+                            appointment{{ bookedOn(closureDraft().date) === 1 ? ' is' : 's are' }}
+                            already booked on that date and will be cancelled.
+                          </p>
+                        } @else if (closureDraft().date) {
+                          <p class="band__note">Nothing is booked on that date.</p>
+                        }
+                      </div>
+                    </app-entry-band>
+                  </td>
+                </tr>
+              }
+              @for (c of closures(); track c.date) {
+                <tr>
+                  <td class="shrink token">{{ c.date }}</td>
+                  <td>{{ c.message ?? 'No explanation given.' }}</td>
+                  @if (canManage()) {
+                    <td class="shrink r">
+                      <div class="rec__actions">
+                        <button
+                          class="btn btn--sm btn--quiet"
+                          type="button"
+                          [disabled]="isDemo()"
+                          (click)="removingClosure.set(removingClosure() === c.date ? null : c.date)"
+                        >
+                          Reopen
+                        </button>
+                      </div>
+                    </td>
+                  }
+                </tr>
+
+                @if (removingClosure() === c.date) {
+                  <tr class="sch__band-row">
+                    <td colspan="3">
+                      <app-entry-band
+                        [heading]="'Reopen ' + c.date + '?'"
+                        [endpoint]="'DELETE /scheduling/closures/' + c.date"
+                        saveLabel="Reopen the date"
+                        busyLabel="Reopening…"
+                        [busy]="busy()"
+                        (save)="removeClosure(c)"
+                        (cancel)="removingClosure.set(null)"
+                      >
+                        <p class="rec__confirm">
+                          The date becomes bookable again. Appointments cancelled when it was closed
+                          are <strong>not</strong> restored — those customers would need to rebook.
+                        </p>
+                      </app-entry-band>
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                @if (!addingClosure()) {
+                  <tr>
+                    <td [attr.colspan]="canManage() ? 3 : 2">
+                      <div class="empty">
+                        <p class="empty__title">No closures</p>
+                        <p>Every day inside the shop's hours is bookable.</p>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>

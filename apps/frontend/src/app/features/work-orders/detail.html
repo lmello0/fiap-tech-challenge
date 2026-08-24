@@ -14,7 +14,7 @@
           @if (customer(); as c) {
             <span class="token wo__doc">{{ c.document }}</span>
           }
-          <span>In shop {{ daysInShop() }}d</span>
+          <span>{{ dwellLabel() }}</span>
         </p>
       </div>
       <div class="wo__head-status">
@@ -52,12 +52,7 @@
                     <strong class="num">{{ s.available }}</strong
                     >, short <strong class="num">{{ s.short }}</strong
                     >.
-                    @if (s.inboundPurchaseOrderCode) {
-                      Inbound on <span class="token">{{ s.inboundPurchaseOrderCode }}</span
-                      >.
-                    } @else {
-                      No purchase order covers it yet.
-                    }
+
                   </li>
                 }
               </ul>
@@ -75,9 +70,29 @@
               </div>
 
               @if (canAdvance()) {
-                <button class="btn btn--primary" type="button" (click)="requestAdvance()">
-                  {{ n.action!.label }}
-                </button>
+                @if (n.status === 'IN_DIAGNOSTICS') {
+                  <button
+                    class="btn btn--primary"
+                    type="button"
+                    [disabled]="isDemo()"
+                    (click)="assigning() ? closeBands() : openAssign()"
+                  >
+                    {{ assigning() ? 'Close' : n.action!.label }}
+                  </button>
+                } @else if (n.status === 'BUDGET_IN_DRAFT') {
+                  <button
+                    class="btn btn--primary"
+                    type="button"
+                    [disabled]="isDemo()"
+                    (click)="diagnosing() ? closeBands() : openDiagnosis()"
+                  >
+                    {{ diagnosing() ? 'Close' : n.action!.label }}
+                  </button>
+                } @else {
+                  <button class="btn btn--primary" type="button" (click)="requestAdvance()">
+                    {{ n.action!.label }}
+                  </button>
+                }
               } @else if (o.status === 'WAITING_APPROVAL') {
                 <p class="wo__inert">
                   <app-icon name="clock" [size]="14" /> Waiting on the customer
@@ -107,6 +122,147 @@
             </app-callout>
           }
         </div>
+
+        @if (assigning()) {
+          <div class="wo__span">
+            <app-entry-band
+              heading="Step 3 — assign the mechanic"
+              endpoint="POST /work-orders/{id}/diagnostics/start"
+              saveLabel="Start diagnostics"
+              [busy]="bandBusy()"
+              [error]="bandError()"
+              [canSave]="assignee() !== ''"
+              (save)="confirmAssign()"
+              (cancel)="closeBands()"
+            >
+              <div class="band__grid">
+                <app-form-field
+                  label="Mechanic taking the job"
+                  [help]="mechanics().length === 1 ? 'Only a manager can read the full roster, so this is you.' : ''"
+                >
+                  <select class="input" [value]="assignee()" (change)="onAssignee($event)">
+                    @for (w of mechanics(); track w.id) {
+                      <option [value]="w.id" [selected]="w.id === assignee()">
+                        {{ w.name }} — {{ roleLabel(w.role) }}
+                      </option>
+                    }
+                  </select>
+                </app-form-field>
+                <p class="band__note">
+                  Diagnosis is the inspection, not the repair. The vehicle stays on the premises and
+                  no stock is touched by this step.
+                </p>
+              </div>
+            </app-entry-band>
+          </div>
+        }
+
+        @if (diagnosing()) {
+          <div class="wo__span">
+            <app-entry-band
+              heading="Step 4 — record the diagnosis and draft the budget"
+              endpoint="POST /work-orders/{id}/diagnostics/finish"
+              saveLabel="Record and draft budget"
+              [busy]="bandBusy()"
+              [error]="bandError()"
+              [canSave]="df().valid()"
+              hint="One call: the diagnosis and the budget are written together."
+              (save)="saveDiagnosis()"
+              (cancel)="closeBands()"
+            >
+              <div class="band__grid">
+                <app-form-field
+                  label="Diagnosis"
+                  [wide]="true"
+                  [errors]="df.diagnosis().errors()"
+                  [touched]="df.diagnosis().touched()"
+                  help="What is actually wrong. The customer reads this alongside the budget."
+                >
+                  <textarea class="input" rows="3" [formField]="df.diagnosis"></textarea>
+                </app-form-field>
+
+                @if (hasCatalogue()) {
+                  <app-form-field label="Add labour" [optional]="true">
+                    <select class="input" (change)="addSeedLine('SERVICE', $event)">
+                      <option value="">Choose a service…</option>
+                      @for (s of availableServices(); track s.id) {
+                        <option [value]="s.id">{{ s.name }} — {{ money(s.price) }}</option>
+                      }
+                    </select>
+                  </app-form-field>
+
+                  <app-form-field label="Add a part" [optional]="true">
+                    <select class="input" (change)="addSeedLine('PART', $event)">
+                      <option value="">Choose a part…</option>
+                      @for (p of availableParts(); track p.id) {
+                        <option [value]="p.id">
+                          {{ p.name }} — {{ money(p.salePrice) }} ({{ p.available }} available)
+                        </option>
+                      }
+                    </select>
+                  </app-form-field>
+                } @else {
+                  <p class="band__note">
+                    The catalogue is empty, so there is nothing to quote. Add a part or a service in
+                    section 6 first — the API refuses a budget with no lines.
+                  </p>
+                }
+
+                <div class="wo__seed span-2">
+                  <p class="label">Opening budget lines</p>
+                  @for (line of diagnosisDraft().lines; track $index) {
+                    <div class="wo__seed-row">
+                      <span class="wo__seed-kind label">{{ line.kind }}</span>
+                      <span class="wo__seed-name">{{ seedLabel(line) }}</span>
+                      <span class="wo__seed-qty">
+                        <button
+                          class="btn btn--sm btn--quiet"
+                          type="button"
+                          (click)="changeSeedQuantity($index, -1)"
+                        >
+                          −
+                        </button>
+                        <span class="num">{{ line.quantity }}</span>
+                        <button
+                          class="btn btn--sm btn--quiet"
+                          type="button"
+                          (click)="changeSeedQuantity($index, 1)"
+                        >
+                          +
+                        </button>
+                      </span>
+                      <span class="wo__seed-shelf">{{ seedShelf(line) ?? 'labour — no stock' }}</span>
+                      <span class="wo__seed-total num">{{
+                        money(line.quantity * seedUnitPrice(line))
+                      }}</span>
+                      <button
+                        class="btn btn--sm btn--danger"
+                        type="button"
+                        (click)="removeSeedLine($index)"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  } @empty {
+                    <p class="wo__seed-empty">
+                      No lines yet. A budget needs at least one, and the API will refuse an empty one.
+                    </p>
+                  }
+                  @if (diagnosisDraft().lines.length) {
+                    <p class="wo__seed-foot">
+                      <span class="label">Draft total</span>
+                      <strong class="num">{{ money(seedTotal()) }}</strong>
+                      <span class="wo__seed-note"
+                        >Parts here are reserved the moment this saves. Nothing is frozen until the
+                        budget is sent.</span
+                      >
+                    </p>
+                  }
+                </div>
+              </div>
+            </app-entry-band>
+          </div>
+        }
 
         @if (confirming()) {
           <div class="wo__confirm wo__span">
@@ -173,9 +329,6 @@
                 <div class="wo__budget-notice">
                   <app-callout tier="caution">
                     <p class="wo__next-lead">Delivery failed. The budget is still waiting to reach the customer.</p>
-                    @if (b.lastSendError) {
-                      <p class="wo__send-error">{{ b.lastSendError }}</p>
-                    }
                     <p>
                       Resend as many times as needed — nothing is re-locked and no stock is
                       re-reserved.
@@ -386,13 +539,14 @@
                     <span class="wo__entry-actor">
                       @if (entry.actorIsSystem) {
                         <span class="wo__system">System</span>
+                      } @else if (entry.actorIsRole) {
+                        <span
+                          class="wo__actor-role"
+                          title="The API records the acting authority, not the person's name"
+                          >Recorded by {{ entry.actorName }}</span
+                        >
                       } @else {
                         {{ entry.actorName ?? 'Unknown actor' }}
-                      }
-                      @if (!entry.customerVisible) {
-                        <span class="wo__internal" title="Not shown on the customer's timeline"
-                          >internal</span
-                        >
                       }
                     </span>
                   </button>

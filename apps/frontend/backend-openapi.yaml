@@ -22,6 +22,10 @@
       "description": "Vendors that parts and services can be purchased from."
     },
     {
+      "name": "Part Stock",
+      "description": "Derived stock standing per part: on-hand, available, status, and windowed cost."
+    },
+    {
       "name": "Stock",
       "description": "Manual stock corrections and the movement ledger for a single part."
     },
@@ -32,10 +36,6 @@
     {
       "name": "Auth",
       "description": "Registration, login, session, password, and email verification/change flows."
-    },
-    {
-      "name": "Reorder Rules",
-      "description": "Per-part, per-vendor automatic-reorder thresholds."
     },
     {
       "name": "Scheduling Settings",
@@ -74,6 +74,10 @@
       "description": "Customer vehicle registration and management."
     },
     {
+      "name": "Stock Policies",
+      "description": "Per-part, per-vendor automatic-reorder thresholds."
+    },
+    {
       "name": "Users",
       "description": "The authenticated caller's own profile, plus worker-only user lookups."
     },
@@ -84,6 +88,10 @@
     {
       "name": "Customer Work Orders",
       "description": "Customer-scoped view of a work order: status, its Budget, and approve/refuse actions."
+    },
+    {
+      "name": "Work Order Readiness",
+      "description": "Whether a work order's parts are fully reserved yet."
     }
   ],
   "paths": {
@@ -256,16 +264,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "The referenced customer or vehicle does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -288,6 +286,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The referenced customer or vehicle does not exist.",
             "content": {
               "*/*": {
                 "schema": {
@@ -320,26 +328,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows starting service.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -362,6 +350,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows starting service.",
             "content": {
               "*/*": {
                 "schema": {
@@ -394,26 +402,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows finishing service, or a Budget line is still open.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -436,6 +424,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows finishing service, or a Budget line is still open.",
             "content": {
               "*/*": {
                 "schema": {
@@ -468,26 +476,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows marking it ready for pickup.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -510,6 +498,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows marking it ready for pickup.",
             "content": {
               "*/*": {
                 "schema": {
@@ -552,26 +560,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order or Budget line exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order or the line is not in a state that allows starting it.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -594,6 +582,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order or Budget line exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order or the line is not in a state that allows starting it.",
             "content": {
               "*/*": {
                 "schema": {
@@ -636,26 +644,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order or Budget line exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The line is not in a state that allows finishing it.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -678,6 +666,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order or Budget line exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The line is not in a state that allows finishing it.",
             "content": {
               "*/*": {
                 "schema": {
@@ -720,26 +728,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows starting diagnostics.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -762,6 +750,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows starting diagnostics.",
             "content": {
               "*/*": {
                 "schema": {
@@ -794,26 +802,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows requesting diagnostics.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -836,6 +824,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows requesting diagnostics.",
             "content": {
               "*/*": {
                 "schema": {
@@ -878,26 +886,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id, or a referenced part/service does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows finishing diagnostics.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -920,6 +908,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id, or a referenced part/service does not exist.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows finishing diagnostics.",
             "content": {
               "*/*": {
                 "schema": {
@@ -952,26 +960,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The work order is not in a state that allows recording delivery.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -994,6 +982,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The work order is not in a state that allows recording delivery.",
             "content": {
               "*/*": {
                 "schema": {
@@ -1046,26 +1054,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No work order or Budget exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is not in a state that allows refusal (e.g. not sent, or already resolved).",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1088,6 +1076,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order or Budget exists with the given id, or it does not belong to the caller.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is not in a state that allows refusal (e.g. not sent, or already resolved).",
             "content": {
               "*/*": {
                 "schema": {
@@ -1130,26 +1138,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order or Budget exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is not in a state that allows approval (e.g. not sent, or already resolved).",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1172,6 +1160,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order or Budget exists with the given id, or it does not belong to the caller.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is not in a state that allows approval (e.g. not sent, or already resolved).",
             "content": {
               "*/*": {
                 "schema": {
@@ -1370,6 +1378,36 @@
           "required": true
         },
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "409": {
             "description": "The license plate is already registered to another vehicle.",
             "content": {
@@ -1379,7 +1417,37 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/stock-policies": {
+      "get": {
+        "tags": [
+          "Stock Policies"
+        ],
+        "summary": "List stock policys",
+        "description": "Returns a paginated, filterable list of stock policys. Requires the STOCKIST or MANAGER role.",
+        "operationId": "getAll_2",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
           },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/StockPolicyFilterQuery"
+            }
+          }
+        ],
+        "responses": {
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1411,6 +1479,66 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Stock Policies"
+        ],
+        "summary": "Create a stock policy",
+        "description": "Creates a minimum/maximum quantity threshold for a part, pointing at the vendor to reorder from. Evaluated immediately, so a part already below the given minimum triggers a reorder signal right away. Requires the STOCKIST or MANAGER role.",
+        "operationId": "create_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockPolicyCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The referenced part or vendor does not exist.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/services": {
@@ -1420,7 +1548,7 @@
         ],
         "summary": "List repair services",
         "description": "Returns a paginated, filterable list of repair services. Requires the MECHANIC, STOCKIST, or MANAGER role.",
-        "operationId": "getAll_2",
+        "operationId": "getAll_3",
         "parameters": [
           {
             "name": "pageable",
@@ -1478,7 +1606,7 @@
         ],
         "summary": "Create a repair service",
         "description": "Adds a new labor/service entry to the catalog. Requires the STOCKIST or MANAGER role.",
-        "operationId": "create_3",
+        "operationId": "create_4",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1490,16 +1618,6 @@
           "required": true
         },
         "responses": {
-          "409": {
-            "description": "A repair service with the given code already exists.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1522,6 +1640,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A repair service with the given code already exists.",
             "content": {
               "*/*": {
                 "schema": {
@@ -1592,158 +1720,38 @@
           "required": true
         },
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "409": {
             "description": "A closure already exists for the given date.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/reorder-rules": {
-      "get": {
-        "tags": [
-          "Reorder Rules"
-        ],
-        "summary": "List reorder rules",
-        "description": "Returns a paginated, filterable list of reorder rules. Requires the STOCKIST or MANAGER role.",
-        "operationId": "getAll_3",
-        "parameters": [
-          {
-            "name": "pageable",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Pageable"
-            }
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ReorderRuleFilterQuery"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Reorder Rules"
-        ],
-        "summary": "Create a reorder rule",
-        "description": "Creates a minimum/maximum quantity threshold for a part, pointing at the vendor to reorder from. Evaluated immediately, so a part already below the given minimum triggers a reorder signal right away. Requires the STOCKIST or MANAGER role.",
-        "operationId": "create_4",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateReorderRuleCommand"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "404": {
-            "description": "The referenced part or vendor does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
             "content": {
               "*/*": {
                 "schema": {
@@ -1832,16 +1840,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "The referenced vendor or a referenced part does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1864,6 +1862,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The referenced vendor or a referenced part does not exist.",
             "content": {
               "*/*": {
                 "schema": {
@@ -1906,26 +1914,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No purchase order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The purchase order is not in a state that allows receiving (e.g. already RECEIVED or CANCELLED).",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -1948,6 +1936,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No purchase order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The purchase order is not in a state that allows receiving (e.g. already RECEIVED or CANCELLED).",
             "content": {
               "*/*": {
                 "schema": {
@@ -1980,26 +1988,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No purchase order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The purchase order is not in a state that allows cancelling (e.g. already RECEIVED or CANCELLED).",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2022,6 +2010,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No purchase order exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The purchase order is not in a state that allows cancelling (e.g. already RECEIVED or CANCELLED).",
             "content": {
               "*/*": {
                 "schema": {
@@ -2110,6 +2118,36 @@
           "required": true
         },
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "409": {
             "description": "A part with the given SKU already exists.",
             "content": {
@@ -2119,7 +2157,121 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/parts/{partId}/stock/adjustments": {
+      "post": {
+        "tags": [
+          "Stock"
+        ],
+        "summary": "Adjust a part's on-hand quantity",
+        "description": "Applies a manual correction to a part's on-hand quantity — a physical count, breakage, or stock found on the wrong shelf. The quantity is signed: positive adds stock, negative removes it; zero is rejected. Requires the STOCKIST or MANAGER role.",
+        "operationId": "adjust",
+        "parameters": [
+          {
+            "name": "partId",
+            "in": "path",
+            "description": "Part id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStockCommand"
+              }
+            }
           },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No part exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The adjustment would drop on-hand quantity below zero, or below what is already reserved.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "List customers",
+        "description": "Returns a paginated, filterable list of customer accounts. Requires the ATTENDANT or MANAGER role.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UserFilterQuery"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2151,59 +2303,25 @@
             }
           }
         }
-      }
-    },
-    "/parts/{partId}/stock/adjustments": {
+      },
       "post": {
         "tags": [
-          "Stock"
+          "Customers"
         ],
-        "summary": "Adjust a part's on-hand quantity",
-        "description": "Applies a manual correction to a part's on-hand quantity — a physical count, breakage, or stock found on the wrong shelf. The quantity is signed: positive adds stock, negative removes it; zero is rejected. Requires the STOCKIST or MANAGER role.",
-        "operationId": "adjust",
-        "parameters": [
-          {
-          "name": "partId",
-            "in": "path",
-            "description": "Part id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
+        "summary": "Create a customer",
+        "description": "Requires the ATTENDANT or MANAGER role.",
+        "operationId": "create_6",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AdjustStockCommand"
+                "$ref": "#/components/schemas/CreateUserCommand"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No part exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The adjustment would drop on-hand quantity below zero, or below what is already reserved.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2226,6 +2344,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The email or document is already registered to another account.",
             "content": {
               "*/*": {
                 "schema": {
@@ -2261,26 +2389,6 @@
           "204": {
             "description": "The customer was reactivated."
           },
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The user does not have a Customer facet.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2303,6 +2411,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The user does not have a Customer facet.",
             "content": {
               "*/*": {
                 "schema": {
@@ -2335,26 +2463,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Budget exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is not in a state that allows sending (e.g. already sent).",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2377,6 +2485,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Budget exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is not in a state that allows sending (e.g. already sent).",
             "content": {
               "*/*": {
                 "schema": {
@@ -2409,26 +2537,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Budget exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is not in a state that allows resending.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2451,6 +2559,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Budget exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is not in a state that allows resending.",
             "content": {
               "*/*": {
                 "schema": {
@@ -2493,26 +2621,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No Budget exists with the given id, or the referenced part/service does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2535,6 +2643,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Budget exists with the given id, or the referenced part/service does not exist.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
             "content": {
               "*/*": {
                 "schema": {
@@ -2565,16 +2693,6 @@
           "required": true
         },
         "responses": {
-          "409": {
-            "description": "The email or document is already registered to another account.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -2604,6 +2722,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The email or document is already registered to another account.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -2616,7 +2744,7 @@
         "summary": "Register a customer",
         "description": "Creates a new CUSTOMER account and returns an access/refresh token pair — no login call needed afterwards. Public; no authentication required.",
         "operationId": "register",
-      "requestBody": {
+        "requestBody": {
           "content": {
             "application/json": {
               "schema": {
@@ -2837,7 +2965,7 @@
           "Auth"
         ],
         "summary": "Log out",
-        "description": "Revokes the given refresh token, ending that one session. Idempotent — an already-revoked or unknown ten is not an error. Public; no authentication required (the refresh token itself is the credential being acted on).",
+        "description": "Revokes the given refresh token, ending that one session. Idempotent — an already-revoked or unknown token is not an error. Public; no authentication required (the refresh token itself is the credential being acted on).",
         "operationId": "logout",
         "requestBody": {
           "content": {
@@ -3159,26 +3287,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment is not in a state that allows rescheduling, or the new slot is not available.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3201,6 +3309,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment is not in a state that allows rescheduling, or the new slot is not available.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3243,26 +3371,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment was already converted to a registered customer.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3285,6 +3393,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment was already converted to a registered customer.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3327,26 +3455,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment is not in a state that allows rescheduling, or the new slot is not available.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3369,6 +3477,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id, or it does not belong to the caller.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment is not in a state that allows rescheduling, or the new slot is not available.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3411,26 +3539,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment is not in a state that allows cancellation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3453,6 +3561,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id, or it does not belong to the caller.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment is not in a state that allows cancellation.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3485,26 +3613,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment is not in a state that allows checking in.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3527,6 +3635,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment is not in a state that allows checking in.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3569,26 +3697,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The appointment is not in a state that allows cancellation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -3611,6 +3719,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The appointment is not in a state that allows cancellation.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3651,16 +3779,6 @@
               }
             }
           },
-          "409": {
-            "description": "The requested slot is no longer available.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "401": {
             "description": "No valid JWT bearer token was supplied.",
             "content": {
@@ -3673,6 +3791,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The requested slot is no longer available.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3693,7 +3821,8 @@
         "description": "Books the pickup slot for the customer/vehicle/work order referenced by a one-time pickup invitation token (sent when the vehicle became ready). Public — no authentication required; the token itself is the credential.",
         "operationId": "bookPickupByToken",
         "requestBody": {
-          "content":             "application/json": {
+          "content": {
+            "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BookPickupByTokenCommand"
               }
@@ -3746,7 +3875,7 @@
         "operationId": "guestView",
         "requestBody": {
           "content": {
-            "alication/json": {
+            "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/GuestTokenCommand"
               }
@@ -3801,7 +3930,7 @@
           "400": {
             "description": "The request body failed validation.",
             "content": {
-            "*/*": {
+              "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -3848,7 +3977,7 @@
               }
             }
           },
-          "reqred": true
+          "required": true
         },
         "responses": {
           "400": {
@@ -3884,7 +4013,7 @@
         "description": "Public — no authentication required; the token itself is the credential.",
         "operationId": "guestCancel",
         "requestBody": {
-          "content":
+          "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/GuestTokenCommand"
@@ -3935,7 +4064,7 @@
         ],
         "summary": "Book a drop-off on behalf of a customer or guest",
         "description": "Staff books a drop-off for an existing customer's vehicle, or for a guest, in one call — exactly one of the two must be supplied. Requires the ATTENDANT or MANAGER role.",
-      "operationId": "bookDropoffOnBehalf",
+        "operationId": "bookDropoffOnBehalf",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3949,16 +4078,6 @@
         "responses": {
           "400": {
             "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The requested slot is no longer available.",
             "content": {
               "*/*": {
                 "schema": {
@@ -3986,6 +4105,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The requested slot is no longer available.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -4002,7 +4131,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookGuestDropoffCoand"
+                "$ref": "#/components/schemas/BookGuestDropoffCommand"
               }
             }
           },
@@ -4062,16 +4191,6 @@
               }
             }
           },
-          "409": {
-            "description": "The requested slot is no longer available.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "401": {
             "description": "No valid JWT bearer token was supplied.",
             "content": {
@@ -4084,6 +4203,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The requested slot is no longer available.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4116,16 +4245,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4148,6 +4267,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4181,26 +4310,6 @@
           "204": {
             "description": "The worker was terminated."
           },
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The user does not have a Worker facet.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4223,6 +4332,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The user does not have a Worker facet.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4255,7 +4384,7 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "sema": {
+              "schema": {
                 "$ref": "#/components/schemas/UpdateUserProfileCommand"
               }
             }
@@ -4263,16 +4392,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4295,6 +4414,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4327,16 +4456,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No vendor exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4359,6 +4478,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vendor exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4392,16 +4521,6 @@
           "204": {
             "description": "The vendor was deactivated."
           },
-          "404": {
-            "description": "No vendor exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4424,6 +4543,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vendor exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4464,16 +4593,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No vendor exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4496,6 +4615,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vendor exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4528,16 +4657,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4560,6 +4679,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4593,16 +4722,6 @@
           "204": {
             "description": "The vehicle was deactivated."
           },
-          "404": {
-            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4625,6 +4744,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4665,26 +4794,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The license plate is already registered to another vehicle.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4707,6 +4816,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No vehicle exists with the given id, or it does not belong to the caller.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The license plate is already registered to another vehicle.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4810,19 +4939,19 @@
         }
       }
     },
-    "/services/{id}": {
+    "/stock-policies/{id}": {
       "get": {
         "tags": [
-          "Repair Services"
+          "Stock Policies"
         ],
-        "summary": "Get a repair service by id",
-        "description": "Requires the MECHANIC, STOCKIST, or MANAGER role.",
+        "summary": "Get a stock policy by id",
+        "description": "Requires the STOCKIST or MANAGER role.",
         "operationId": "getById_3",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Repair service id",
+            "description": "Stock policy id",
             "required": true,
             "schema": {
               "type": "string",
@@ -4831,8 +4960,8 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No repair service exists with the given id.",
+          "400": {
+            "description": "The request body or parameters failed validation.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4840,6 +4969,61 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No stock policy exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Stock Policies"
+        ],
+        "summary": "Delete a stock policy",
+        "description": "Permanently deletes a stock policy. Requires the STOCKIST or MANAGER role.",
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Stock policy id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The stock policy was deleted."
           },
           "400": {
             "description": "The request body or parameters failed validation.",
@@ -4863,6 +5047,152 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No stock policy exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Stock Policies"
+        ],
+        "summary": "Update a stock policy",
+        "description": "Updates a stock policy's thresholds, vendor, and enabled flag, and re-evaluates the part immediately. Requires the STOCKIST or MANAGER role.",
+        "operationId": "update_3",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Stock policy id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStockPolicyCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No stock policy exists with the given id, or the referenced vendor does not exist.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/services/{id}": {
+      "get": {
+        "tags": [
+          "Repair Services"
+        ],
+        "summary": "Get a repair service by id",
+        "description": "Requires the MECHANIC, STOCKIST, or MANAGER role.",
+        "operationId": "getById_4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Repair service id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No repair service exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -4896,16 +5226,6 @@
           "204": {
             "description": "The repair service was deactivated."
           },
-          "404": {
-            "description": "No repair service exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -4935,6 +5255,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "No repair service exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
@@ -4944,7 +5274,7 @@
         ],
         "summary": "Update a repair service",
         "description": "Updates a repair service's name, description, price, and estimated duration. The code cannot be changed. Requires the STOCKIST or MANAGER role.",
-        "operationId": "update_3",
+        "operationId": "update_4",
         "parameters": [
           {
             "name": "id",
@@ -4968,239 +5298,38 @@
           "required": true
         },
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No repair service exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/reorder-rules/{id}": {
-      "get": {
-        "tags": [
-          "Reorder Rules"
-        ],
-        "summary": "Get a reorder rule by id",
-        "description": "Requires the STOCKIST or MANAGER role.",
-        "operationId": "getById_4",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Reorder rule id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "404": {
-            "description": "No reorder rule exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Reorder Rules"
-        ],
-        "summary": "Delete a reorder rule",
-        "description": "Permanently deletes a reorder rule. Requires the STOCKIST or MANAGER role.",
-        "operationId": "delete",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Reorder rule id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "The reorder rule was deleted."
-          },
-          "404": {
-            "description": "No reorder rule exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Reorder Rules"
-        ],
-        "summary": "Update a reorder rule",
-        "description": "Updates a reorder rule's thresholds, vendor, and enabled flag, and re-evaluates the part immediately. Requires the STOCKIST or MANAGER role.",
-        "operationId": "update_4",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Reorder rule id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateReorderRuleCommand"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "404": {
-            "description": "No reorder rule exists with the given id, or the referenced vendor does not exist.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5233,16 +5362,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No part exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5265,6 +5384,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No part exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5298,16 +5427,6 @@
           "204": {
             "description": "The part was deactivated."
           },
-          "404": {
-            "description": "No part exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5330,6 +5449,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No part exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5370,16 +5499,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No part exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5402,6 +5521,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No part exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5434,16 +5563,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5466,6 +5585,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5499,26 +5628,6 @@
           "204": {
             "description": "The customer was deactivated."
           },
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The user does not have an active Customer facet.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5541,6 +5650,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The user does not have an active Customer facet.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5581,16 +5710,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5613,6 +5732,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5665,26 +5794,6 @@
           "required": true
         },
         "responses": {
-          "404": {
-            "description": "No Budget or Budget line exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5714,6 +5823,26 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "No Budget or Budget line exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -5725,7 +5854,7 @@
         ],
         "summary": "List workers",
         "description": "Returns a paginated, filterable list of worker accounts. Requires the MANAGER role.",
-        "operationId": "list",
+        "operationId": "list_1",
         "parameters": [
           {
             "name": "filter",
@@ -5778,6 +5907,43 @@
         }
       }
     },
+    "/work-orders/{workOrderId}/blocking-shortfalls": {
+      "get": {
+        "tags": [
+          "Work Order Readiness"
+        ],
+        "summary": "List the parts still blocking a work order from starting service",
+        "description": "Empty means nothing here is blocking it. Each entry is a part still short on this work order's reservations. Requires the MECHANIC, STOCKIST, or MANAGER role.",
+        "operationId": "getBlockingShortfalls",
+        "parameters": [
+          {
+            "name": "workOrderId",
+            "in": "path",
+            "description": "Work order id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BlockingShortfallInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/work-orders/{id}": {
       "get": {
         "tags": [
@@ -5799,16 +5965,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5831,6 +5987,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5871,16 +6037,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5903,6 +6059,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -5945,16 +6111,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id, or no history entry exists with the given entry id for it.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -5977,6 +6133,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id, or no history entry exists with the given entry id for it.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6009,16 +6175,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6041,6 +6197,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id, or it does not belong to the caller.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6081,16 +6247,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No work order exists with the given id, or it does not belong to the caller.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6113,6 +6269,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No work order exists with the given id, or it does not belong to the caller.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6155,6 +6321,36 @@
           }
         ],
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No work order exists with the given id, it does not belong to the caller, or no history entry exists with the given entry id.",
             "content": {
@@ -6164,7 +6360,39 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/work-orders/summary": {
+      "get": {
+        "tags": [
+          "Work Orders"
+        ],
+        "summary": "Count the work orders by statuses",
+        "description": "Returns the count of work orders in each status, can be filtered by date",
+        "operationId": "getWorkOrderStatusInfo",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6204,7 +6432,7 @@
           "Users"
         ],
         "summary": "Get a user by id",
-        "description": "Requires the WORKER role (any staff role — ATTENDANTMECHANIC, STOCKIST, or MANAGER; a CUSTOMER-only principal cannot call this).",
+        "description": "Requires the WORKER role (any staff role — ATTENDANT, MECHANIC, STOCKIST, or MANAGER; a CUSTOMER-only principal cannot call this).",
         "operationId": "getById_8",
         "parameters": [
           {
@@ -6219,16 +6447,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No user exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6251,6 +6469,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6283,16 +6511,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No purchase order exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6315,6 +6533,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No purchase order exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6381,6 +6609,78 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parts/stock": {
+      "get": {
+        "tags": [
+          "Part Stock"
+        ],
+        "summary": "List parts' derived stock, filterable by status (e.g. LOW, OUT).",
+        "operationId": "getAll_6",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PartStockFilterQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponsePartStockInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parts/stock/{partId}": {
+      "get": {
+        "tags": [
+          "Part Stock"
+        ],
+        "summary": "Get one part's derived stock standing.",
+        "operationId": "getByPartId",
+        "parameters": [
+          {
+            "name": "partId",
+            "in": "path",
+            "description": "Part id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartStockInfo"
                 }
               }
             }
@@ -6499,98 +6799,38 @@
           }
         ],
         "responses": {
+          "400": {
+            "description": "The request body or parameters failed validation.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid JWT bearer token was supplied.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No history entry exists with the given entry id for this aggregate.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/customers": {
-      "get": {
-        "tags": [
-          "Customers"
-        ],
-        "summary": "List customers",
-        "description": "Returns a paginated, filterable list of customer accounts. Requires the ATTENDANT or MANAGER role.",
-        "operationId": "list_1",
-        "parameters": [
-          {
-            "name": "filter",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/UserFilterQuery"
-            }
-          },
-          {
-            "name": "pageable",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Pageable"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "The request body or parameters failed validation.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid JWT bearer token was supplied.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller is authenticated but does not hold a required role.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6623,16 +6863,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Budget exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6662,6 +6892,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "No Budget exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -6673,7 +6913,7 @@
         ],
         "summary": "List appointments",
         "description": "Returns a paginated, filterable list of appointments. Requires the ATTENDANT or MANAGER role.",
-        "operationId": "getAll_6",
+        "operationId": "getAll_7",
         "parameters": [
           {
             "name": "pageable",
@@ -6747,16 +6987,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No appointment exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6779,6 +7009,16 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No appointment exists with the given id.",
             "content": {
               "*/*": {
                 "schema": {
@@ -6810,7 +7050,7 @@
                 "DROPOFF",
                 "PICKUP"
               ]
-          }
+            }
           },
           {
             "name": "date",
@@ -6926,26 +7166,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Budget or Budget line exists with the given id.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
           "400": {
             "description": "The request body or parameters failed validation.",
             "content": {
@@ -6968,6 +7188,26 @@
           },
           "403": {
             "description": "The caller is authenticated but does not hold a required role.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Budget or Budget line exists with the given id.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Budget is locked (not in DRAFT) and cannot be edited.",
             "content": {
               "*/*": {
                 "schema": {
@@ -7030,9 +7270,7 @@
           },
           "properties": {
             "type": "object",
-            "additionalProperties": {
-
-            }
+            "additionalProperties": {}
           }
         }
       },
@@ -7227,6 +7465,33 @@
           "vehicleType"
         ]
       },
+      "CreateStockPolicyCommand": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minQuantity": {
+            "type": "number"
+          },
+          "maxQuantity": {
+            "type": "number"
+          },
+          "vendorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoReorderEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "autoReorderEnabled",
+          "minQuantity",
+          "partId"
+        ]
+      },
       "CreateRepairServiceCommand": {
         "type": "object",
         "properties": {
@@ -7269,35 +7534,6 @@
         },
         "required": [
           "date"
-        ]
-      },
-      "CreateReorderRuleCommand": {
-        "type": "object",
-        "properties": {
-          "partId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "minQuantity": {
-            "type": "number"
-          },
-          "maxQuantity": {
-            "type": "number"
-          },
-          "vendorId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "enabled",
-          "maxQuantity",
-          "minQuantity",
-          "partId",
-          "vendorId"
         ]
       },
       "PlacePurchaseOrderCommand": {
@@ -7472,6 +7708,31 @@
           "phoneNumbers"
         ]
       },
+      "RegisterPhoneNumberCommand": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "MOBILE",
+              "COMMERCIAL",
+              "HOME",
+              "OTHER"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "phone",
+          "type"
+        ]
+      },
       "CreateWorkerCommand": {
         "type": "object",
         "properties": {
@@ -7501,31 +7762,6 @@
           "role",
           "startDate",
           "user"
-        ]
-      },
-      "RegisterPhoneNumberCommand": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "MOBILE",
-              "COMMERCIAL",
-              "HOME",
-              "OTHER"
-            ]
-          },
-          "phone": {
-            "type": "string",
-            "minLength": 1
-          },
-          "isPrimary": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "phone",
-          "type"
         ]
       },
       "RegisterWorkerCommand": {
@@ -8173,6 +8409,28 @@
           "vehicleType"
         ]
       },
+      "UpdateStockPolicyCommand": {
+        "type": "object",
+        "properties": {
+          "minQuantity": {
+            "type": "number"
+          },
+          "maxQuantity": {
+            "type": "number"
+          },
+          "vendorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoReorderEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "autoReorderEnabled",
+          "minQuantity"
+        ]
+      },
       "UpdateRepairServiceCommand": {
         "type": "object",
         "properties": {
@@ -8195,30 +8453,6 @@
           "estimatedSeconds",
           "name",
           "price"
-        ]
-      },
-      "UpdateReorderRuleCommand": {
-        "type": "object",
-        "properties": {
-          "minQuantity": {
-            "type": "number"
-          },
-          "maxQuantity": {
-            "type": "number"
-          },
-          "vendorId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "enabled",
-          "maxQuantity",
-          "minQuantity",
-          "vendorId"
         ]
       },
       "UpdatePartCommand": {
@@ -8310,29 +8544,48 @@
             "type": "string",
             "format": "uuid"
           },
+          "customerName": {
+            "type": "string"
+          },
           "vehicleId": {
             "type": "string",
             "format": "uuid"
+          },
+          "vehiclePlate": {
+            "type": "string"
+          },
+          "vehicleMake": {
+            "type": "string"
+          },
+          "vehicleModel": {
+            "type": "string"
           },
           "mechanicId": {
             "type": "string",
             "format": "uuid"
           },
+          "mechanicName": {
+            "type": "string"
+          },
           "status": {
-            "type": "string",
-            "enum": [
-              "RECEIVED",
-              "WAITING_DIAGNOSTICS",
-              "IN_DIAGNOSTICS",
-              "BUDGET_IN_DRAFT",
-              "WAITING_APPROVAL",
-              "APPROVED",
-              "REFUSED",
-              "IN_PROGRESS",
-              "FINISHED",
-              "WAITING_PICKUP",
-              "DELIVERED"
-            ]
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "RECEIVED",
+                "WAITING_DIAGNOSTICS",
+                "IN_DIAGNOSTICS",
+                "BUDGET_IN_DRAFT",
+                "WAITING_APPROVAL",
+                "APPROVED",
+                "REFUSED",
+                "IN_PROGRESS",
+                "FINISHED",
+                "WAITING_PICKUP",
+                "DELIVERED"
+              ]
+            },
+            "uniqueItems": true
           },
           "code": {
             "type": "string"
@@ -8344,6 +8597,24 @@
           "finishedAt": {
             "type": "string",
             "format": "date"
+          }
+        }
+      },
+      "BlockingShortfallInfo": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partSku": {
+            "type": "string"
+          },
+          "partName": {
+            "type": "string"
+          },
+          "quantityShort": {
+            "type": "number"
           }
         }
       },
@@ -8446,21 +8717,7 @@
           }
         }
       },
-      "RepairServiceFilterQuery": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "active": {
-            "type": "boolean"
-          }
-        }
-      },
-      "ReorderRuleFilterQuery": {
+      "StockPolicyFilterQuery": {
         "type": "object",
         "properties": {
           "partId": {
@@ -8471,7 +8728,21 @@
             "type": "string",
             "format": "uuid"
           },
-          "enabled": {
+          "autoReorderEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RepairServiceFilterQuery": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
             "type": "boolean"
           }
         }
@@ -8524,6 +8795,86 @@
           },
           "active": {
             "type": "boolean"
+          }
+        }
+      },
+      "PartStockFilterQuery": {
+        "type": "object",
+        "properties": {
+          "stockStatus": {
+            "type": "string",
+            "enum": [
+              "OUT",
+              "LOW",
+              "OK",
+              "NO_POLICY"
+            ]
+          }
+        }
+      },
+      "PageResponsePartStockInfo": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartStockInfo"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PartStockInfo": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "onHand": {
+            "type": "number"
+          },
+          "reserved": {
+            "type": "number"
+          },
+          "available": {
+            "type": "number"
+          },
+          "stockStatus": {
+            "type": "string",
+            "enum": [
+              "OUT",
+              "LOW",
+              "OK",
+              "NO_POLICY"
+            ]
+          },
+          "avgCost30d": {
+            "type": "number"
+          },
+          "avgCost90d": {
+            "type": "number"
+          },
+          "avgCost365d": {
+            "type": "number"
+          },
+          "avgCostAllTime": {
+            "type": "number"
           }
         }
       },

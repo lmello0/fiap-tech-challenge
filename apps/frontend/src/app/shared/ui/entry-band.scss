@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+/* The band is ruled into the table, not laid on top of it: it shares the plate's
+   ground, is bounded by the same hairlines, and casts nothing. */
+.band {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  background: color-mix(in srgb, var(--ref) 3%, var(--plate));
+}
+
+.band__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+
+.band__heading {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.band__endpoint {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: var(--step--2);
+}
+
+.band__body {
+  padding: 0.9rem 0.75rem;
+}
+
+.band__error {
+  padding: 0 0.75rem 0.75rem;
+}
+
+.band__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid var(--rule);
+  background: var(--plate-sunk);
+}
+
+.band__hint {
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}

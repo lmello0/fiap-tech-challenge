@@ -2,17 +2,46 @@
 
 What the Angular staff console needs from the API that the API does not provide yet.
 
-The console is **already built against these shapes**. Every one of them is optional at the
-TypeScript level and read through an adapter, so the UI renders correctly against the current
-contract too — it just renders less. Each item below says what degrades while it is missing.
+**The console is now wired to the live API** (`http://localhost:8080`, CORS-allowed for
+`http://localhost:4200`). Every read and every lifecycle action below goes to a real endpoint;
+nothing in live mode is stubbed. The wire types in `src/app/core/api/dto.ts` are transcribed
+one-for-one from the Java `record`s under `**/api/representation/`, and `core/data/mappers.ts`
+is the only thing that crosses between wire and domain.
 
-Ordered by how much the console depends on it.
+Each item below says what degrades while it is missing.
+
+> **Status of this document — updated after wiring.**
+> Item 1 has **landed** and is consumed. Items 2–4 were closed a different way: rather than the
+> API enriching its DTOs, the console resolves ids client-side (`core/data/enrich.ts`), bulk-first
+> with a per-id fallback. That is the agreed N+1 and it is good enough at shop scale; the items
+> are kept because the server-side join is still the better answer if list sizes grow.
 
 ---
 
-## 1. Shortfall read endpoint — blocking, and not merely enrichment
+## 1. Shortfall read endpoint — ✅ **landed and consumed**
 
-**Status: the capability does not exist in the REST surface at all.**
+**Status: shipped as `GET /work-orders/{workOrderId}/blocking-shortfalls`.**
+
+The endpoint returns a bare array of `BlockingShortfallInfo`
+(`partId`, `partSku`, `partName`, `quantityShort`) and is guarded by
+`hasAnyRole('MECHANIC', 'STOCKIST', 'MANAGER')`.
+
+The console calls it for every `APPROVED` work order — the only status with stock consumption as
+its next step — and joins `available` from the `/parts/stock` standing it already holds, so the
+board shows "need N, have M, short K" without a second round trip per part.
+
+Two notes for whoever revisits this:
+
+- **An `ATTENDANT` is refused (403).** The store reads that as *unknown*, not as *clear*: the row
+  simply carries no shortfall band. Widening the role to match the work order read would let an
+  attendant see why a job is stuck, which is arguably their business.
+- **The batch form is still worth having.** The board currently issues one request per approved
+  order. `GET /work-orders/blocking-shortfalls?ids=…` would collapse that to one.
+
+The original proposal, kept for reference:
+
+<details>
+<summary>Original request (superseded)</summary>
 
 Shortfall is modelled internally (`PartReservation`, `InsufficientStockException`,
 `PartReservationService`) but is never projected onto a representation. Today the only way to
@@ -51,16 +80,22 @@ GET /work-orders/blocking?ids=<uuid>,<uuid>,…     # batch, for the board
 
 Roles: same as the work order read — `ATTENDANT`, `MECHANIC`, `MANAGER`.
 
-**While missing:** the adapter returns `blocked: false` with an empty list, so the board shows
-*nothing* rather than falsely claiming everything is clear. The reactive path — a 409 from
-`service/start` — stays the authority, and the console surfaces the error on the failed attempt.
+</details>
 
-Frontend contract: `WorkOrderBlock` / `Shortfall` in `src/app/core/domain/models.ts`;
-adapter seam is `ShopStore.blockFor()`.
+`inboundPurchaseOrderCode` / `inboundEta` were **not** shipped, so the board no longer claims
+anything about inbound cover. Frontend contract: `WorkOrderBlock` / `Shortfall` in
+`src/app/core/domain/models.ts`; consumed by `ShopStore.refreshBlocks()` / `blockFor()`.
 
 ---
 
-## 2. `WorkOrderInfo` — resolve the identity UUIDs
+## 2. `WorkOrderInfo` — resolve the identity UUIDs — *worked around, still wanted*
+
+> **Now handled client-side.** `core/data/enrich.ts` bulk-loads `/customers` and `/vehicles`
+> (one page each) and resolves anything left over per id, caching for the session and collapsing
+> concurrent callers onto one request. A mechanic is resolved through `GET /users/{id}` — which
+> any staff principal may call — rather than `/workers/{id}`, which is `MANAGER`-only.
+> This is fine at shop scale. It stops being fine when the shop outgrows one page of each list.
+
 
 `WorkOrderInfo` returns `customerId`, `vehicleId` and `assignedMechanicId` as bare UUIDs. A board
 row cannot show *who* and *which car* without an N+1 fan-out per row.
@@ -83,7 +118,7 @@ board a service advisor can read across and one they have to click through.
 
 ---
 
-## 3. `AppointmentInfo` — same treatment
+## 3. `AppointmentInfo` — same treatment — *same workaround applies*
 
 Add `customerName`, `vehicleLabel`, `vehiclePlate`, and `workOrderCode` (for pickups).
 
@@ -95,7 +130,12 @@ exactly backwards from how a counter is actually worked.
 
 ---
 
-## 4. `StockMovementInfo.referenceId` — resolve the reference
+## 4. `StockMovementInfo.referenceId` — resolve the reference — *still open*
+
+> Unresolved: a movement's `referenceId` is a bare UUID that may point at a purchase order **or**
+> a work order, and nothing on the wire says which. The console cannot label it without guessing,
+> so it prints the raw reference. This is the one enrichment gap with no client-side workaround.
+
 
 `referenceId` points at either a purchase order or a work order with no way to tell which, and no
 human-readable handle.
@@ -108,33 +148,59 @@ single most useful column in a stock audit.
 
 ---
 
-## 5. `WorkOrderFilterQuery` — multi-status and free-text search
+## 5. `WorkOrderFilterQuery` — ✅ **landed and consumed**
 
-Currently `status` accepts one value. A shop status board is almost never filtered to exactly one
-step; the useful filters are "everything waiting on a customer" or "everything blocked".
+The board sends its whole query to the API and narrows nothing itself. Filters are **ANDed**, so one
+free-text box cannot fan out across several columns — it would return nothing. The board therefore
+names the column it is looking up ("look up by Plate / Customer / Make / Model / Order code /
+Mechanic"), which is how a printed index is used, and the placeholder shows an example value rather
+than repeating the label.
 
-**Add:**
-- `statuses: List<WorkOrderStatus>` (keep `status` for compatibility)
-- `search: String` matching across customer name and licence plate
+**Verified against the running server, 24 Aug 2026** — each field sent on its own and its answer
+compared with the unfiltered result:
 
-**While missing:** the console filters client-side over the current page, which is correct only
-while the whole board fits in one page. It will silently under-report once a shop passes a few
-hundred live orders.
+| Field | State |
+|---|---|
+| `status` | ✅ single and multiple values |
+| `code` | ✅ case-insensitive substring |
+| `customerName` | ✅ case-insensitive substring |
+| `vehiclePlate` | ✅ case-insensitive substring |
+| `vehicleMake` | ✅ case-insensitive substring |
+| `vehicleModel` | ✅ case-insensitive substring |
+| `mechanicName` | ✅ case-insensitive substring |
+
+Punctuation is stripped from a plate term before sending: plates are stored bare, and an operator
+reading one off a document may type the separator printed on it. Nothing else is transformed.
+
+Two consequences worth knowing:
+
+- **The detail view loads its own order** (`ShopStore.ensureWorkOrder`). It is reachable by link, so
+  it cannot assume the board's current query happens to include it.
+- **Demo mode applies the same narrowing locally**, since it has no API behind it. The two paths
+  agree on what each filter means.
 
 ---
 
-## 6. Aggregate status counts
+## 6. Aggregate status counts — ✅ **landed and consumed**
 
-The board prints a count per lifecycle step. Deriving those from one page of results is wrong at
-any real volume.
+The board's step filter prints the database's own counts rather than counting the rows it happens to
+hold, so they stay right at any volume. Called unbounded; `start`/`end` are genuinely optional and a
+window correctly narrows the counts.
 
-**Proposed:** `GET /work-orders/summary` → `{ "RECEIVED": 4, "WAITING_DIAGNOSTICS": 2, … }`
+`ShopStore.statusCounts` still falls back to counting the loaded page if the endpoint is ever
+refused, and the board says so in its sub-line ("step counts are of loaded rows") so nobody reads an
+approximate count as exact. That failure is deliberately **not** raised on the API fault band, unlike
+every other read: there is a correct fallback, and alarming the operator about something they cannot
+act on and that costs them nothing would be noise.
 
-**While missing:** counts are derived from the loaded page and are accurate only for small shops.
+## 7. Open question — Mechanic visibility of customer and vehicle — ✅ **answered**
 
----
+> **Resolved in the current code.** `CustomerController.list/getById` is annotated
+> `hasAnyRole('ATTENDANT', 'MANAGER', 'MECHANIC')`, so a mechanic *can* read customers, and
+> `GET /users/{id}` is open to any `WORKER`. The console's nav still omits the Customers and
+> Vehicles sections for a mechanic — those remain attendant/manager sections by design — but a
+> mechanic's board now names the customer and vehicle on their own jobs, which was the actual need.
 
-## 7. Open question — Mechanic visibility of customer and vehicle
 
 `CustomerController` and `VehicleController` admit `ATTENDANT` and `MANAGER` but **not**
 `MECHANIC`. A mechanic therefore cannot resolve the owner or the vehicle record of a work order
@@ -151,6 +217,112 @@ question from browsing, and the console would use it if it existed.
 
 ---
 
+## 8. Two lifecycle steps the console could not perform — ✅ **both closed**
+
+### 8a. `POST /work-orders/{id}/diagnostics/finish` — ✅ **form built**
+
+The detail view now carries a diagnosis band that collects the written diagnosis and seeds the
+opening budget lines, showing each part's shelf position (`10 available → 9 after reserving`)
+against the line that causes it. One call records the diagnosis and drafts the budget.
+
+### 8b. `POST /work-orders/{id}/diagnostics/start` — ✅ **mechanic picker built**
+
+Starting diagnostics now opens a band with a mechanic picker. `/workers` is `MANAGER`-only, so a
+non-manager sees only themselves in the list and the band says why — that is the role matrix, not
+a gap.
+
+**The whole lifecycle is now performable from the console**, verified end to end against the live
+API: intake → diagnostics → diagnosis and budget → send → *(customer approves)* → start service →
+finish → ready for pickup → delivered. Step 6 is the customer's alone and correctly has no staff
+action.
+
+---
+
+## 9. Records — ✅ **create, update and deactivate built**
+
+The console was read-and-lifecycle only; signed in as a manager against an empty database there was
+nothing you could do. It now writes:
+
+| Section | Create | Update | Deactivate |
+|---|---|---|---|
+| Customers | `POST /customers` | `PATCH /customers/{id}` | soft-delete + reactivate |
+| Vehicles | `POST /vehicles` | `PATCH /vehicles/{id}` | soft-delete |
+| Parts | `POST /parts` | `PATCH /parts/{id}` | withdraw |
+| Stock | `POST /parts/{id}/stock/adjustments` | — | — |
+| Labour | `POST /services` | `PATCH /services/{id}` | withdraw |
+| Work orders | `POST /work-orders` | lifecycle only | — |
+
+Editing happens in a **ruled entry band**: the row unfolds in place on the same grid, and creating
+opens the same band as a blank line at the head of the register. There are no dialogs anywhere,
+including for confirmations — the visual world forbids floating panels.
+
+Pass 2 added the rest:
+
+| Section | Create | Update | Remove |
+|---|---|---|---|
+| Vendors | `POST /vendors` | `PATCH /vendors/{id}` | deactivate |
+| Purchase orders | `POST /purchase-orders` | receipts (`/receipts`) | cancel |
+| Reorder thresholds | `POST /stock-policies` | `PATCH /stock-policies/{id}` | **delete** (a rule, not a record) |
+| Workers | `POST /auth/register/worker` | `PATCH /workers/{id}` | terminate |
+| Shop hours | — | `PUT /scheduling/settings` | — |
+| Closures | `POST /scheduling/closures` | — | `DELETE .../{date}` |
+| Appointments | `POST /appointments/dropoff/on-behalf` | reschedule | cancel |
+
+Notes on two of them:
+
+- **A reorder threshold opens on the part's own row**, not in a separate register — it belongs to
+  the part, and the band states the part's current availability so the operator can see whether the
+  threshold they are setting fires immediately.
+- **Receiving is per line**, pre-filled with what is still owed at the price it was ordered at, and
+  says plainly that the unit cost entered moves the part's moving-average cost. Partial receipts
+  settle the order at `PARTIALLY_RECEIVED` and stay receivable.
+
+The whole console is now writable. Nothing in it is stubbed.
+
+### Open backend items found while building this
+
+0. **`guestEmail` on `POST /appointments/dropoff/on-behalf` is load-bearing but declared optional.**
+   The XOR guard (customer *or* guest details, not both, not neither) works correctly and answers a
+   clean 400 either way. Inside the guest branch, though, `guestEmail` specifically is required:
+
+   | Payload | Result |
+   |---|---|
+   | `guestEmail` only | ✅ 201 |
+   | `guestName` + `guestPhone`, no email | ❌ **500** |
+   | customer *and* guest details | ✅ 400, with your message |
+   | neither | ✅ 400, with your message |
+
+   The booking-management token is emailed to the guest, so a booking with nowhere to send it fails
+   downstream rather than being rejected up front. It wants `@NotBlank` on `guestEmail` (or an
+   explicit 400). The console requires it in the form and says why, so an operator never reaches
+   the 500.
+
+1. **`actorLabel` carries an authority, not a name.** History entries come back with
+   `actorLabel: "ROLE_CUSTOMER"` for `USER` actors and a class name (`WorkOrderWaitingPickup`) for
+   `SYSTEM` ones. Neither identifies a person, so the timeline renders "Recorded by a customer"
+   rather than putting a constant where a name belongs. A user's display name here would make the
+   History plate genuinely useful. Related: for a dual-facet user the resolver picks the customer
+   facet even when the person is acting as staff, so staff actions are attributed to the customer.
+2. **A batch shortfall read** (item 1) would still collapse the board's per-order requests.
+
+---
+
+## 10. Seed data — the database is empty
+
+Not a contract gap, but it blocks anyone reviewing the console against live data. A fresh
+database contains only the bootstrap `MANAGER` and nothing else: no work orders, parts, services,
+vendors, customers or vehicles. Every live screen therefore renders its empty state, correctly but
+uninformatively.
+
+The console ships a **demo mode** (the button on the sign-in page) that reads a synthetic shop from
+`core/data/demo-data.ts` so the screens can be reviewed regardless. It is announced in a standing
+band, signs in to nothing and calls no API — it is never entered automatically, and never
+substituted for a failed request.
+
+A seeding routine, or a Flyway migration behind a `dev` profile, would remove the need for it.
+
+---
+
 ## Not requested
 
 For the avoidance of doubt, the console does **not** need any of these, because the domain already
@@ -163,3 +335,5 @@ answers them well:
 - The lifecycle and its role gating are fully derivable from `WorkOrderStatus` plus the
   `@PreAuthorize` annotations; they are transcribed in
   `src/app/core/domain/lifecycle.ts` and need no endpoint.
+
+---

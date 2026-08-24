@@ -5,17 +5,49 @@
       <p class="board__sub">
         {{ rows().length }} {{ rows().length === 1 ? 'job' : 'jobs' }} on the board ·
         {{ blockedRows().length }} blocked · {{ waitingOnCustomer() }} waiting on a customer
+        @if (loading()) {
+          <span class="board__loading">· reading…</span>
+        } @else if (!countsAreExact()) {
+          <span
+            class="board__loading"
+            title="The status counts endpoint did not answer, so the step counts below are of the rows loaded here"
+            >· step counts are of loaded rows</span
+          >
+        }
       </p>
     </div>
 
     <div class="board__filters">
+      @if (canOpen()) {
+        <button
+          class="btn btn--primary"
+          type="button"
+          [disabled]="opening() || isDemo() || !canStartIntake()"
+          (click)="openIntake()"
+        >
+          Open work order
+        </button>
+      }
+
+      <!-- The API ANDs its filter fields, so the operator names the column
+           they are looking up rather than throwing one term at all of them. -->
+      <label class="field board__lookup">
+        <span class="sr-only">Look up by</span>
+        <select class="input board__lookup-select" [value]="lookupField()" (change)="onLookupField($event)">
+          @for (f of lookupFields; track f.id) {
+            <option [value]="f.id" [selected]="f.id === lookupField()">{{ f.label }}</option>
+          }
+        </select>
+      </label>
+
       <label class="field board__search">
-        <span class="sr-only">Search by order code, customer, or plate</span>
+        <span class="sr-only">Look up a work order by {{ lookupLabel() }}</span>
         <span class="board__search-icon" aria-hidden="true"><app-icon name="search" [size]="15" /></span>
         <input
           class="input board__search-input"
           type="search"
-          placeholder="Order, customer or plate"
+          [placeholder]="lookupExample()"
+          [title]="lookupHint"
           [value]="query()"
           (input)="onQuery($event)"
         />
@@ -74,6 +106,64 @@
           </tr>
         </thead>
         <tbody>
+          @if (opening()) {
+            <tr class="board__band-row">
+              <td colspan="9">
+                <app-entry-band
+                  heading="Step 1 — receive a vehicle"
+                  endpoint="POST /work-orders"
+                  saveLabel="Open work order"
+                  [busy]="busy()"
+                  [error]="bandError()"
+                  [canSave]="f().valid()"
+                  hint="The job appears on the board at step 1."
+                  (save)="openWorkOrder()"
+                  (cancel)="closeIntake()"
+                >
+                  <div class="band__grid">
+                    <app-form-field
+                      label="Customer"
+                      [errors]="f.customerId().errors()"
+                      [touched]="f.customerId().touched()"
+                    >
+                      <select class="input" [formField]="f.customerId" (change)="onOwnerChange()">
+                        <option value="" disabled>Choose the customer…</option>
+                        @for (c of customers(); track c.id) {
+                          <option [value]="c.id">{{ c.name }}</option>
+                        }
+                      </select>
+                    </app-form-field>
+
+                    <app-form-field
+                      label="Vehicle"
+                      [errors]="f.vehicleId().errors()"
+                      [touched]="f.vehicleId().touched()"
+                      [help]="ownedVehicles().length === 0 ? 'This customer has no active vehicle on record.' : ''"
+                    >
+                      <select class="input" [formField]="f.vehicleId">
+                        <option value="" disabled>Choose the vehicle…</option>
+                        @for (v of ownedVehicles(); track v.id) {
+                          <option [value]="v.id">
+                            {{ v.licensePlate }} — {{ v.make }} {{ v.model }}
+                          </option>
+                        }
+                      </select>
+                    </app-form-field>
+
+                    <app-form-field
+                      label="Reported complaint"
+                      [wide]="true"
+                      [errors]="f.complaint().errors()"
+                      [touched]="f.complaint().touched()"
+                      help="What the customer said, not what you suspect — the diagnosis comes later."
+                    >
+                      <textarea class="input" rows="2" [formField]="f.complaint"></textarea>
+                    </app-form-field>
+                  </div>
+                </app-entry-band>
+              </td>
+            </tr>
+          }
           @for (row of rows(); track row.order.id; let i = $index) {
             <tr class="board__row" [class.is-blocked]="row.block.blocked">
               <td class="shrink board__n token">{{ i + 1 }}</td>
@@ -128,12 +218,7 @@
                           <strong class="num">{{ s.available }}</strong>, short
                           <strong class="num">{{ s.short }}</strong
                           >.
-                          @if (s.inboundPurchaseOrderCode) {
-                            Inbound on <span class="token">{{ s.inboundPurchaseOrderCode }}</span
-                            >.
-                          } @else {
-                            No purchase order covers it yet.
-                          }
+
                         </span>
                       }
                     </div>
@@ -160,18 +245,52 @@
           } @empty {
             <tr>
               <td colspan="9">
-                <div class="empty">
-                  <p class="empty__title">No jobs match this filter</p>
-                  <p>
-                    The board is showing nothing because of the filters above, not because the shop is
-                    empty.
-                  </p>
-                  <p class="board__empty-action">
-                    <button class="btn btn--sm" type="button" (click)="clearFilters()">
-                      Clear filters
-                    </button>
-                  </p>
-                </div>
+                <!-- Two different nothings. A filter that excludes every row is a
+                     step the operator took and can undo; a shop with no work
+                     orders at all is a fact about the shop. Saying the first when
+                     the second is true sends someone hunting for a filter that
+                     was never set. -->
+                @if (isFiltered()) {
+                  <div class="empty">
+                    <p class="empty__title">No jobs match this filter</p>
+                    <p>
+                      Nothing on record matches
+                      @if (query().trim()) {
+                        {{ lookupLabel().toLowerCase() }} “{{ query().trim() }}”
+                      } @else {
+                        the filters above
+                      }.
+                    </p>
+                    <p class="board__empty-action">
+                      <button class="btn btn--sm" type="button" (click)="clearFilters()">
+                        Clear filters
+                      </button>
+                    </p>
+                  </div>
+                } @else {
+                  <div class="empty">
+                    <p class="empty__title">No work orders on record</p>
+                    <p>
+                      The shop has no work orders at all yet — this is not a filter. One is opened
+                      when an attendant checks in a drop-off appointment, or from the counter against
+                      a customer and their vehicle.
+                    </p>
+                    @if (canOpen() && !isDemo()) {
+                      @if (canStartIntake()) {
+                        <p class="board__empty-action">
+                          <button class="btn btn--sm btn--primary" type="button" (click)="openIntake()">
+                            Open the first work order
+                          </button>
+                        </p>
+                      } @else {
+                        <p class="board__empty-action board__empty-note">
+                          A work order is opened against a customer's vehicle, and the shop has
+                          neither yet. Start in section 7.
+                        </p>
+                      }
+                    }
+                  </div>
+                }
               </td>
             </tr>
           }

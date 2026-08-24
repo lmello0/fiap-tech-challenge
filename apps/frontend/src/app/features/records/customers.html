@@ -1,0 +1,303 @@
+<div class="rec">
+  <header class="rec__head">
+    <div>
+      <h1 class="rec__title">Customers</h1>
+      <p class="rec__sub">{{ rows().length }} on file · {{ deactivated().length }} deactivated</p>
+    </div>
+
+    <div class="rec__tools">
+      <label class="field">
+        <span class="sr-only">Search customers</span>
+        <input
+          class="input rec__search"
+          type="search"
+          placeholder="Name, email or document"
+          [value]="q()"
+          (input)="onQuery($event)"
+        />
+      </label>
+      @if (canWrite()) {
+        <button
+          class="btn btn--primary"
+          type="button"
+          [disabled]="open() === 'new' || isDemo()"
+          (click)="openNew()"
+        >
+          New customer
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (notice(); as message) {
+    <div class="rec__notice">
+      <app-callout tier="note" heading="On file">
+        {{ message }}
+        <button class="btn btn--quiet btn--sm rec__dismiss" type="button" (click)="dismissNotice()">
+          Dismiss
+        </button>
+      </app-callout>
+    </div>
+  }
+
+  <div class="rec__notice">
+    <app-callout tier="note">
+      Deactivation is a reversible soft-delete of the customer facet only. It never touches a worker
+      facet the same user might also hold — someone can be a deactivated customer and an active
+      mechanic at once.
+    </app-callout>
+  </div>
+
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">7.1 — Customer accounts</p>
+      <p class="plate__meta label">Attendant or manager</p>
+    </div>
+    <div class="mt-wrap">
+      <table class="mt">
+        <caption class="sr-only">Customers with contact details and facet state.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Document</th>
+            <th scope="col">Email</th>
+            <th scope="col">Phone</th>
+            <th scope="col" class="r shrink">Vehicles</th>
+            <th scope="col" class="shrink">Facet</th>
+            @if (canWrite()) {
+              <th scope="col" class="shrink r">Entry</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          <!-- The blank line: a new entry is written at the head of the register,
+               on the same grid as every record already in it. -->
+          @if (open() === 'new') {
+            <tr class="rec__band-row">
+              <td [attr.colspan]="canWrite() ? 7 : 6">
+                <app-entry-band
+                  heading="New customer"
+                  endpoint="POST /customers"
+                  saveLabel="Record customer"
+                  [busy]="busy()"
+                  [error]="bandError()"
+                  [canSave]="f().valid()"
+                  hint="No password is set — the customer signs in via password reset."
+                  (save)="save()"
+                  (cancel)="close()"
+                >
+                  <ng-container *ngTemplateOutlet="fields; context: { creating: true }" />
+                </app-entry-band>
+              </td>
+            </tr>
+          }
+
+          @for (c of rows(); track c.id) {
+            <tr [class.is-inactive]="!c.active" [class.is-editing]="open() === c.id">
+              <td class="rec__name">{{ c.name }}</td>
+              <td>
+                <span class="token">{{ doc(c) }}</span>
+                <span class="rec__doctype">{{ c.documentType }}</span>
+              </td>
+              <td class="rec__muted">{{ c.email }}</td>
+              <td class="rec__muted">{{ phone(c) }}</td>
+              <td class="r num">{{ vehicleCount(c.id) }}</td>
+              <td class="shrink">
+                <span class="rec__state" [class.is-off]="!c.active">{{
+                  c.active ? 'Active' : 'Deactivated'
+                }}</span>
+              </td>
+              @if (canWrite()) {
+                <td class="shrink r">
+                  <div class="rec__actions">
+                  <button
+                    class="btn btn--sm btn--quiet"
+                    type="button"
+                    [disabled]="isDemo()"
+                    (click)="open() === c.id ? close() : openEdit(c)"
+                  >
+                    {{ open() === c.id ? 'Close' : 'Edit' }}
+                  </button>
+                  @if (c.active) {
+                    <button
+                      class="btn btn--sm btn--danger"
+                      type="button"
+                      [disabled]="isDemo()"
+                      (click)="confirming.set(confirming() === c.id ? null : c.id)"
+                    >
+                      Deactivate
+                    </button>
+                  } @else {
+                    <button
+                      class="btn btn--sm"
+                      type="button"
+                      [disabled]="isDemo() || busy()"
+                      (click)="setActive(c, true)"
+                    >
+                      Reactivate
+                    </button>
+                  }
+                  </div>
+                </td>
+              }
+            </tr>
+
+            @if (open() === c.id) {
+              <tr class="rec__band-row">
+                <td colspan="7">
+                  <app-entry-band
+                    [heading]="'Editing — ' + c.name"
+                    [endpoint]="'PATCH /customers/' + c.id.slice(0, 8) + '…'"
+                    saveLabel="Save changes"
+                    [busy]="busy()"
+                    [error]="bandError()"
+                    [canSave]="f().valid()"
+                    (save)="save()"
+                    (cancel)="close()"
+                  >
+                    <ng-container *ngTemplateOutlet="fields; context: { creating: false }" />
+                  </app-entry-band>
+                </td>
+              </tr>
+            }
+
+            <!-- Confirmation is part of the register, not a dialog over it. -->
+            @if (confirming() === c.id) {
+              <tr class="rec__band-row">
+                <td colspan="7">
+                  <app-entry-band
+                    [heading]="'Deactivate ' + c.name + '?'"
+                    [endpoint]="'DELETE /customers/' + c.id.slice(0, 8) + '…'"
+                    saveLabel="Deactivate customer"
+                    busyLabel="Deactivating…"
+                    tone="danger"
+                    [busy]="busy()"
+                    (save)="setActive(c, false)"
+                    (cancel)="confirming.set(null)"
+                  >
+                    <p class="rec__confirm">
+                      Their customer facet stops working and their vehicles stay on record. Nothing
+                      is deleted, and any manager or attendant can reactivate them.
+                      @if (vehicleCount(c.id) > 0) {
+                        <strong
+                          >{{ vehicleCount(c.id) }} vehicle{{
+                            vehicleCount(c.id) === 1 ? '' : 's'
+                          }}
+                          remain on file.</strong
+                        >
+                      }
+                    </p>
+                  </app-entry-band>
+                </td>
+              </tr>
+            }
+          } @empty {
+            @if (open() !== 'new') {
+              <tr>
+                <td [attr.colspan]="canWrite() ? 7 : 6">
+                  @if (store.customers().length) {
+                    <div class="empty">
+                      <p class="empty__title">No customer matches that search</p>
+                      <p>Try a partial name, an email, or the document without punctuation.</p>
+                    </div>
+                  } @else {
+                    <div class="empty">
+                      <p class="empty__title">No customers on file</p>
+                      <p>
+                        A customer is the first record the shop needs — a vehicle hangs off one, and
+                        a work order hangs off a vehicle.
+                      </p>
+                      @if (canWrite() && !isDemo()) {
+                        <p class="rec__empty-action">
+                          <button class="btn btn--sm btn--primary" type="button" (click)="openNew()">
+                            Record the first customer
+                          </button>
+                        </p>
+                      }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- One set of blanks, used by both the new line and the edit band. -->
+<ng-template #fields let-creating="creating">
+  <div class="band__grid">
+    <app-form-field
+      label="First name"
+      [errors]="f.firstName().errors()"
+      [touched]="f.firstName().touched()"
+    >
+      <input class="input" type="text" autocomplete="off" [formField]="f.firstName" />
+    </app-form-field>
+
+    <app-form-field
+      label="Last name"
+      [optional]="true"
+      [errors]="f.lastName().errors()"
+      [touched]="f.lastName().touched()"
+    >
+      <input class="input" type="text" autocomplete="off" [formField]="f.lastName" />
+    </app-form-field>
+
+    <app-form-field
+      label="Email"
+      [errors]="f.email().errors()"
+      [touched]="f.email().touched()"
+      [help]="creating ? '' : 'The email cannot be changed after the record exists.'"
+    >
+      <input
+        class="input"
+        type="email"
+        autocomplete="off"
+        [formField]="f.email"
+      />
+    </app-form-field>
+
+    <app-form-field label="Document type">
+      <select class="input" [formField]="f.documentType">
+        <option value="CPF">CPF — an individual</option>
+        <option value="CNPJ">CNPJ — a company</option>
+      </select>
+    </app-form-field>
+
+    <app-form-field
+      label="Document"
+      [errors]="f.documentCode().errors()"
+      [touched]="f.documentCode().touched()"
+      [help]="creating ? 'Punctuation is fine — it is stripped before sending.' : 'The document cannot be changed after the record exists.'"
+    >
+      <input
+        class="input"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        [formField]="f.documentCode"
+      />
+    </app-form-field>
+
+    <app-form-field label="Phone type">
+      <select class="input" [formField]="f.phoneType">
+        <option value="MOBILE">Mobile</option>
+        <option value="COMMERCIAL">Commercial</option>
+        <option value="HOME">Home</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </app-form-field>
+
+    <app-form-field
+      label="Phone"
+      [errors]="f.phone().errors()"
+      [touched]="f.phone().touched()"
+      help="Area code plus number."
+    >
+      <input class="input" type="tel" autocomplete="off" [formField]="f.phone" />
+    </app-form-field>
+  </div>
+</ng-template>

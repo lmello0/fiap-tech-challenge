@@ -52,9 +52,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-001',
     name: 'Rafael Nogueira',
     email: 'rafael.nogueira@oficina.example',
+    phone: '11987650000',
     role: 'ATTENDANT',
     hiredAt: '2023-02-06',
-    startedAt: '2023-02-13',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -62,9 +63,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-002',
     name: 'Beatriz Salgado',
     email: 'beatriz.salgado@oficina.example',
+    phone: '11987650000',
     role: 'MECHANIC',
     hiredAt: '2021-09-01',
-    startedAt: '2021-09-15',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -72,9 +74,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-003',
     name: 'Cláudia Ferraz',
     email: 'claudia.ferraz@oficina.example',
+    phone: '11987650000',
     role: 'MANAGER',
     hiredAt: '2019-04-22',
-    startedAt: '2019-04-22',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -82,9 +85,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-004',
     name: 'Dario Pinheiro',
     email: 'dario.pinheiro@oficina.example',
+    phone: '11987650000',
     role: 'STOCKIST',
     hiredAt: '2022-11-14',
-    startedAt: '2022-11-21',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -92,9 +96,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-005',
     name: 'Emerson Vidal',
     email: 'emerson.vidal@oficina.example',
+    phone: '11987650000',
     role: 'MECHANIC',
     hiredAt: '2020-06-08',
-    startedAt: '2020-06-15',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -102,9 +107,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-006',
     name: 'Helena Braga',
     email: 'helena.braga@oficina.example',
+    phone: '11987650000',
     role: 'MECHANIC',
     hiredAt: '2024-03-04',
-    startedAt: '2024-03-11',
+    registration: null,
     terminatedAt: null,
     active: true,
   },
@@ -112,9 +118,10 @@ export const DEMO_WORKERS: Worker[] = [
     id: 'w-007',
     name: 'Tiago Assunção',
     email: 'tiago.assuncao@oficina.example',
+    phone: '11987650000',
     role: 'ATTENDANT',
     hiredAt: '2022-01-10',
-    startedAt: '2022-01-17',
+    registration: null,
     terminatedAt: '2026-05-29',
     active: false,
   },
@@ -125,16 +132,16 @@ export const DEMO_WORKERS: Worker[] = [
    -------------------------------------------------------------------------- */
 
 export const DEMO_CUSTOMERS: Customer[] = [
-  { id: 'c-001', name: 'Marina Albuquerque', email: 'marina.alb@example.com', document: '384.207.115-60', documentType: 'CPF', phone: '(11) 98214-7730', active: true, vehicleCount: 2, createdAt: '2024-03-18' },
-  { id: 'c-002', name: 'Otávio Bastos', email: 'otavio.bastos@example.com', document: '229.884.370-11', documentType: 'CPF', phone: '(11) 99652-1184', active: true, vehicleCount: 1, createdAt: '2023-11-02' },
-  { id: 'c-003', name: 'Transportes Vale Verde LTDA', email: 'frota@valeverde.example', document: '18.442.907/0001-35', documentType: 'CNPJ', phone: '(11) 3387-2200', active: true, vehicleCount: 4, createdAt: '2022-07-25' },
-  { id: 'c-004', name: 'Juliana Kowalski', email: 'ju.kowalski@example.com', document: '551.330.298-04', documentType: 'CPF', phone: '(11) 97418-3320', active: true, vehicleCount: 1, createdAt: '2025-01-14' },
-  { id: 'c-005', name: 'Fernando Sequeira', email: 'f.sequeira@example.com', document: '702.115.446-83', documentType: 'CPF', phone: '(11) 98890-5512', active: true, vehicleCount: 2, createdAt: '2024-09-06' },
-  { id: 'c-006', name: 'Priscila Tavares', email: 'pri.tavares@example.com', document: '146.923.507-22', documentType: 'CPF', phone: '(11) 99105-8847', active: false, vehicleCount: 1, createdAt: '2023-05-30' },
-  { id: 'c-007', name: 'Gustavo Rennó', email: 'gustavo.renno@example.com', document: '830.664.209-77', documentType: 'CPF', phone: '(11) 98337-2091', active: true, vehicleCount: 1, createdAt: '2025-06-11' },
-  { id: 'c-008', name: 'Adriana Peçanha', email: 'a.pecanha@example.com', document: '415.778.320-58', documentType: 'CPF', phone: '(11) 99728-4416', active: true, vehicleCount: 1, createdAt: '2024-12-03' },
-  { id: 'c-009', name: 'Leonardo Vasques', email: 'leo.vasques@example.com', document: '967.204.881-19', documentType: 'CPF', phone: '(11) 98561-7734', active: true, vehicleCount: 2, createdAt: '2023-08-21' },
-  { id: 'c-010', name: 'Camila Ostrowski', email: 'c.ostrowski@example.com', document: '273.590.164-06', documentType: 'CPF', phone: '(11) 99483-1157', active: true, vehicleCount: 1, createdAt: '2025-04-02' },
+  { id: 'c-001', name: 'Marina Albuquerque', email: 'marina.alb@example.com', document: '384.207.115-60', documentType: 'CPF', phone: '(11) 98214-7730', active: true, createdAt: '2024-03-18' },
+  { id: 'c-002', name: 'Otávio Bastos', email: 'otavio.bastos@example.com', document: '229.884.370-11', documentType: 'CPF', phone: '(11) 99652-1184', active: true, createdAt: '2023-11-02' },
+  { id: 'c-003', name: 'Transportes Vale Verde LTDA', email: 'frota@valeverde.example', document: '18.442.907/0001-35', documentType: 'CNPJ', phone: '(11) 3387-2200', active: true, createdAt: '2022-07-25' },
+  { id: 'c-004', name: 'Juliana Kowalski', email: 'ju.kowalski@example.com', document: '551.330.298-04', documentType: 'CPF', phone: '(11) 97418-3320', active: true, createdAt: '2025-01-14' },
+  { id: 'c-005', name: 'Fernando Sequeira', email: 'f.sequeira@example.com', document: '702.115.446-83', documentType: 'CPF', phone: '(11) 98890-5512', active: true, createdAt: '2024-09-06' },
+  { id: 'c-006', name: 'Priscila Tavares', email: 'pri.tavares@example.com', document: '146.923.507-22', documentType: 'CPF', phone: '(11) 99105-8847', active: false, createdAt: '2023-05-30' },
+  { id: 'c-007', name: 'Gustavo Rennó', email: 'gustavo.renno@example.com', document: '830.664.209-77', documentType: 'CPF', phone: '(11) 98337-2091', active: true, createdAt: '2025-06-11' },
+  { id: 'c-008', name: 'Adriana Peçanha', email: 'a.pecanha@example.com', document: '415.778.320-58', documentType: 'CPF', phone: '(11) 99728-4416', active: true, createdAt: '2024-12-03' },
+  { id: 'c-009', name: 'Leonardo Vasques', email: 'leo.vasques@example.com', document: '967.204.881-19', documentType: 'CPF', phone: '(11) 98561-7734', active: true, createdAt: '2023-08-21' },
+  { id: 'c-010', name: 'Camila Ostrowski', email: 'c.ostrowski@example.com', document: '273.590.164-06', documentType: 'CPF', phone: '(11) 99483-1157', active: true, createdAt: '2025-04-02' },
 ];
 
 export const DEMO_VEHICLES: Vehicle[] = [
@@ -160,41 +167,41 @@ export const DEMO_VEHICLES: Vehicle[] = [
    -------------------------------------------------------------------------- */
 
 export const DEMO_PARTS: Part[] = [
-  { id: 'p-001', sku: 'BRK-PAD-0142', name: 'Front brake pad set', description: 'Ceramic, ventilated disc', brand: 'Bosch', unitOfMeasure: 'SET', salePrice: 289.9, averageCost: 172.4, quantityOnHand: 14, quantityReserved: 4, available: 10, active: true, createdAt: '2023-01-12', updatedAt: day(-3) },
-  { id: 'p-002', sku: 'BRK-DSC-0088', name: 'Front brake disc', description: 'Ventilated, 283mm', brand: 'Fremax', unitOfMeasure: 'UNIT', salePrice: 341.0, averageCost: 208.15, quantityOnHand: 6, quantityReserved: 2, available: 4, active: true, createdAt: '2023-01-12', updatedAt: day(-9) },
-  { id: 'p-003', sku: 'FLT-OIL-0311', name: 'Oil filter', description: 'Spin-on', brand: 'Mann', unitOfMeasure: 'UNIT', salePrice: 47.5, averageCost: 22.8, quantityOnHand: 62, quantityReserved: 6, available: 56, active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
-  { id: 'p-004', sku: 'FLT-AIR-0207', name: 'Engine air filter', description: null, brand: 'Tecfil', unitOfMeasure: 'UNIT', salePrice: 68.9, averageCost: 31.2, quantityOnHand: 38, quantityReserved: 3, available: 35, active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
-  { id: 'p-005', sku: 'LUB-SYN-5W30', name: 'Synthetic engine oil 5W30', description: 'API SP', brand: 'Motul', unitOfMeasure: 'LITER', salePrice: 79.9, averageCost: 41.6, quantityOnHand: 84, quantityReserved: 12, available: 72, active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
-  { id: 'p-006', sku: 'IGN-SPK-0455', name: 'Iridium spark plug', description: null, brand: 'NGK', unitOfMeasure: 'UNIT', salePrice: 96.4, averageCost: 54.9, quantityOnHand: 3, quantityReserved: 8, available: -5, active: true, createdAt: '2022-11-19', updatedAt: day(0, 11) },
-  { id: 'p-007', sku: 'SUS-SHK-0921', name: 'Rear shock absorber', description: 'Gas-pressurised', brand: 'Cofap', unitOfMeasure: 'UNIT', salePrice: 412.0, averageCost: 246.7, quantityOnHand: 8, quantityReserved: 0, available: 8, active: true, createdAt: '2023-03-27', updatedAt: day(-14) },
-  { id: 'p-008', sku: 'ELE-BAT-0060', name: 'Battery 60Ah', description: 'Sealed, 12V', brand: 'Moura', unitOfMeasure: 'UNIT', salePrice: 649.0, averageCost: 398.0, quantityOnHand: 5, quantityReserved: 1, available: 4, active: true, createdAt: '2022-08-04', updatedAt: day(-6) },
-  { id: 'p-009', sku: 'TRN-CLT-0338', name: 'Clutch kit', description: 'Disc, plate and bearing', brand: 'Luk', unitOfMeasure: 'SET', salePrice: 1284.0, averageCost: 812.5, quantityOnHand: 2, quantityReserved: 1, available: 1, active: true, createdAt: '2023-06-15', updatedAt: day(-21) },
-  { id: 'p-010', sku: 'COL-RAD-0512', name: 'Radiator', description: 'Aluminium core', brand: 'Valeo', unitOfMeasure: 'UNIT', salePrice: 878.0, averageCost: 545.3, quantityOnHand: 1, quantityReserved: 2, available: -1, active: true, createdAt: '2023-09-08', updatedAt: day(0, 9) },
-  { id: 'p-011', sku: 'ENG-BLT-0173', name: 'Timing belt kit', description: 'Belt, tensioner and idler', brand: 'Gates', unitOfMeasure: 'SET', salePrice: 736.0, averageCost: 449.9, quantityOnHand: 4, quantityReserved: 1, available: 3, active: true, createdAt: '2023-02-02', updatedAt: day(-11) },
-  { id: 'p-012', sku: 'ELE-ALT-0244', name: 'Alternator 90A', description: 'Remanufactured', brand: 'Denso', unitOfMeasure: 'UNIT', salePrice: 1156.0, averageCost: 702.0, quantityOnHand: 0, quantityReserved: 0, available: 0, active: true, createdAt: '2024-01-30', updatedAt: day(-30) },
-  { id: 'p-013', sku: 'FLT-CAB-0119', name: 'Cabin air filter', description: 'Activated carbon', brand: 'Mann', unitOfMeasure: 'UNIT', salePrice: 89.9, averageCost: 42.1, quantityOnHand: 27, quantityReserved: 2, available: 25, active: true, createdAt: '2022-08-04', updatedAt: day(-2) },
-  { id: 'p-014', sku: 'BRK-FLD-DOT4', name: 'Brake fluid DOT 4', description: null, brand: 'Bosch', unitOfMeasure: 'LITER', salePrice: 54.0, averageCost: 24.9, quantityOnHand: 19, quantityReserved: 2, available: 17, active: true, createdAt: '2022-08-04', updatedAt: day(-4) },
-  { id: 'p-015', sku: 'SUS-ARM-0677', name: 'Lower control arm', description: 'With bushings', brand: 'Nakata', unitOfMeasure: 'UNIT', salePrice: 528.0, averageCost: 318.4, quantityOnHand: 3, quantityReserved: 0, available: 3, active: false, createdAt: '2023-05-19', updatedAt: day(-60) },
+  { id: 'p-001', sku: 'BRK-PAD-0142', name: 'Front brake pad set', description: 'Ceramic, ventilated disc', brand: 'Bosch', unitOfMeasure: 'SET', salePrice: 289.9, averageCost: 172.4, quantityOnHand: 14, quantityReserved: 4, available: 10, stockStatus: 'OK', active: true, createdAt: '2023-01-12', updatedAt: day(-3) },
+  { id: 'p-002', sku: 'BRK-DSC-0088', name: 'Front brake disc', description: 'Ventilated, 283mm', brand: 'Fremax', unitOfMeasure: 'UNIT', salePrice: 341.0, averageCost: 208.15, quantityOnHand: 6, quantityReserved: 2, available: 4, stockStatus: 'LOW', active: true, createdAt: '2023-01-12', updatedAt: day(-9) },
+  { id: 'p-003', sku: 'FLT-OIL-0311', name: 'Oil filter', description: 'Spin-on', brand: 'Mann', unitOfMeasure: 'UNIT', salePrice: 47.5, averageCost: 22.8, quantityOnHand: 62, quantityReserved: 6, available: 56, stockStatus: 'OK', active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
+  { id: 'p-004', sku: 'FLT-AIR-0207', name: 'Engine air filter', description: null, brand: 'Tecfil', unitOfMeasure: 'UNIT', salePrice: 68.9, averageCost: 31.2, quantityOnHand: 38, quantityReserved: 3, available: 35, stockStatus: 'OK', active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
+  { id: 'p-005', sku: 'LUB-SYN-5W30', name: 'Synthetic engine oil 5W30', description: 'API SP', brand: 'Motul', unitOfMeasure: 'LITER', salePrice: 79.9, averageCost: 41.6, quantityOnHand: 84, quantityReserved: 12, available: 72, stockStatus: 'OK', active: true, createdAt: '2022-08-04', updatedAt: day(-1) },
+  { id: 'p-006', sku: 'IGN-SPK-0455', name: 'Iridium spark plug', description: null, brand: 'NGK', unitOfMeasure: 'UNIT', salePrice: 96.4, averageCost: 54.9, quantityOnHand: 3, quantityReserved: 8, available: -5, stockStatus: 'OUT', active: true, createdAt: '2022-11-19', updatedAt: day(0, 11) },
+  { id: 'p-007', sku: 'SUS-SHK-0921', name: 'Rear shock absorber', description: 'Gas-pressurised', brand: 'Cofap', unitOfMeasure: 'UNIT', salePrice: 412.0, averageCost: 246.7, quantityOnHand: 8, quantityReserved: 0, available: 8, stockStatus: 'OK', active: true, createdAt: '2023-03-27', updatedAt: day(-14) },
+  { id: 'p-008', sku: 'ELE-BAT-0060', name: 'Battery 60Ah', description: 'Sealed, 12V', brand: 'Moura', unitOfMeasure: 'UNIT', salePrice: 649.0, averageCost: 398.0, quantityOnHand: 5, quantityReserved: 1, available: 4, stockStatus: 'LOW', active: true, createdAt: '2022-08-04', updatedAt: day(-6) },
+  { id: 'p-009', sku: 'TRN-CLT-0338', name: 'Clutch kit', description: 'Disc, plate and bearing', brand: 'Luk', unitOfMeasure: 'SET', salePrice: 1284.0, averageCost: 812.5, quantityOnHand: 2, quantityReserved: 1, available: 1, stockStatus: 'LOW', active: true, createdAt: '2023-06-15', updatedAt: day(-21) },
+  { id: 'p-010', sku: 'COL-RAD-0512', name: 'Radiator', description: 'Aluminium core', brand: 'Valeo', unitOfMeasure: 'UNIT', salePrice: 878.0, averageCost: 545.3, quantityOnHand: 1, quantityReserved: 2, available: -1, stockStatus: 'OUT', active: true, createdAt: '2023-09-08', updatedAt: day(0, 9) },
+  { id: 'p-011', sku: 'ENG-BLT-0173', name: 'Timing belt kit', description: 'Belt, tensioner and idler', brand: 'Gates', unitOfMeasure: 'SET', salePrice: 736.0, averageCost: 449.9, quantityOnHand: 4, quantityReserved: 1, available: 3, stockStatus: 'LOW', active: true, createdAt: '2023-02-02', updatedAt: day(-11) },
+  { id: 'p-012', sku: 'ELE-ALT-0244', name: 'Alternator 90A', description: 'Remanufactured', brand: 'Denso', unitOfMeasure: 'UNIT', salePrice: 1156.0, averageCost: 702.0, quantityOnHand: 0, quantityReserved: 0, available: 0, stockStatus: 'OUT', active: true, createdAt: '2024-01-30', updatedAt: day(-30) },
+  { id: 'p-013', sku: 'FLT-CAB-0119', name: 'Cabin air filter', description: 'Activated carbon', brand: 'Mann', unitOfMeasure: 'UNIT', salePrice: 89.9, averageCost: 42.1, quantityOnHand: 27, quantityReserved: 2, available: 25, stockStatus: 'OK', active: true, createdAt: '2022-08-04', updatedAt: day(-2) },
+  { id: 'p-014', sku: 'BRK-FLD-DOT4', name: 'Brake fluid DOT 4', description: null, brand: 'Bosch', unitOfMeasure: 'LITER', salePrice: 54.0, averageCost: 24.9, quantityOnHand: 19, quantityReserved: 2, available: 17, stockStatus: 'OK', active: true, createdAt: '2022-08-04', updatedAt: day(-4) },
+  { id: 'p-015', sku: 'SUS-ARM-0677', name: 'Lower control arm', description: 'With bushings', brand: 'Nakata', unitOfMeasure: 'UNIT', salePrice: 528.0, averageCost: 318.4, quantityOnHand: 3, quantityReserved: 0, available: 3, stockStatus: 'LOW', active: false, createdAt: '2023-05-19', updatedAt: day(-60) },
 ];
 
 export const DEMO_SERVICES: RepairService[] = [
-  { id: 's-001', name: 'Front brake pad replacement', description: 'Both sides, includes bedding-in', price: 240.0, executionMinutes: 74, estimated: false, active: true },
-  { id: 's-002', name: 'Engine oil and filter change', description: null, price: 130.0, executionMinutes: 38, estimated: false, active: true },
-  { id: 's-003', name: 'Full diagnostic inspection', description: 'Scanner plus 32-point visual', price: 180.0, executionMinutes: 55, estimated: false, active: true },
-  { id: 's-004', name: 'Timing belt replacement', description: 'Includes tensioner and water pump check', price: 980.0, executionMinutes: 268, estimated: false, active: true },
-  { id: 's-005', name: 'Clutch replacement', description: null, price: 1150.0, executionMinutes: 340, estimated: true, active: true },
-  { id: 's-006', name: 'Suspension overhaul, rear axle', description: null, price: 640.0, executionMinutes: 186, estimated: false, active: true },
-  { id: 's-007', name: 'Air conditioning service', description: 'Regas, leak test, cabin filter', price: 310.0, executionMinutes: 92, estimated: false, active: true },
-  { id: 's-008', name: 'Battery test and replacement', description: null, price: 90.0, executionMinutes: 22, estimated: false, active: true },
-  { id: 's-009', name: 'Radiator replacement', description: 'Includes coolant flush', price: 520.0, executionMinutes: 154, estimated: true, active: true },
-  { id: 's-010', name: 'Wheel alignment and balancing', description: null, price: 190.0, executionMinutes: 48, estimated: false, active: true },
+  { id: 's-001', code: 'SVC-001', name: 'Front brake pad replacement', description: 'Both sides, includes bedding-in', price: 240.0, executionMinutes: 74, estimated: false, executionCount: 12, active: true },
+  { id: 's-002', code: 'SVC-002', name: 'Engine oil and filter change', description: null, price: 130.0, executionMinutes: 38, estimated: false, executionCount: 12, active: true },
+  { id: 's-003', code: 'SVC-003', name: 'Full diagnostic inspection', description: 'Scanner plus 32-point visual', price: 180.0, executionMinutes: 55, estimated: false, executionCount: 12, active: true },
+  { id: 's-004', code: 'SVC-004', name: 'Timing belt replacement', description: 'Includes tensioner and water pump check', price: 980.0, executionMinutes: 268, estimated: false, executionCount: 12, active: true },
+  { id: 's-005', code: 'SVC-005', name: 'Clutch replacement', description: null, price: 1150.0, executionMinutes: 340, estimated: true, executionCount: 0, active: true },
+  { id: 's-006', code: 'SVC-006', name: 'Suspension overhaul, rear axle', description: null, price: 640.0, executionMinutes: 186, estimated: false, executionCount: 12, active: true },
+  { id: 's-007', code: 'SVC-007', name: 'Air conditioning service', description: 'Regas, leak test, cabin filter', price: 310.0, executionMinutes: 92, estimated: false, executionCount: 12, active: true },
+  { id: 's-008', code: 'SVC-008', name: 'Battery test and replacement', description: null, price: 90.0, executionMinutes: 22, estimated: false, executionCount: 12, active: true },
+  { id: 's-009', code: 'SVC-009', name: 'Radiator replacement', description: 'Includes coolant flush', price: 520.0, executionMinutes: 154, estimated: true, executionCount: 0, active: true },
+  { id: 's-010', code: 'SVC-010', name: 'Wheel alignment and balancing', description: null, price: 190.0, executionMinutes: 48, estimated: false, executionCount: 12, active: true },
 ];
 
 export const DEMO_VENDORS: Vendor[] = [
-  { id: 'vd-001', name: 'Distribuidora Paulista de Autopeças', document: '42.118.335/0001-09', email: 'pedidos@dpa.example', phone: '(11) 3221-8800', active: true },
-  { id: 'vd-002', name: 'Rolamentos & Freios Zona Sul', document: '27.904.661/0001-74', email: 'vendas@rfzs.example', phone: '(11) 3654-1120', active: true },
-  { id: 'vd-003', name: 'Lubrificantes Interlagos', document: '55.328.017/0001-42', email: 'comercial@lubint.example', phone: '(11) 3777-9043', active: true },
-  { id: 'vd-004', name: 'Eletro Auto Mogi', document: '31.775.209/0001-58', email: 'atendimento@eletroauto.example', phone: '(11) 4798-3311', active: false },
+  { id: 'vd-001', name: 'Distribuidora Paulista de Autopeças', email: 'pedidos@dpa.example', active: true },
+  { id: 'vd-002', name: 'Rolamentos & Freios Zona Sul', email: 'vendas@rfzs.example', active: true },
+  { id: 'vd-003', name: 'Lubrificantes Interlagos', email: 'comercial@lubint.example', active: true },
+  { id: 'vd-004', name: 'Eletro Auto Mogi', email: 'atendimento@eletroauto.example', active: false },
 ];
 
 export const DEMO_PURCHASE_ORDERS: PurchaseOrder[] = [
@@ -202,37 +209,37 @@ export const DEMO_PURCHASE_ORDERS: PurchaseOrder[] = [
     id: 'po-001', code: 'PO-2026-0148', vendorId: 'vd-002', vendorName: 'Rolamentos & Freios Zona Sul',
     status: 'PLACED', placedAt: day(-2, 10), expectedAt: day(2, 10),
     lines: [
-      { partId: 'p-006', sku: 'IGN-SPK-0455', partName: 'Iridium spark plug', quantity: 24, received: 0, unitCost: 54.9 },
-      { partId: 'p-001', sku: 'BRK-PAD-0142', partName: 'Front brake pad set', quantity: 10, received: 0, unitCost: 172.4 },
+      { id: 'pol-001', partId: 'p-006', quantity: 24, received: 0, unitCost: 54.9 },
+      { id: 'pol-002', partId: 'p-001', quantity: 10, received: 0, unitCost: 172.4 },
     ],
   },
   {
     id: 'po-002', code: 'PO-2026-0147', vendorId: 'vd-001', vendorName: 'Distribuidora Paulista de Autopeças',
     status: 'PARTIALLY_RECEIVED', placedAt: day(-8, 14), expectedAt: day(-1, 14),
     lines: [
-      { partId: 'p-010', sku: 'COL-RAD-0512', partName: 'Radiator', quantity: 4, received: 1, unitCost: 545.3 },
-      { partId: 'p-012', sku: 'ELE-ALT-0244', partName: 'Alternator 90A', quantity: 2, received: 0, unitCost: 702.0 },
+      { id: 'pol-003', partId: 'p-010', quantity: 4, received: 1, unitCost: 545.3 },
+      { id: 'pol-004', partId: 'p-012', quantity: 2, received: 0, unitCost: 702.0 },
     ],
   },
   {
     id: 'po-003', code: 'PO-2026-0146', vendorId: 'vd-003', vendorName: 'Lubrificantes Interlagos',
     status: 'RECEIVED', placedAt: day(-16, 9), expectedAt: day(-12, 9),
-    lines: [{ partId: 'p-005', sku: 'LUB-SYN-5W30', partName: 'Synthetic engine oil 5W30', quantity: 60, received: 60, unitCost: 41.6 }],
+    lines: [{ id: 'pol-005', partId: 'p-005', quantity: 60, received: 60, unitCost: 41.6 }],
   },
   {
     id: 'po-004', code: 'PO-2026-0145', vendorId: 'vd-004', vendorName: 'Eletro Auto Mogi',
     status: 'CANCELLED', placedAt: day(-24, 11), expectedAt: null,
-    lines: [{ partId: 'p-008', sku: 'ELE-BAT-0060', partName: 'Battery 60Ah', quantity: 8, received: 0, unitCost: 398.0 }],
+    lines: [{ id: 'pol-006', partId: 'p-008', quantity: 8, received: 0, unitCost: 398.0 }],
   },
 ];
 
 export const DEMO_REORDER_RULES: ReorderRule[] = [
-  { id: 'rr-001', partId: 'p-001', sku: 'BRK-PAD-0142', partName: 'Front brake pad set', min: 8, max: 24, enabled: true },
-  { id: 'rr-002', partId: 'p-003', sku: 'FLT-OIL-0311', partName: 'Oil filter', min: 20, max: 80, enabled: true },
-  { id: 'rr-003', partId: 'p-005', sku: 'LUB-SYN-5W30', partName: 'Synthetic engine oil 5W30', min: 40, max: 120, enabled: true },
-  { id: 'rr-004', partId: 'p-006', sku: 'IGN-SPK-0455', partName: 'Iridium spark plug', min: 12, max: 48, enabled: true },
-  { id: 'rr-005', partId: 'p-010', sku: 'COL-RAD-0512', partName: 'Radiator', min: 2, max: 6, enabled: true },
-  { id: 'rr-006', partId: 'p-008', sku: 'ELE-BAT-0060', partName: 'Battery 60Ah', min: 4, max: 12, enabled: false },
+  { id: 'rr-001', partId: 'p-001', vendorId: 'vd-001', min: 8, max: 24, enabled: true },
+  { id: 'rr-002', partId: 'p-003', vendorId: 'vd-001', min: 20, max: 80, enabled: true },
+  { id: 'rr-003', partId: 'p-005', vendorId: 'vd-001', min: 40, max: 120, enabled: true },
+  { id: 'rr-004', partId: 'p-006', vendorId: 'vd-001', min: 12, max: 48, enabled: true },
+  { id: 'rr-005', partId: 'p-010', vendorId: 'vd-001', min: 2, max: 6, enabled: true },
+  { id: 'rr-006', partId: 'p-008', vendorId: 'vd-001', min: 4, max: 12, enabled: false },
 ];
 
 export const DEMO_STOCK_MOVEMENTS: StockMovement[] = [
@@ -447,7 +454,7 @@ export const DEMO_BUDGETS: Budget[] = [
     line('bl-073', 'PART', 'Front brake disc', 2, 341.0, { partId: 'p-002' }),
     line('bl-074', 'SERVICE', 'Timing belt replacement', 1, 980.0, { serviceId: 's-004' }),
     line('bl-075', 'PART', 'Timing belt kit', 1, 736.0, { partId: 'p-011' }),
-  ], { lastSendError: 'Delivery to frota@valeverde.example was rejected by the receiving server (550 mailbox full).' }),
+  ]),
 
   budget('b-008', 'wo-008', 'APPROVED', [
     line('bl-081', 'SERVICE', 'Battery test and replacement', 1, 90.0, { serviceId: 's-008' }),
@@ -511,14 +518,14 @@ export const DEMO_BLOCKS: WorkOrderBlock[] = [
     workOrderId: 'wo-019',
     blocked: true,
     shortfalls: [
-      { partId: 'p-011', sku: 'ENG-BLT-0173', partName: 'Timing belt kit', required: 1, available: 0, short: 1, unitOfMeasure: 'SET', inboundPurchaseOrderCode: null, inboundEta: null },
+      { partId: 'p-011', sku: 'ENG-BLT-0173', partName: 'Timing belt kit', required: 1, available: 0, short: 1 },
     ],
   },
   {
     workOrderId: 'wo-008',
     blocked: true,
     shortfalls: [
-      { partId: 'p-008', sku: 'ELE-BAT-0060', partName: 'Battery 60Ah', required: 1, available: 0, short: 1, unitOfMeasure: 'UNIT', inboundPurchaseOrderCode: 'PO-2026-0145', inboundEta: null },
+      { partId: 'p-008', sku: 'ELE-BAT-0060', partName: 'Battery 60Ah', required: 1, available: 0, short: 1 },
     ],
   },
 ];
@@ -528,18 +535,16 @@ export const DEMO_BLOCKS: WorkOrderBlock[] = [
    -------------------------------------------------------------------------- */
 
 export const DEMO_SETTINGS: SchedulingSettings = {
-  openDays: [1, 2, 3, 4, 5],
   openFrom: '08:00',
   openTo: '18:00',
-  slotMinutes: 30,
   dropoffCapacityPerSlot: 3,
   pickupCapacityPerSlot: 2,
 };
 
 export const DEMO_CLOSURES: Closure[] = [
-  { date: '2026-09-07', message: 'Independence Day — shop closed.', cancelledAppointments: 0 },
-  { date: '2026-10-12', message: null, cancelledAppointments: 4 },
-  { date: '2026-11-02', message: 'All Souls’ Day — closed, deliveries resume the following morning.', cancelledAppointments: 2 },
+  { date: '2026-09-07', message: 'Independence Day — shop closed.' },
+  { date: '2026-10-12', message: null },
+  { date: '2026-11-02', message: 'All Souls’ Day — closed, deliveries resume the following morning.' },
 ];
 
 export const DEMO_APPOINTMENTS: Appointment[] = [
@@ -561,35 +566,35 @@ export const DEMO_APPOINTMENTS: Appointment[] = [
 
 export const DEMO_HISTORY: Record<string, HistoryEntry[]> = {
   'wo-004': [
-    { id: 'h-0401', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'WorkOrderCreated', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: day(-4, 8, 30), summary: 'Work order opened at the counter from a checked-in drop-off.' },
-    { id: 'h-0402', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsRequested', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: day(-4, 9), summary: 'Queued for diagnostics.' },
-    { id: 'h-0403', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsStarted', actorName: 'Emerson Vidal', actorIsSystem: false, customerVisible: true, occurredAt: day(-4, 10), summary: 'Emerson Vidal began the inspection.' },
-    { id: 'h-0404', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsFinished', actorName: 'Emerson Vidal', actorIsSystem: false, customerVisible: true, occurredAt: day(-4, 12), summary: 'Diagnosis recorded. Budget draft opened with 5 lines.' },
-    { id: 'h-0405', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'BudgetSent', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: day(-3, 9), summary: 'Budget frozen and sent to f.sequeira@example.com. Total R$ 1.148,10.' },
-    { id: 'h-0406', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'BudgetApproved', actorName: 'Fernando Sequeira', actorIsSystem: false, customerVisible: true, occurredAt: day(-2, 16, 20), summary: 'Customer approved the budget.' },
-    { id: 'h-0407', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'ServiceStarted', actorName: 'Emerson Vidal', actorIsSystem: false, customerVisible: true, occurredAt: day(0, 11), summary: 'Service started. 4 × IGN-SPK-0455 and 4 L of LUB-SYN-5W30 consumed from stock.' },
+    { id: 'h-0401', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'WorkOrderCreated', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: day(-4, 8, 30), summary: 'Work order opened at the counter from a checked-in drop-off.' },
+    { id: 'h-0402', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsRequested', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: day(-4, 9), summary: 'Queued for diagnostics.' },
+    { id: 'h-0403', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsStarted', actorName: 'Emerson Vidal', actorIsSystem: false, actorIsRole: false, occurredAt: day(-4, 10), summary: 'Emerson Vidal began the inspection.' },
+    { id: 'h-0404', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'DiagnosticsFinished', actorName: 'Emerson Vidal', actorIsSystem: false, actorIsRole: false, occurredAt: day(-4, 12), summary: 'Diagnosis recorded. Budget draft opened with 5 lines.' },
+    { id: 'h-0405', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'BudgetSent', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: day(-3, 9), summary: 'Budget frozen and sent to f.sequeira@example.com. Total R$ 1.148,10.' },
+    { id: 'h-0406', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'BudgetApproved', actorName: 'Fernando Sequeira', actorIsSystem: false, actorIsRole: false, occurredAt: day(-2, 16, 20), summary: 'Customer approved the budget.' },
+    { id: 'h-0407', aggregateType: 'WORK_ORDER', aggregateId: 'wo-004', eventType: 'ServiceStarted', actorName: 'Emerson Vidal', actorIsSystem: false, actorIsRole: false, occurredAt: day(0, 11), summary: 'Service started. 4 × IGN-SPK-0455 and 4 L of LUB-SYN-5W30 consumed from stock.' },
   ],
   'wo-013': [
-    { id: 'h-1301', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'WorkOrderCreated', actorName: 'Tiago Assunção', actorIsSystem: false, customerVisible: true, occurredAt: day(-14, 8, 30), summary: 'Work order opened at the counter.' },
-    { id: 'h-1302', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'DiagnosticsFinished', actorName: 'Emerson Vidal', actorIsSystem: false, customerVisible: true, occurredAt: day(-13, 15), summary: 'Diagnosis recorded. Budget draft opened with 2 lines.' },
-    { id: 'h-1303', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'BudgetSent', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: day(-13, 16), summary: 'Budget frozen and sent. Total R$ 1.398,00.' },
-    { id: 'h-1304', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'BudgetRefused', actorName: 'Priscila Tavares', actorIsSystem: false, customerVisible: true, occurredAt: day(-11, 19, 5), summary: 'Customer refused the budget. Work order closed as refused.' },
-    { id: 'h-1305', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'ReservationsReleased', actorName: null, actorIsSystem: true, customerVisible: false, occurredAt: day(-11, 19, 5), summary: 'Reservations released: 1 × COL-RAD-0512 returned to available stock.' },
+    { id: 'h-1301', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'WorkOrderCreated', actorName: 'Tiago Assunção', actorIsSystem: false, actorIsRole: false, occurredAt: day(-14, 8, 30), summary: 'Work order opened at the counter.' },
+    { id: 'h-1302', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'DiagnosticsFinished', actorName: 'Emerson Vidal', actorIsSystem: false, actorIsRole: false, occurredAt: day(-13, 15), summary: 'Diagnosis recorded. Budget draft opened with 2 lines.' },
+    { id: 'h-1303', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'BudgetSent', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: day(-13, 16), summary: 'Budget frozen and sent. Total R$ 1.398,00.' },
+    { id: 'h-1304', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'BudgetRefused', actorName: 'Priscila Tavares', actorIsSystem: false, actorIsRole: false, occurredAt: day(-11, 19, 5), summary: 'Customer refused the budget. Work order closed as refused.' },
+    { id: 'h-1305', aggregateType: 'WORK_ORDER', aggregateId: 'wo-013', eventType: 'ReservationsReleased', actorName: null, actorIsSystem: true, actorIsRole: false, occurredAt: day(-11, 19, 5), summary: 'Reservations released: 1 × COL-RAD-0512 returned to available stock.' },
   ],
 };
 
 /** Fallback timeline for orders without an authored history above. */
 export function fallbackHistory(order: WorkOrder): HistoryEntry[] {
   const entries: HistoryEntry[] = [
-    { id: `${order.id}-h1`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'WorkOrderCreated', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: order.createdAt, summary: 'Work order opened at the counter.' },
+    { id: `${order.id}-h1`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'WorkOrderCreated', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: order.createdAt, summary: 'Work order opened at the counter.' },
   ];
-  if (order.diagnosticRequestedAt) entries.push({ id: `${order.id}-h2`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsRequested', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: order.diagnosticRequestedAt, summary: 'Queued for diagnostics.' });
-  if (order.diagnosticStartedAt) entries.push({ id: `${order.id}-h3`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsStarted', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, customerVisible: true, occurredAt: order.diagnosticStartedAt, summary: `${order.assignedMechanicName ?? 'A mechanic'} began the inspection.` });
-  if (order.diagnosticFinishedAt) entries.push({ id: `${order.id}-h4`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsFinished', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, customerVisible: true, occurredAt: order.diagnosticFinishedAt, summary: 'Diagnosis recorded. Budget draft opened.' });
-  if (order.approvedAt) entries.push({ id: `${order.id}-h5`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'BudgetApproved', actorName: order.customerName ?? null, actorIsSystem: false, customerVisible: true, occurredAt: order.approvedAt, summary: 'Customer approved the budget.' });
-  if (order.serviceStartedAt) entries.push({ id: `${order.id}-h6`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'ServiceStarted', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, customerVisible: true, occurredAt: order.serviceStartedAt, summary: 'Service started. Reserved stock consumed.' });
-  if (order.finishedAt) entries.push({ id: `${order.id}-h7`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'ServiceFinished', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, customerVisible: true, occurredAt: order.finishedAt, summary: 'All approved lines completed.' });
-  if (order.pickupReadyAt) entries.push({ id: `${order.id}-h8`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'PickupInvitationSent', actorName: null, actorIsSystem: true, customerVisible: true, occurredAt: order.pickupReadyAt, summary: 'Pickup booking invitation sent. No appointment exists until the customer picks a slot.' });
-  if (order.deliveredAt) entries.push({ id: `${order.id}-h9`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'Delivered', actorName: 'Rafael Nogueira', actorIsSystem: false, customerVisible: true, occurredAt: order.deliveredAt, summary: 'Vehicle collected by the customer.' });
+  if (order.diagnosticRequestedAt) entries.push({ id: `${order.id}-h2`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsRequested', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: order.diagnosticRequestedAt, summary: 'Queued for diagnostics.' });
+  if (order.diagnosticStartedAt) entries.push({ id: `${order.id}-h3`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsStarted', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, actorIsRole: false, occurredAt: order.diagnosticStartedAt, summary: `${order.assignedMechanicName ?? 'A mechanic'} began the inspection.` });
+  if (order.diagnosticFinishedAt) entries.push({ id: `${order.id}-h4`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'DiagnosticsFinished', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, actorIsRole: false, occurredAt: order.diagnosticFinishedAt, summary: 'Diagnosis recorded. Budget draft opened.' });
+  if (order.approvedAt) entries.push({ id: `${order.id}-h5`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'BudgetApproved', actorName: order.customerName ?? null, actorIsSystem: false, actorIsRole: false, occurredAt: order.approvedAt, summary: 'Customer approved the budget.' });
+  if (order.serviceStartedAt) entries.push({ id: `${order.id}-h6`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'ServiceStarted', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, actorIsRole: false, occurredAt: order.serviceStartedAt, summary: 'Service started. Reserved stock consumed.' });
+  if (order.finishedAt) entries.push({ id: `${order.id}-h7`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'ServiceFinished', actorName: order.assignedMechanicName ?? null, actorIsSystem: false, actorIsRole: false, occurredAt: order.finishedAt, summary: 'All approved lines completed.' });
+  if (order.pickupReadyAt) entries.push({ id: `${order.id}-h8`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'PickupInvitationSent', actorName: null, actorIsSystem: true, actorIsRole: false, occurredAt: order.pickupReadyAt, summary: 'Pickup booking invitation sent. No appointment exists until the customer picks a slot.' });
+  if (order.deliveredAt) entries.push({ id: `${order.id}-h9`, aggregateType: 'WORK_ORDER', aggregateId: order.id, eventType: 'Delivered', actorName: 'Rafael Nogueira', actorIsSystem: false, actorIsRole: false, occurredAt: order.deliveredAt, summary: 'Vehicle collected by the customer.' });
   return entries.reverse();
 }

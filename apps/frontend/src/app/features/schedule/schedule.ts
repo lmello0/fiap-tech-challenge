@@ -1,6 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import {
+  FormField,
+  form,
+  min,
+  minLength,
+  required,
+  schema,
+  validate,
+} from '@angular/forms/signals';
 import { ShopStore } from '../../core/data/shop-store';
 import { Session } from '../../core/auth/session';
+import { EntryBand } from '../../shared/ui/entry-band';
+import { FormFieldRow } from '../../shared/ui/form-field';
+import type { Appointment, Closure } from '../../core/domain/models';
 import {
   APPOINTMENT_CANCEL_REASON_LABEL,
   APPOINTMENT_STATUS_LABEL,
@@ -9,154 +21,95 @@ import {
 import { Callout } from '../../shared/ui/callout';
 import { Icon } from '../../shared/ui/icon';
 
+interface SettingsDraft {
+  businessStartTime: string;
+  businessEndTime: string;
+  dropoffSlotCapacity: number | null;
+  pickupSlotCapacity: number | null;
+}
+
+const settingsSchema = schema<SettingsDraft>((p) => {
+  required(p.businessStartTime, { message: 'An opening time is required.' });
+  required(p.businessEndTime, { message: 'A closing time is required.' });
+  validate(p.businessEndTime, (ctx) => {
+    const end = ctx.value();
+    const start = ctx.valueOf(p.businessStartTime);
+    if (!end || !start) return null;
+    return end > start ? null : { kind: 'hours', message: 'The shop must close after it opens.' };
+  });
+  min(p.dropoffSlotCapacity, 1, { message: 'At least one drop-off per slot.' });
+  min(p.pickupSlotCapacity, 1, { message: 'At least one pickup per slot.' });
+});
+
+interface ClosureDraft {
+  date: string;
+  message: string;
+}
+
+const closureSchema = schema<ClosureDraft>((p) => {
+  required(p.date, { message: 'Which date is closed?' });
+});
+
+/**
+ * A staff booking is one of two things, and the form is honest about which:
+ * either an existing customer and their vehicle, or a walk-in whose details are
+ * taken inline and who becomes a Customer later, at check-in.
+ */
+interface BookingDraft {
+  forGuest: boolean;
+  customerId: string;
+  vehicleId: string;
+  guestName: string;
+  guestPhone: string;
+  guestEmail: string;
+  guestVehicleMake: string;
+  guestVehicleModel: string;
+  guestVehicleYear: number | null;
+  complaint: string;
+  date: string;
+  slotStart: string;
+}
+
+const bookingSchema = schema<BookingDraft>((p) => {
+  required(p.complaint, { message: 'Record what the customer reported.' });
+  minLength(p.complaint, 5, { message: 'A sentence, in their own terms.' });
+  required(p.date, { message: 'Pick a date.' });
+  required(p.slotStart, { message: 'Pick a slot.' });
+  validate(p.customerId, (ctx) =>
+    !ctx.valueOf(p.forGuest) && !ctx.value()
+      ? { kind: 'who', message: 'Which customer is bringing the vehicle in?' }
+      : null,
+  );
+  validate(p.vehicleId, (ctx) =>
+    !ctx.valueOf(p.forGuest) && !ctx.value()
+      ? { kind: 'which', message: 'Which vehicle is coming in?' }
+      : null,
+  );
+  validate(p.guestName, (ctx) =>
+    ctx.valueOf(p.forGuest) && !ctx.value().trim()
+      ? { kind: 'guest', message: 'A walk-in still needs a name to call.' }
+      : null,
+  );
+  validate(p.guestPhone, (ctx) =>
+    ctx.valueOf(p.forGuest) && !ctx.value().trim()
+      ? { kind: 'guest', message: 'A number to reach them on.' }
+      : null,
+  );
+  // The API advertises this as optional but cannot complete the booking without
+  // it — the booking-management token is emailed to the guest, and a booking
+  // with nowhere to send it fails server-side. Required here so it fails in the
+  // field instead.
+  validate(p.guestEmail, (ctx) =>
+    ctx.valueOf(p.forGuest) && !ctx.value().trim()
+      ? { kind: 'guest', message: 'Required — the booking link is emailed to them.' }
+      : null,
+  );
+});
+
 @Component({
   selector: 'app-schedule',
-  imports: [Callout, Icon],
-  template: `
-    <div class="sch">
-      <header class="sch__head">
-        <div>
-          <h1 class="sch__title">Schedule</h1>
-          <p class="sch__sub">
-            {{ settings().openFrom }}–{{ settings().openTo }}, Monday to Friday ·
-            {{ settings().slotMinutes }}-minute slots · drop-off capacity
-            {{ settings().dropoffCapacityPerSlot }}, pickup {{ settings().pickupCapacityPerSlot }} per slot
-          </p>
-        </div>
-        <label class="field">
-          <span class="sr-only">Filter by status</span>
-          <select class="input" [value]="filter()" (change)="onFilter($event)">
-            <option value="ALL">All appointments</option>
-            @for (s of statuses; track s) {
-              <option [value]="s">{{ label(s) }}</option>
-            }
-          </select>
-        </label>
-      </header>
-
-      <section class="plate">
-        <div class="plate__head">
-          <p class="plate__title">5.1 — Booked appointments</p>
-          <p class="plate__meta label">{{ rows().length }} listed</p>
-        </div>
-        <div class="mt-wrap">
-          <table class="mt">
-            <caption class="sr-only">Appointments with slot, party, vehicle and status.</caption>
-            <thead>
-              <tr>
-                <th scope="col" class="shrink">Slot</th>
-                <th scope="col" class="shrink">Type</th>
-                <th scope="col">Party</th>
-                <th scope="col">Vehicle</th>
-                <th scope="col">Complaint</th>
-                <th scope="col" class="shrink">Status</th>
-                <th scope="col" class="shrink">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of rows(); track a.id) {
-                <tr>
-                  <td class="shrink token sch__slot">{{ slot(a.slotStart) }}</td>
-                  <td class="shrink">
-                    <span class="sch__type" [class.is-pickup]="a.type === 'PICKUP'">{{ a.type }}</span>
-                  </td>
-                  <td>
-                    @if (a.guestName) {
-                      <span class="sch__party">{{ a.guestName }}</span>
-                      <span class="sch__guest">Guest — not yet a customer</span>
-                    } @else {
-                      <span class="sch__party">{{ a.customerName }}</span>
-                    }
-                  </td>
-                  <td>
-                    @if (a.vehiclePlate) {
-                      <span class="token sch__plate">{{ a.vehiclePlate }}</span>
-                      <span class="sch__vehicle">{{ a.vehicleLabel }}</span>
-                    } @else {
-                      <span class="sch__vehicle"
-                        >{{ a.guestVehicleMake }} {{ a.guestVehicleModel }} {{ a.guestVehicleYear }}</span
-                      >
-                      <span class="sch__guest">Given inline on the booking</span>
-                    }
-                  </td>
-                  <td class="sch__complaint">{{ a.complaint ?? '—' }}</td>
-                  <td class="shrink">
-                    <span class="sch__status" [class]="'is-' + a.status.toLowerCase()">{{
-                      label(a.status)
-                    }}</span>
-                    @if (a.cancelReason) {
-                      <span class="sch__reason">{{ reason(a.cancelReason) }}</span>
-                    }
-                  </td>
-                  <td class="shrink">
-                    @if (a.status === 'SCHEDULED' && canAct()) {
-                      <button class="btn btn--sm btn--primary" type="button" (click)="checkIn(a.id)">
-                        Check in
-                      </button>
-                    } @else if (a.status === 'COMPLETED') {
-                      <span class="sch__done"
-                        ><app-icon name="check" [size]="12" /> {{ time(a.checkedInAt!) }}</span
-                      >
-                    } @else {
-                      <span class="sch__inert">—</span>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="7">
-                    <div class="empty">
-                      <p class="empty__title">Nothing booked in this view</p>
-                      <p>Change the status filter to see appointments outside it.</p>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="plate sch__closures">
-        <div class="plate__head">
-          <p class="plate__title">5.2 — Closures</p>
-          <p class="plate__meta label">Manager only</p>
-        </div>
-        <div class="plate__body">
-          <app-callout tier="caution">
-            Closing a date that already has appointments cancels them and notifies the affected
-            customers and guests. A closure is a one-off decision, not a recurring holiday.
-          </app-callout>
-
-          <table class="mt sch__closure-table">
-            <caption class="sr-only">Dates the shop is closed.</caption>
-            <thead>
-              <tr>
-                <th scope="col" class="shrink">Date</th>
-                <th scope="col">Message to customers</th>
-                <th scope="col" class="r shrink">Cancelled</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of closures(); track c.date) {
-                <tr>
-                  <td class="shrink token">{{ c.date }}</td>
-                  <td>{{ c.message ?? 'No explanation given.' }}</td>
-                  <td class="r num">
-                    @if (c.cancelledAppointments > 0) {
-                      <span class="sch__cancelled">{{ c.cancelledAppointments }}</span>
-                    } @else {
-                      0
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  `,
+  imports: [Callout, Icon, EntryBand, FormFieldRow, FormField],
+  templateUrl: './schedule.html',
   styles: `
     :host {
       display: block;
@@ -293,6 +246,38 @@ import { Icon } from '../../shared/ui/icon';
       color: var(--warn);
       font-weight: 600;
     }
+
+    /* --- entry ---------------------------------------------------------------- */
+
+    .sch__band {
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--rule-strong);
+    }
+
+    .sch__band-row > td {
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .sch__who {
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .sch__radio {
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+    }
+
+    /* The cost of the decision, stated where the decision is made. */
+    .sch__will-cancel {
+      color: var(--warn);
+    }
+
+    .sch__will-cancel strong {
+      color: var(--warn);
+    }
   `,
 })
 export class Schedule {
@@ -341,6 +326,278 @@ export class Schedule {
   }
 
   protected time(iso: string): string {
+    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* ---------------------------------------------------------------------
+     The calendar: hours, closures, and the booking counter.
+     --------------------------------------------------------------------- */
+
+  protected readonly isDemo = this.store.isDemo;
+  protected readonly canManage = computed(() => this.session.hasAnyRole('MANAGER'));
+
+  protected readonly editingSettings = signal(false);
+  protected readonly addingClosure = signal(false);
+  protected readonly removingClosure = signal<string | null>(null);
+  protected readonly booking = signal(false);
+  protected readonly rescheduling = signal<string | null>(null);
+  protected readonly cancelling = signal<string | null>(null);
+  protected readonly busy = signal(false);
+  protected readonly bandError = signal<string | null>(null);
+
+  protected readonly settingsDraft = signal<SettingsDraft>({
+    businessStartTime: '08:00',
+    businessEndTime: '18:00',
+    dropoffSlotCapacity: 3,
+    pickupSlotCapacity: 3,
+  });
+  protected readonly stf = form(this.settingsDraft, settingsSchema);
+
+  protected readonly closureDraft = signal<ClosureDraft>({ date: '', message: '' });
+  protected readonly clf = form(this.closureDraft, closureSchema);
+
+  protected readonly bookingDraft = signal<BookingDraft>(this.emptyBooking());
+  protected readonly bf = form(this.bookingDraft, bookingSchema);
+
+  /** Slots still open on the chosen date, read straight from the API. */
+  protected readonly slots = signal<string[]>([]);
+  protected readonly loadingSlots = signal(false);
+  /** The new slot being considered for a reschedule. */
+  protected readonly rescheduleTo = signal('');
+  protected readonly cancelMessage = signal('');
+
+  private emptyBooking(): BookingDraft {
+    return {
+      forGuest: false,
+      customerId: '',
+      vehicleId: '',
+      guestName: '',
+      guestPhone: '',
+      guestEmail: '',
+      guestVehicleMake: '',
+      guestVehicleModel: '',
+      guestVehicleYear: null,
+      complaint: '',
+      date: new Date().toISOString().slice(0, 10),
+      slotStart: '',
+    };
+  }
+
+  protected readonly customers = computed(() =>
+    this.store.customers().filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name)),
+  );
+
+  protected readonly ownedVehicles = computed(() => {
+    const owner = this.bookingDraft().customerId;
+    return owner ? this.store.vehicles().filter((v) => v.customerId === owner && v.active) : [];
+  });
+
+  private closeBands(): void {
+    this.editingSettings.set(false);
+    this.addingClosure.set(false);
+    this.removingClosure.set(null);
+    this.booking.set(false);
+    this.rescheduling.set(null);
+    this.cancelling.set(null);
+    this.bandError.set(null);
+  }
+
+  protected close(): void {
+    this.closeBands();
+  }
+
+  /* --- hours ------------------------------------------------------------ */
+
+  protected openSettings(): void {
+    const s = this.settings();
+    this.closeBands();
+    this.settingsDraft.set({
+      businessStartTime: s?.openFrom ?? '08:00',
+      businessEndTime: s?.openTo ?? '18:00',
+      dropoffSlotCapacity: s?.dropoffCapacityPerSlot ?? 3,
+      pickupSlotCapacity: s?.pickupCapacityPerSlot ?? 3,
+    });
+    this.editingSettings.set(true);
+  }
+
+  protected async saveSettings(): Promise<void> {
+    if (this.stf().invalid()) return;
+    this.busy.set(true);
+    this.bandError.set(null);
+    const d = this.settingsDraft();
+    const result = await this.store.updateSchedulingSettings({
+      businessStartTime: d.businessStartTime,
+      businessEndTime: d.businessEndTime,
+      dropoffSlotCapacity: d.dropoffSlotCapacity ?? undefined,
+      pickupSlotCapacity: d.pickupSlotCapacity ?? undefined,
+    });
+    this.busy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'The hours could not be saved.');
+      return;
+    }
+    this.closeBands();
+  }
+
+  /* --- closures --------------------------------------------------------- */
+
+  protected openClosure(): void {
+    this.closeBands();
+    this.closureDraft.set({ date: '', message: '' });
+    this.addingClosure.set(true);
+  }
+
+  protected async saveClosure(): Promise<void> {
+    if (this.clf().invalid()) return;
+    this.busy.set(true);
+    this.bandError.set(null);
+    const d = this.closureDraft();
+    const result = await this.store.createClosure({
+      date: d.date,
+      message: d.message.trim() || null,
+    });
+    this.busy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'That date could not be closed.');
+      return;
+    }
+    this.closeBands();
+  }
+
+  protected async removeClosure(c: Closure): Promise<void> {
+    this.busy.set(true);
+    const result = await this.store.deleteClosure(c.date);
+    this.busy.set(false);
+    this.removingClosure.set(null);
+    if (!result.ok) this.bandError.set(result.error ?? null);
+  }
+
+  /** How many booked appointments a proposed closure would cancel. */
+  protected bookedOn(date: string): number {
+    return this.store
+      .appointments()
+      .filter((a) => a.status === 'SCHEDULED' && a.slotStart.slice(0, 10) === date).length;
+  }
+
+  /* --- booking ---------------------------------------------------------- */
+
+  protected openBooking(): void {
+    this.closeBands();
+    this.bookingDraft.set(this.emptyBooking());
+    this.booking.set(true);
+    void this.loadSlots();
+  }
+
+  protected setGuest(forGuest: boolean): void {
+    this.bookingDraft.update((d) => ({ ...d, forGuest, customerId: '', vehicleId: '' }));
+  }
+
+  protected onOwnerChange(): void {
+    this.bookingDraft.update((d) => ({ ...d, vehicleId: '' }));
+  }
+
+  /** The open slots are a fact about the date, so they are re-read when it changes. */
+  protected async loadSlots(): Promise<void> {
+    const date = this.bookingDraft().date;
+    if (!date) return;
+    this.loadingSlots.set(true);
+    this.slots.set(await this.store.availability('DROPOFF', date));
+    this.loadingSlots.set(false);
+    this.bookingDraft.update((d) => ({ ...d, slotStart: '' }));
+  }
+
+  protected async onDateChange(): Promise<void> {
+    await this.loadSlots();
+  }
+
+  protected async book(): Promise<void> {
+    if (this.bf().invalid()) return;
+    this.busy.set(true);
+    this.bandError.set(null);
+    const d = this.bookingDraft();
+    const result = await this.store.bookDropoff(
+      d.forGuest
+        ? {
+            guestName: d.guestName.trim(),
+            guestPhone: d.guestPhone.trim(),
+            guestEmail: d.guestEmail.trim() || null,
+            guestVehicleMake: d.guestVehicleMake.trim() || null,
+            guestVehicleModel: d.guestVehicleModel.trim() || null,
+            guestVehicleYear: d.guestVehicleYear,
+            complaint: d.complaint.trim(),
+            slotStart: d.slotStart,
+          }
+        : {
+            customerId: d.customerId,
+            vehicleId: d.vehicleId,
+            complaint: d.complaint.trim(),
+            slotStart: d.slotStart,
+          },
+    );
+    this.busy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'That booking was refused.');
+      return;
+    }
+    this.closeBands();
+  }
+
+  /* --- reschedule and cancel -------------------------------------------- */
+
+  protected async openReschedule(a: Appointment): Promise<void> {
+    this.closeBands();
+    this.rescheduleTo.set('');
+    this.rescheduling.set(a.id);
+    this.loadingSlots.set(true);
+    this.slots.set(await this.store.availability(a.type, a.slotStart.slice(0, 10)));
+    this.loadingSlots.set(false);
+  }
+
+  protected async reloadSlotsFor(a: Appointment, date: string): Promise<void> {
+    this.loadingSlots.set(true);
+    this.slots.set(await this.store.availability(a.type, date));
+    this.loadingSlots.set(false);
+    this.rescheduleTo.set('');
+  }
+
+  protected onRescheduleSlot(event: Event): void {
+    this.rescheduleTo.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected async confirmReschedule(a: Appointment): Promise<void> {
+    const to = this.rescheduleTo();
+    if (!to) return;
+    this.busy.set(true);
+    this.bandError.set(null);
+    const result = await this.store.rescheduleAppointment(a.id, to);
+    this.busy.set(false);
+    if (!result.ok) {
+      this.bandError.set(result.error ?? 'That slot could not be taken.');
+      return;
+    }
+    this.closeBands();
+  }
+
+  protected openCancel(a: Appointment): void {
+    this.closeBands();
+    this.cancelMessage.set('');
+    this.cancelling.set(a.id);
+  }
+
+  protected onCancelMessage(event: Event): void {
+    this.cancelMessage.set((event.target as HTMLInputElement).value);
+  }
+
+  protected async confirmCancel(a: Appointment): Promise<void> {
+    this.busy.set(true);
+    const result = await this.store.cancelAppointment(a.id, this.cancelMessage().trim() || null);
+    this.busy.set(false);
+    this.cancelling.set(null);
+    if (!result.ok) this.bandError.set(result.error ?? null);
+  }
+
+  /** `2026-08-26T13:00:00Z` → `13:00`, in the operator's own zone. */
+  protected slotTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   }
 }

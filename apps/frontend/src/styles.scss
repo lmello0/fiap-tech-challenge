@@ -516,3 +516,90 @@ textarea.input {
   color: var(--caution-ink);
   font-size: var(--step--1);
 }
+
+/* --- entry bands ---------------------------------------------------------
+   The blanks inside a ruled entry band. Shared furniture: a band in the parts
+   register is the same band as in customers, because a manual is one system.
+   Two columns at the console's fixed desktop width — a form of eight short
+   fields set in one column would run longer than the table it opens inside. */
+
+.band__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+  max-width: 52rem;
+}
+
+.band__grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 62rem;
+}
+
+/* A blank that needs the full measure: a complaint, a diagnosis, a reason. */
+.band__grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+.band__note {
+  grid-column: 1 / -1;
+  color: var(--ink-2);
+  font-size: var(--step--1);
+  max-width: 68ch;
+}
+
+textarea.input {
+  min-height: 4.5rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* The row a band belongs to keeps its place in the register while open. */
+tr.is-editing > td {
+  background: color-mix(in srgb, var(--ref) 5%, transparent);
+}
+
+/* --- entry furniture ---------------------------------------------------------------- */
+
+.rec__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* The band spans the whole register, so its cell carries no cell padding. */
+.rec__band-row > td {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.rec__actions {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+/* The flex row lives inside the cell, never on it: `display: flex` on a `<td>`
+   takes it out of table layout, and the column then resolves to a few pixels
+   regardless of what it contains. */
+.rec__actions > .btn {
+  flex: none;
+}
+
+.rec__confirm {
+  max-width: 68ch;
+  color: var(--ink-2);
+}
+
+.rec__confirm strong {
+  color: var(--ink);
+}
+
+.rec__empty-action {
+  margin-top: 0.8rem;
+}
+
+.rec__dismiss {
+  margin-left: 0.5rem;
+}

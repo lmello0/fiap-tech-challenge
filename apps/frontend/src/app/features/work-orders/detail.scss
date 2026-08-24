@@ -514,3 +514,59 @@
 .wo__notfound-action {
   margin-top: 0.9rem;
 }
+
+/* --- the diagnosis form's opening budget ---------------------------------- */
+
+.wo__seed {
+  border-top: 1px solid var(--rule);
+  padding-top: 0.7rem;
+}
+
+.wo__seed-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(8rem, 1fr) auto minmax(9rem, auto) 5.5rem auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wo__seed-kind {
+  color: var(--ink-3);
+}
+
+.wo__seed-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* The consequence sits on the same line as the line that causes it. */
+.wo__seed-shelf {
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+
+.wo__seed-total {
+  text-align: right;
+}
+
+.wo__seed-empty,
+.wo__seed-note {
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+
+.wo__seed-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* An authority is not a person, and the timeline should not imply it is. */
+.wo__actor-role {
+  color: var(--ink-3);
+  font-style: italic;
+}

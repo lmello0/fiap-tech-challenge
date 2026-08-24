@@ -1,0 +1,69 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.signin {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 2rem 1.5rem;
+}
+
+.signin__sheet {
+  width: min(26rem, 100%);
+  padding: 2rem;
+  border-top: 3px solid var(--sec-work-orders);
+}
+
+.signin__eyebrow {
+  color: var(--ink-3);
+}
+
+.signin__title {
+  margin-top: 0.35rem;
+  font-size: var(--step-4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.signin__sub {
+  margin-top: 0.4rem;
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+
+.signin__form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.signin__field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.signin__field .input {
+  width: 100%;
+}
+
+.signin__foot {
+  margin-top: 2rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.signin__note {
+  color: var(--ink-2);
+  font-size: var(--step--1);
+  max-width: 46ch;
+}
+
+.signin__note--tight {
+  color: var(--ink-3);
+}
