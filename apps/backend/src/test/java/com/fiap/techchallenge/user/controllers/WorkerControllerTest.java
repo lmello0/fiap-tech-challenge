@@ -37,8 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * MANAGER-only worker management, plus a worker's self-service profile update. Unlike
- * CustomerController, update has no staff override -- only the worker themselves may call it.
+ * MANAGER-only worker management, plus a worker's self-service profile update. A MANAGER may
+ * also update any worker's profile, mirroring the staff override on CustomerController.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -116,8 +116,8 @@ class WorkerControllerTest {
     }
 
     @Test
-    void aManagerCannotUpdateAnotherWorkersProfile() throws Exception {
-        // unlike CustomerController, there is no staff override on this endpoint
+    void aManagerCanUpdateAnotherWorkersProfile() throws Exception {
+        // mirrors the staff override on CustomerController
         Fixture manager = registerWorker(WorkerRole.MANAGER);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
 
@@ -125,20 +125,30 @@ class WorkerControllerTest {
                         .header("Authorization", "Bearer " + manager.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload("Nova", "8822")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Nova"));
     }
 
     @Test
-    void theSelfOnlyCheckIsEnforcedBeforeTheTargetIsEvenLookedUp() throws Exception {
-        // a MANAGER targeting an id that doesn't exist at all still gets 403, not 404 -- the SpEL
-        // self-check runs ahead of the controller/service, so identity is decided before existence
-        // is ever checked.
+    void aManagerUpdatingAnUnknownWorkerGetsNotFound() throws Exception {
         Fixture manager = registerWorker(WorkerRole.MANAGER);
 
         mvc.perform(patch("/workers/{id}", UUID.randomUUID())
                         .header("Authorization", "Bearer " + manager.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload("Nova", "8833")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aMechanicCannotUpdateAnotherWorkersProfile() throws Exception {
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture otherMechanic = registerWorker(WorkerRole.MECHANIC);
+
+        mvc.perform(patch("/workers/{id}", otherMechanic.id())
+                        .header("Authorization", "Bearer " + mechanic.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updatePayload("Nova", "8844")))
                 .andExpect(status().isForbidden());
     }
 

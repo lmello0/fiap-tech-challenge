@@ -4,6 +4,7 @@ import com.fiap.techchallenge.workorder.entities.WorkOrder;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -101,14 +102,22 @@ class WorkOrderSpecificationsTest {
     }
 
     @Test
+    void withStatusIsANoOpWhenStatusesIsEmpty() {
+        Specification<WorkOrder> spec = WorkOrderSpecifications.withStatus(Set.of());
+
+        assertThat(spec.toPredicate(root, query, cb)).isNull();
+        verifyNoInteractionsWithCriteriaBuilder();
+    }
+
+    @Test
     void withStatusFiltersByStatusWhenPresent() {
-        Path<Object> statusPath = mockPath("status");
-        when(cb.equal(statusPath, WorkOrderStatus.IN_PROGRESS)).thenReturn(predicate);
+        Path<WorkOrderStatus> statusPath = mock();
+        when(root.<WorkOrderStatus>get("status")).thenReturn(statusPath);
+        when(statusPath.in(Set.of(WorkOrderStatus.IN_PROGRESS))).thenReturn(predicate);
 
         Specification<WorkOrder> spec = WorkOrderSpecifications.withStatus(Set.of(WorkOrderStatus.IN_PROGRESS));
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
-        verify(cb).equal(statusPath, WorkOrderStatus.IN_PROGRESS);
     }
 
     @Test
@@ -121,13 +130,16 @@ class WorkOrderSpecificationsTest {
 
     @Test
     void withCodeFiltersByCodeWhenPresent() {
-        Path<Object> codePath = mockPath("code");
-        when(cb.equal(codePath, "WO-1")).thenReturn(predicate);
+        Path<String> codePath = mock();
+        Expression<String> lowerCodeExpr = mock();
+        when(root.<String>get("orderCode")).thenReturn(codePath);
+        when(cb.lower(codePath)).thenReturn(lowerCodeExpr);
+        when(cb.like(lowerCodeExpr, "%wo-1%")).thenReturn(predicate);
 
         Specification<WorkOrder> spec = WorkOrderSpecifications.withCode("WO-1");
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
-        verify(cb).equal(codePath, "WO-1");
+        verify(cb).like(lowerCodeExpr, "%wo-1%");
     }
 
     @Test

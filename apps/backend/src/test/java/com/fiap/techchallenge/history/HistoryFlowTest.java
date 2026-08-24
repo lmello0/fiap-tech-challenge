@@ -8,9 +8,11 @@ import com.fiap.techchallenge.history.entities.HistoryEntry;
 import com.fiap.techchallenge.history.repositories.HistoryEntryRepository;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.commands.CreateUserCommand;
+import com.fiap.techchallenge.user.api.commands.CreateWorkerCommand;
 import com.fiap.techchallenge.user.api.commands.RegisterPhoneNumberCommand;
 import com.fiap.techchallenge.user.enums.DocumentType;
 import com.fiap.techchallenge.user.enums.PhoneType;
+import com.fiap.techchallenge.user.enums.WorkerRole;
 import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.commands.CreateVehicleCommand;
 import com.fiap.techchallenge.vehicle.enums.FuelType;
@@ -30,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -75,7 +78,7 @@ class HistoryFlowTest {
         WorkOrderInfo wo = workOrderService.create(
                 new CreateWorkOrderCommand(customerId, vehicleId, "Strange noise on braking"));
         workOrderService.requestDiagnostics(wo.id());
-        workOrderService.startDiagnostics(wo.id(), new StartDiagnosticsCommand(UUID.randomUUID()));
+        workOrderService.startDiagnostics(wo.id(), new StartDiagnosticsCommand(registerMechanic()));
 
         // Async: HistoryEntryWriter runs after each publishing transaction commits, on another thread.
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
@@ -160,6 +163,24 @@ class HistoryFlowTest {
                 DocumentType.CPF,
                 uniqueDocument(),
                 List.of(new RegisterPhoneNumberCommand(PhoneType.MOBILE, "11999999999", true))
+        )).id();
+    }
+
+    private UUID registerMechanic() {
+        String email = UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@example.com";
+
+        return userService.createWorker(new CreateWorkerCommand(
+                new CreateUserCommand(
+                        email,
+                        "History",
+                        "Mechanic",
+                        DocumentType.CPF,
+                        uniqueDocument(),
+                        List.of(new RegisterPhoneNumberCommand(PhoneType.MOBILE, "11999999999", true))
+                ),
+                WorkerRole.MECHANIC,
+                LocalDate.now().minusYears(1),
+                LocalDate.now().minusYears(1)
         )).id();
     }
 

@@ -293,7 +293,26 @@ class PartReservationFlowTest {
 
     private void advanceToInDiagnostics(UUID workOrderId) {
         workOrderService.requestDiagnostics(workOrderId);
-        workOrderService.startDiagnostics(workOrderId, new StartDiagnosticsCommand(UUID.randomUUID()));
+        workOrderService.startDiagnostics(workOrderId, new StartDiagnosticsCommand(registerMechanic()));
+    }
+
+    private UUID registerMechanic() {
+        String email = UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@example.com";
+
+        return userService.createWorker(new com.fiap.techchallenge.user.api.commands.CreateWorkerCommand(
+                new com.fiap.techchallenge.user.api.commands.CreateUserCommand(
+                        email,
+                        "Test",
+                        "Mechanic",
+                        com.fiap.techchallenge.user.enums.DocumentType.CPF,
+                        uniqueDocument(),
+                        java.util.List.of(new com.fiap.techchallenge.user.api.commands.RegisterPhoneNumberCommand(
+                                com.fiap.techchallenge.user.enums.PhoneType.MOBILE, "11999999999", true))
+                ),
+                com.fiap.techchallenge.user.enums.WorkerRole.MECHANIC,
+                java.time.LocalDate.now().minusYears(1),
+                java.time.LocalDate.now().minusYears(1)
+        )).id();
     }
 
     private WorkOrderInfo finishDiagnosticsWith(UUID workOrderId, UUID partId, BigDecimal partQuantity, UUID serviceId) {
