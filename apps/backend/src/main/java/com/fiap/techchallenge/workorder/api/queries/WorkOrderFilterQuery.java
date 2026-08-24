@@ -16,8 +16,13 @@ import java.util.UUID;
 )
 public record WorkOrderFilterQuery(
         UUID customerId,
+        String customerName,
         UUID vehicleId,
+        String vehiclePlate,
+        String vehicleMake,
+        String vehicleModel,
         UUID mechanicId,
+        String mechanicName,
         Set<WorkOrderStatus> status,
         String code,
 

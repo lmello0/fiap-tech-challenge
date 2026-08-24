@@ -10,19 +10,44 @@ import java.util.UUID;
 
 public class WorkOrderSpecifications {
 
-    public static Specification<WorkOrder> belongsToCustomer(UUID customerId) {
+    public static Specification<WorkOrder> belongsToCustomerId(UUID customerId) {
         return (root, query, cb) ->
                 customerId == null ? null : cb.equal(root.get("customerId"), customerId);
     }
 
-    public static Specification<WorkOrder> ofVehicle(UUID vehicleId) {
+    public static Specification<WorkOrder> belongsToCustomerName(String customerName) {
+        return (root, query, cb) ->
+                customerName == null ? null : cb.equal(root.get("customerName"), customerName);
+    }
+
+    public static Specification<WorkOrder> ofVehicleId(UUID vehicleId) {
         return (root, query, cb) ->
                 vehicleId == null ? null : cb.equal(root.get("vehicleId"), vehicleId);
     }
 
-    public static Specification<WorkOrder> withMechanic(UUID mechanicId) {
+    public static Specification<WorkOrder> ofVehiclePlate(String vehiclePlate) {
+        return (root, query, cb) ->
+                vehiclePlate == null ? null : cb.equal(root.get("vehiclePlate"), vehiclePlate);
+    }
+
+    public static Specification<WorkOrder> ofVehicleMake(String vehicleMake) {
+        return (root, query, cb) ->
+                vehicleMake == null ? null : cb.equal(root.get("vehicleMake"), vehicleMake);
+    }
+
+    public static Specification<WorkOrder> ofVehicleModel(String vehicleModel) {
+        return (root, query, cb) ->
+                vehicleModel == null ? null : cb.equal(root.get("vehicleModel"), vehicleModel);
+    }
+
+    public static Specification<WorkOrder> withMechanicId(UUID mechanicId) {
         return (root, query, cb) ->
                 mechanicId == null ? null : cb.equal(root.get("mechanicId"), mechanicId);
+    }
+
+    public static Specification<WorkOrder> withMechanicName(String mechanicName) {
+        return (root, query, cb) ->
+                mechanicName == null ? null : cb.equal(root.get("mechanicName"), mechanicName);
     }
 
     public static Specification<WorkOrder> withStatus(Set<WorkOrderStatus> statuses) {

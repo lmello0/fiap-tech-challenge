@@ -33,7 +33,7 @@ class WorkOrderSpecificationsTest {
 
     @Test
     void belongsToCustomerIsANoOpWhenCustomerIdIsNull() {
-        Specification<WorkOrder> spec = WorkOrderSpecifications.belongsToCustomer(null);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.belongsToCustomerId(null);
 
         assertThat(spec.toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
@@ -45,7 +45,7 @@ class WorkOrderSpecificationsTest {
         Path<Object> customerPath = mockPath("customerId");
         when(cb.equal(customerPath, customerId)).thenReturn(predicate);
 
-        Specification<WorkOrder> spec = WorkOrderSpecifications.belongsToCustomer(customerId);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.belongsToCustomerId(customerId);
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(customerPath, customerId);
@@ -53,7 +53,7 @@ class WorkOrderSpecificationsTest {
 
     @Test
     void ofVehicleIsANoOpWhenVehicleIdIsNull() {
-        Specification<WorkOrder> spec = WorkOrderSpecifications.ofVehicle(null);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.ofVehicleId(null);
 
         assertThat(spec.toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
@@ -65,7 +65,7 @@ class WorkOrderSpecificationsTest {
         Path<Object> vehiclePath = mockPath("vehicleId");
         when(cb.equal(vehiclePath, vehicleId)).thenReturn(predicate);
 
-        Specification<WorkOrder> spec = WorkOrderSpecifications.ofVehicle(vehicleId);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.ofVehicleId(vehicleId);
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(vehiclePath, vehicleId);
@@ -73,7 +73,7 @@ class WorkOrderSpecificationsTest {
 
     @Test
     void withMechanicIsANoOpWhenMechanicIdIsNull() {
-        Specification<WorkOrder> spec = WorkOrderSpecifications.withMechanic(null);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.withMechanicId(null);
 
         assertThat(spec.toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
@@ -85,7 +85,7 @@ class WorkOrderSpecificationsTest {
         Path<Object> mechanicPath = mockPath("mechanicId");
         when(cb.equal(mechanicPath, mechanicId)).thenReturn(predicate);
 
-        Specification<WorkOrder> spec = WorkOrderSpecifications.withMechanic(mechanicId);
+        Specification<WorkOrder> spec = WorkOrderSpecifications.withMechanicId(mechanicId);
 
         assertThat(spec.toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(mechanicPath, mechanicId);

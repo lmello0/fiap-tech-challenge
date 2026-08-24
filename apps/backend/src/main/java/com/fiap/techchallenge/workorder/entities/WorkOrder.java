@@ -38,7 +38,19 @@ public class WorkOrder {
     private UUID customerId;
 
     @Column(nullable = false)
+    private String customerName;
+
+    @Column(nullable = false)
     private UUID vehicleId;
+
+    @Column(nullable = false)
+    private String vehiclePlate;
+
+    @Column(nullable = false)
+    private String vehicleMake;
+
+    @Column(nullable = false)
+    private String vehicleModel;
 
     @Column
     private UUID assignedMechanicId;

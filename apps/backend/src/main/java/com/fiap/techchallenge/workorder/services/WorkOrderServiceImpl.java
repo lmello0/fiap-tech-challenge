@@ -7,10 +7,15 @@ import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.user.api.UserService;
+import com.fiap.techchallenge.user.api.representation.UserInfo;
 import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
-import com.fiap.techchallenge.workorder.api.commands.*;
+import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
+import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.events.*;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
@@ -23,7 +28,10 @@ import com.fiap.techchallenge.workorder.entities.WorkOrder;
 import com.fiap.techchallenge.workorder.enums.BudgetStatus;
 import com.fiap.techchallenge.workorder.enums.RowType;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
-import com.fiap.techchallenge.workorder.exceptions.*;
+import com.fiap.techchallenge.workorder.exceptions.BudgetLineNotFoundException;
+import com.fiap.techchallenge.workorder.exceptions.VehicleOwnershipException;
+import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotFoundException;
+import com.fiap.techchallenge.workorder.exceptions.WorkOrderNotInProgressException;
 import com.fiap.techchallenge.workorder.mappers.BudgetMapper;
 import com.fiap.techchallenge.workorder.mappers.WorkOrderMapper;
 import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
@@ -63,6 +71,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final RepairServiceCatalogService repairServiceCatalogService;
     private final PartReservationService partReservationService;
     private final VehicleService vehicleService;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public WorkOrderCountStatusInfo getWorkOrderStatusInfo(Instant startDate, Instant endDate) {
@@ -72,9 +81,14 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional(readOnly = true)
     public Page<WorkOrderInfo> getAllWorkOrders(WorkOrderFilterQuery filter, Pageable pageable) {
         Specification<WorkOrder> spec = Specification
-                .where(WorkOrderSpecifications.belongsToCustomer(filter.customerId()))
-                .and(WorkOrderSpecifications.ofVehicle(filter.vehicleId()))
-                .and(WorkOrderSpecifications.withMechanic(filter.mechanicId()))
+                .where(WorkOrderSpecifications.belongsToCustomerId(filter.customerId()))
+                .and(WorkOrderSpecifications.belongsToCustomerName(filter.customerName()))
+                .and(WorkOrderSpecifications.ofVehicleId(filter.vehicleId()))
+                .and(WorkOrderSpecifications.ofVehiclePlate(filter.vehiclePlate()))
+                .and(WorkOrderSpecifications.ofVehicleMake(filter.vehicleMake()))
+                .and(WorkOrderSpecifications.ofVehicleModel(filter.vehicleModel()))
+                .and(WorkOrderSpecifications.withMechanicId(filter.mechanicId()))
+                .and(WorkOrderSpecifications.withMechanicName(filter.mechanicName()))
                 .and(WorkOrderSpecifications.withStatus(filter.status()))
                 .and(WorkOrderSpecifications.withCode(filter.code()))
                 .and(WorkOrderSpecifications.createdBetween(filter.createdAt(), filter.finishedAt()));
@@ -113,6 +127,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional
     public WorkOrderInfo create(CreateWorkOrderCommand command) {
         VehicleInfo vehicle = vehicleService.getById(command.vehicleId());
+        UserInfo customer = userService.getById(command.customerId());
 
         if (!vehicle.customerId().equals(command.customerId())) {
             throw new VehicleOwnershipException(command.vehicleId(), command.customerId());
@@ -121,7 +136,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         WorkOrder wo = new WorkOrder();
         wo.setOrderCode(nextOrderNumber());
         wo.setCustomerId(command.customerId());
+        wo.setCustomerName(customer.firstName() + " " + customer.lastName());
         wo.setVehicleId(command.vehicleId());
+        wo.setVehiclePlate(vehicle.licensePlate());
+        wo.setVehicleMake(vehicle.make());
+        wo.setVehicleModel(vehicle.model());
         wo.setCustomerComplaint(command.complaint());
         wo.setStatus(WorkOrderStatus.RECEIVED);
 
