@@ -55,6 +55,9 @@ public class WorkOrder {
     @Column
     private UUID assignedMechanicId;
 
+    @Column
+    private String mechanicName;
+
     @Column(length = 2000)
     private String customerComplaint;
 
