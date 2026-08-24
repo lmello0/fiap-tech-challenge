@@ -39,4 +39,9 @@ public class UserExceptionHandler {
     ProblemDetail handleNotACustomer(NotACustomerException e) {
         return ProblemDetails.of(HttpStatus.UNPROCESSABLE_CONTENT, "Unprocessable", e.getMessage());
     }
+
+    @ExceptionHandler(InvalidDocumentException.class)
+    ProblemDetail handleInvalidDocument(InvalidDocumentException e) {
+        return ProblemDetails.of(HttpStatus.UNPROCESSABLE_CONTENT, "Unprocessable", e.getMessage());
+    }
 }
