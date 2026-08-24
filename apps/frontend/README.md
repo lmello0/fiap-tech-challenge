@@ -13,8 +13,8 @@ npm start          # http://localhost:4200
 ```
 
 The backend's `APP_BASE_URL` already defaults to `http://localhost:4200` — see
-`apps/backend/.env.example`. `docker compose --profile frontend up` runs it via the `frontend`
-service in the root `compose.yaml`.
+`apps/backend/.env.example`. `docker compose --profile app up` (from the repo root) runs it via the
+`frontend` service in the root `compose.yaml`, alongside the backend.
 
 ## Demo data
 
