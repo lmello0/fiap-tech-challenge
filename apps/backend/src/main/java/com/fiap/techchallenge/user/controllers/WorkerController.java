@@ -34,7 +34,7 @@ public class WorkerController implements WorkerControllerSwaggerDoc {
     }
 
     @Override
-    @PreAuthorize("#id.toString() == authentication.name")
+    @PreAuthorize("hasRole('MANAGER') or #id.toString() == authentication.name")
     public ResponseEntity<UserInfo> update(UUID id, UpdateUserProfileCommand command) {
         return ResponseEntity.ok(service.updateProfile(id, command));
     }
