@@ -1,69 +1,121 @@
+/* ---------------------------------------------------------------------------
+   SIGN IN — the smallest card the shop prints.
+
+   Deliberately the plainest surface here: two blanks and one action. It sits
+   on the same stationery as the drop-off order and the account card, at a
+   width that admits it is a receipt rather than a form.
+   --------------------------------------------------------------------------- */
+
 :host {
   display: block;
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.front__have {
+  font-size: var(--step--1);
+  color: var(--ink-2);
 }
 
 .signin {
+  flex: 1;
   display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  padding: 2rem 1.5rem;
+  place-items: start center;
+  padding: 1.5rem 1.25rem 3rem;
 }
 
 .signin__sheet {
-  width: min(26rem, 100%);
-  padding: 2rem;
-  border-top: 3px solid var(--sec-work-orders);
+  width: min(30rem, 100%);
+  border-top: 2px solid var(--ink);
 }
 
-.signin__eyebrow {
-  color: var(--ink-3);
+.signin__band {
+  padding: 0.55rem 1.5rem;
+  background: var(--plate-sunk);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.signin__body {
+  padding: 2rem 1.5rem 1.75rem;
 }
 
 .signin__title {
-  margin-top: 0.35rem;
   font-size: var(--step-4);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1;
 }
 
 .signin__sub {
-  margin-top: 0.4rem;
+  margin-top: 0.6rem;
+  margin-bottom: 1.5rem;
   color: var(--ink-2);
-  font-size: var(--step--1);
+  max-width: 46ch;
 }
 
 .signin__form {
   display: grid;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 1.4rem;
+  margin-top: 1.5rem;
 }
 
-.signin__field {
-  display: grid;
-  gap: 0.3rem;
+.signin__form .blank {
+  grid-column: auto;
 }
 
-.signin__field .input {
-  width: 100%;
+.signin__resent {
+  display: block;
+  margin-top: 0.35rem;
+  font-weight: 600;
+}
+
+.signin__resent--bad {
+  color: var(--warn);
+}
+
+.signin__resend {
+  justify-self: start;
+}
+
+.signin__go {
+  justify-self: start;
+  font-size: var(--step-1);
+  padding: 0.6rem 1.4rem;
+}
+
+.signin__link {
+  justify-self: start;
+  font-size: var(--step--1);
 }
 
 .signin__foot {
-  margin-top: 2rem;
-  border-top: 1px solid var(--rule);
-  padding-top: 1.25rem;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.6rem;
   justify-items: start;
+  padding: 1.25rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--rule);
+  background: var(--stock);
 }
 
 .signin__note {
-  color: var(--ink-2);
   font-size: var(--step--1);
-  max-width: 46ch;
+  color: var(--ink-2);
+  max-width: 52ch;
 }
 
 .signin__note--tight {
   color: var(--ink-3);
+}
+
+@media (max-width: 46rem) {
+  .signin {
+    padding-inline: 0.9rem;
+  }
+
+  .signin__body,
+  .signin__foot,
+  .signin__band {
+    padding-inline: 1.1rem;
+  }
 }

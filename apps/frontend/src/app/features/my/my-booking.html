@@ -1,0 +1,297 @@
+<header class="gs__head">
+  <div>
+    <h1 class="gs__title">
+      {{ mode === 'PICKUP' ? 'Book a pickup' : 'Book a drop-off' }}
+    </h1>
+    <p class="gs__sub">
+      @if (mode === 'PICKUP') {
+        Choose when you'll collect the car. The counter has it ready for that slot.
+      } @else {
+        Thirty-minute slots, Monday to Friday, 8am to 6pm. Pick one and bring the car.
+      }
+    </p>
+  </div>
+</header>
+
+<div class="gs__stack">
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">
+        {{ mode === 'PICKUP' ? '3.2 — New pickup' : '3.1 — New drop-off' }}
+      </p>
+      <p class="plate__meta label">
+        {{ mode === 'PICKUP' ? 'POST /appointments/pickup' : 'POST /appointments/dropoff/customer' }}
+      </p>
+    </div>
+
+    <div class="plate__body">
+      @if (booked(); as appointment) {
+        <div class="bk__done">
+          <app-callout tier="note" heading="Booked">
+            <strong>{{ when(appointment.slotStart) }}</strong> —
+            {{ vehicleLabel(appointment.vehicleId) }}. It's in the register below, and you can move
+            or cancel it from there.
+          </app-callout>
+          <button class="btn" type="button" (click)="booked.set(null)">Book another</button>
+        </div>
+      } @else if (mode === 'PICKUP' && job() === null) {
+        <app-callout tier="warning" heading="That job could not be read">
+          A pickup is booked against a job that is ready to collect.
+          <a routerLink="/my/jobs">Open the job</a> and try from there.
+        </app-callout>
+      } @else if (store.activeVehicles().length === 0) {
+        <div class="empty">
+          <p class="empty__title">No vehicle to book in.</p>
+          <p>A booking is made against one of your cars, so add one first.</p>
+          <div class="rec__empty-action">
+            <a class="btn btn--primary" routerLink="/my/vehicles">Add a vehicle</a>
+          </div>
+        </div>
+      } @else {
+        @if (mode === 'PICKUP' && job(); as j) {
+          <p class="bk__for">
+            Collecting job <span class="token">{{ j.orderCode }}</span>.
+          </p>
+        }
+
+        <form class="form bk__form" (submit)="book($event)" novalidate>
+          <fieldset class="form__set">
+            <legend class="form__legend">1 — Which car</legend>
+            <label class="blank blank--full bk__vehicle">
+              <span class="blank__label label">Vehicle</span>
+              <select
+                class="blank__rule"
+                [value]="vehicleId()"
+                (change)="vehicleId.set($any($event.target).value)"
+              >
+                <option value="" disabled>Choose one of your vehicles</option>
+                @for (v of store.activeVehicles(); track v.id) {
+                  <option [value]="v.id">{{ v.make }} {{ v.model }} — {{ v.licensePlate }}</option>
+                }
+              </select>
+            </label>
+          </fieldset>
+
+          @if (mode === 'DROPOFF') {
+            <fieldset class="form__set">
+              <legend class="form__legend">2 — What is wrong</legend>
+              <label class="blank blank--full">
+                <span class="sr-only">Describe the fault</span>
+                <textarea
+                  class="blank__area"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="When it happens, what it sounds like, how long it's been going on."
+                  [value]="complaint()"
+                  (input)="complaint.set($any($event.target).value)"
+                ></textarea>
+                <span class="blank__help">This is what the mechanic reads first.</span>
+              </label>
+            </fieldset>
+          }
+
+          <fieldset class="form__set">
+            <legend class="form__legend">
+              {{ mode === 'PICKUP' ? "2 — When you'll collect it" : "3 — When you'll bring it" }}
+            </legend>
+            <label class="blank blank--date">
+              <span class="blank__label label">Date</span>
+              <input
+                class="blank__rule token"
+                type="date"
+                [min]="minDate"
+                [value]="date()"
+                (change)="pickDate($any($event.target).value)"
+              />
+            </label>
+
+            <div class="slots" role="group" aria-label="Available times">
+              @if (weekendPicked()) {
+                <app-callout tier="caution">The shop is closed at weekends. Pick a weekday.</app-callout>
+              } @else if (slotsBusy()) {
+                <p class="slots__state">Reading the open slots…</p>
+              } @else if (slotsError(); as message) {
+                <app-callout tier="warning">{{ message }}</app-callout>
+              } @else if (slots().length > 0) {
+                <ul class="slots__list">
+                  @for (s of slots(); track s) {
+                    <li>
+                      <button
+                        class="slot"
+                        type="button"
+                        [class.is-picked]="slot() === s"
+                        [attr.aria-pressed]="slot() === s"
+                        (click)="slot.set(s)"
+                      >
+                        <span class="token">{{ slotLabel(s) }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              } @else if (slotsAsked()) {
+                <app-callout tier="caution">
+                  Nothing left on that date. Try the next working day.
+                </app-callout>
+              } @else {
+                <p class="slots__state">Pick a date and the open times appear here.</p>
+              }
+            </div>
+          </fieldset>
+
+          <div class="file">
+            @if (error(); as message) {
+              <app-callout tier="warning">{{ message }}</app-callout>
+            }
+            <div class="file__actions">
+              <button
+                class="btn btn--primary file__primary"
+                type="submit"
+                [disabled]="busy() || !canBook()"
+              >
+                {{ busy() ? 'Booking…' : 'Book this slot' }}
+              </button>
+              <p class="file__note">
+                You can move or cancel it yourself, right up to the slot.
+              </p>
+            </div>
+          </div>
+        </form>
+      }
+    </div>
+  </section>
+
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">3.3 — Bookings made on this device</p>
+      <p class="plate__meta label">{{ store.upcomingBookings().length }} upcoming</p>
+    </div>
+    <div class="plate__body">
+      <div class="bk__note">
+        <app-callout tier="note" heading="Why this register is device-local">
+          The shop's system lets a customer make, move and cancel a booking, but has no call to
+          list their own — so this is what this browser has booked. The shop's confirmation email
+          is the record that follows you everywhere.
+        </app-callout>
+      </div>
+
+      @if (store.bookings().length === 0) {
+        <div class="empty">
+          <p class="empty__title">Nothing booked from here yet.</p>
+        </div>
+      } @else {
+        <ul class="bk__list">
+          @for (b of store.bookings(); track b.id) {
+            <li class="bk__row" [class.bk__row--spent]="b.status !== 'SCHEDULED'">
+              <div class="bk__top">
+                <span class="bk__when">{{ when(b.slotStart) }}</span>
+                <span class="bk__kind label">
+                  {{ b.type === 'DROPOFF' ? 'Drop-off' : 'Pickup' }}
+                </span>
+                @if (b.status !== 'SCHEDULED') {
+                  <span class="bk__state label">{{ b.status.toLowerCase() }}</span>
+                }
+              </div>
+              <p class="gs__muted">{{ vehicleLabel(b.vehicleId) }}</p>
+
+              @if (b.status === 'SCHEDULED') {
+                @if (isActing(b.id, 'cancel')) {
+                  <div class="bk__act bk__act--danger">
+                    <p class="bk__ask">Cancel this booking?</p>
+                    <label class="blank blank--full">
+                      <span class="blank__label label">Anything to tell the shop?</span>
+                      <input
+                        class="blank__rule"
+                        type="text"
+                        maxlength="500"
+                        [value]="cancelMessage()"
+                        (input)="cancelMessage.set($any($event.target).value)"
+                      />
+                    </label>
+                    @if (actingError(); as message) {
+                      <app-callout tier="warning">{{ message }}</app-callout>
+                    }
+                    <div class="bk__act-row">
+                      <button
+                        class="btn btn--danger"
+                        type="button"
+                        [disabled]="actingBusy()"
+                        (click)="confirmCancel(b.id)"
+                      >
+                        {{ actingBusy() ? 'Cancelling…' : 'Cancel it' }}
+                      </button>
+                      <button class="btn btn--quiet" type="button" (click)="acting.set(null)">
+                        Keep it
+                      </button>
+                    </div>
+                  </div>
+                } @else if (isActing(b.id, 'move')) {
+                  <div class="bk__act">
+                    <p class="bk__ask">Move it to when?</p>
+                    <label class="blank blank--date">
+                      <span class="blank__label label">New date</span>
+                      <input
+                        class="blank__rule token"
+                        type="date"
+                        [min]="minDate"
+                        [value]="moveDate()"
+                        (change)="pickMoveDate($any($event.target).value, b.type)"
+                      />
+                    </label>
+                    @if (moveSlots().length > 0) {
+                      <ul class="slots__list">
+                        @for (s of moveSlots(); track s) {
+                          <li>
+                            <button
+                              class="slot"
+                              type="button"
+                              [class.is-picked]="moveSlot() === s"
+                              [attr.aria-pressed]="moveSlot() === s"
+                              (click)="moveSlot.set(s)"
+                            >
+                              <span class="token">{{ slotLabel(s) }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    } @else if (moveDate()) {
+                      <p class="slots__state">Nothing open on that date.</p>
+                    }
+                    @if (actingError(); as message) {
+                      <app-callout tier="warning">{{ message }}</app-callout>
+                    }
+                    <div class="bk__act-row">
+                      <button
+                        class="btn btn--primary"
+                        type="button"
+                        [disabled]="actingBusy() || !moveSlot()"
+                        (click)="confirmMove(b.id)"
+                      >
+                        {{ actingBusy() ? 'Moving…' : 'Move it' }}
+                      </button>
+                      <button class="btn btn--quiet" type="button" (click)="acting.set(null)">
+                        Leave it
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="gs__actions bk__actions">
+                    <button class="btn btn--sm" type="button" (click)="startAction(b.id, 'move')">
+                      Move
+                    </button>
+                    <button
+                      class="btn btn--danger btn--sm"
+                      type="button"
+                      (click)="startAction(b.id, 'cancel')"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                }
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+</div>

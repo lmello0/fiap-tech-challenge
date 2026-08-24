@@ -1,0 +1,141 @@
+<header class="gs__head">
+  <div>
+    <h1 class="gs__title">Afternoon, {{ firstName() }}.</h1>
+    @if (store.loading()) {
+      <p class="gs__sub">Reading your account…</p>
+    } @else if (waiting().length > 0) {
+      <p class="gs__sub">
+        {{ waiting().length }}
+        {{ waiting().length === 1 ? 'thing is' : 'things are' }} waiting on you. Everything else is
+        the shop's move.
+      </p>
+    } @else {
+      <p class="gs__sub">Nothing is waiting on you. Whatever is open is the shop's move.</p>
+    }
+  </div>
+  <div class="gs__tools">
+    <a class="btn btn--primary" routerLink="/my/booking">Book a drop-off</a>
+  </div>
+</header>
+
+<div class="gs__stack">
+  <!-- 0.1 — the only queue that matters on this page. -->
+  <section class="plate fp__yours">
+    <div class="plate__head">
+      <p class="plate__title">0.1 — Waiting on you</p>
+      <p class="plate__meta label">Nothing moves until you act</p>
+    </div>
+    <div class="plate__body">
+      @if (waiting().length === 0) {
+        <!-- The good outcome, so it gets a line and not the largest void on
+             the page. A dashed empty-state box here would make "all clear"
+             look like a screen that failed to load. -->
+        <p class="fp__clear">
+          <span class="fp__clear-mark"><app-icon name="check" [size]="11" /></span>
+          Nothing needs you. When a mechanic has priced a job, or a car is ready to collect, it
+          appears here — and the shop emails you as well.
+        </p>
+      } @else {
+        <ul class="fp__list">
+          @for (job of waiting(); track job.id) {
+            <li class="fp__item">
+              <div class="fp__item-top">
+                <span class="fp__code token">{{ job.orderCode }}</span>
+                <app-status-mark [status]="job.status" />
+              </div>
+              <p class="fp__line">{{ step(job.status).line }}</p>
+              <div class="fp__item-foot">
+                @if (job.status === 'WAITING_APPROVAL' && job.budget) {
+                  <p class="fp__total">
+                    <span class="label">Total quoted</span>
+                    <strong>{{ money(job.budget.grandTotal) }}</strong>
+                  </p>
+                }
+                <a class="btn btn--primary btn--sm" [routerLink]="['/my/jobs', job.id]">
+                  {{ job.status === 'WAITING_APPROVAL' ? 'Read the price' : 'Open the job' }}
+                </a>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <div class="fp__cols">
+    <!-- 0.2 -->
+    <section class="plate">
+      <div class="plate__head">
+        <p class="plate__title">0.2 — Your next visit</p>
+      </div>
+      <div class="plate__body">
+        @if (nextBooking(); as booking) {
+          <p class="fp__when">{{ when(booking.slotStart) }}</p>
+          <p class="fp__what gs__muted">
+            {{ booking.type === 'DROPOFF' ? 'Dropping the car off' : 'Collecting the car' }}
+          </p>
+          <a class="btn btn--sm fp__manage" routerLink="/my/booking">Manage bookings</a>
+        } @else {
+          <p class="gs__muted">No visit booked.</p>
+          <a class="btn btn--sm fp__manage" routerLink="/my/booking">Book a drop-off</a>
+        }
+      </div>
+    </section>
+
+    <!-- 0.3 -->
+    <section class="plate">
+      <div class="plate__head">
+        <p class="plate__title">0.3 — In the shop's hands</p>
+      </div>
+      <div class="plate__body">
+        @if (moving().length === 0) {
+          <p class="gs__muted">Nothing open.</p>
+        } @else {
+          <ul class="fp__thin">
+            @for (job of moving(); track job.id) {
+              <li>
+                <a class="fp__thin-link" [routerLink]="['/my/jobs', job.id]">
+                  <span class="token">{{ job.orderCode }}</span>
+                  <app-status-mark [status]="job.status" />
+                </a>
+              </li>
+            }
+          </ul>
+        }
+        <a class="btn btn--sm fp__manage" routerLink="/my/jobs">All your jobs</a>
+      </div>
+    </section>
+
+    <!-- 0.4 -->
+    <section class="plate">
+      <div class="plate__head">
+        <p class="plate__title">0.4 — Your vehicles</p>
+      </div>
+      <div class="plate__body">
+        @if (store.activeVehicles().length === 0) {
+          <p class="gs__muted">None on record yet.</p>
+        } @else {
+          <ul class="fp__thin">
+            @for (v of store.activeVehicles(); track v.id) {
+              <li>
+                <span class="fp__veh">{{ v.make }} {{ v.model }}</span>
+                <span class="token">{{ v.licensePlate }}</span>
+              </li>
+            }
+          </ul>
+        }
+        <a class="btn btn--sm fp__manage" routerLink="/my/vehicles">Manage vehicles</a>
+      </div>
+    </section>
+  </div>
+
+  @if (store.jobs().length === 0 && !store.loading()) {
+    <div class="gs__notice">
+      <app-callout tier="note" heading="Jobs reach this page from the shop's emails">
+        The shop's system has no list of a customer's own work orders yet, so this console follows
+        the reference in the emails it sends you — open one on this device and it stays here. You
+        can also add a reference by hand under <a routerLink="/my/jobs">Your jobs</a>.
+      </app-callout>
+    </div>
+  }
+</div>

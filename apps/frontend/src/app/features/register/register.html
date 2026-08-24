@@ -1,0 +1,241 @@
+<a class="skip" href="#card">Skip to the form</a>
+
+<header class="front">
+  <p class="front__shop"><a routerLink="/">Auto Repair Shop</a></p>
+  <nav class="front__nav" aria-label="Account">
+    <span class="front__have">Already have an account?</span>
+    <a class="btn btn--sm" routerLink="/sign-in">Sign in</a>
+  </nav>
+</header>
+
+<main class="jobcard jobcard--narrow" id="card">
+  <div class="jobcard__band">
+    <p class="jobcard__form label">Form 2 — Account</p>
+    <p class="jobcard__no label">
+      Customer no. <span class="jobcard__blank" aria-label="assigned when the account is opened">&nbsp;</span>
+    </p>
+  </div>
+
+  <div class="jobcard__face">
+    <div class="jobcard__head">
+      <h1 class="jobcard__title">Open an account.</h1>
+      <p class="jobcard__lede">
+        Your vehicles, every job on them, and every price you've been asked to approve — in one
+        place instead of an inbox. <strong>This creates a customer account.</strong> Staff accounts
+        are created by the shop.
+      </p>
+    </div>
+
+    <form class="form" (submit)="submit($event)" novalidate>
+      <fieldset class="form__set">
+        <legend class="form__legend">1 — Who you are</legend>
+        <div class="form__row">
+          <label class="blank" [class.blank--invalid]="shown(firstNameError()) !== null">
+            <span class="blank__label label">First name</span>
+            <input
+              class="blank__rule"
+              type="text"
+              name="firstName"
+              autocomplete="given-name"
+              maxlength="30"
+              [value]="firstName()"
+              (input)="firstName.set($any($event.target).value)"
+            />
+            @if (shown(firstNameError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            } @else {
+              <span class="blank__help">3 to 30 characters.</span>
+            }
+          </label>
+
+          <label class="blank" [class.blank--invalid]="shown(lastNameError()) !== null">
+            <span class="blank__label label">Last name</span>
+            <input
+              class="blank__rule"
+              type="text"
+              name="lastName"
+              autocomplete="family-name"
+              maxlength="30"
+              [value]="lastName()"
+              (input)="lastName.set($any($event.target).value)"
+            />
+            @if (shown(lastNameError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="blank blank--short">
+            <span class="blank__label label">Document</span>
+            <select
+              class="blank__rule"
+              name="documentType"
+              [value]="documentType()"
+              (change)="documentType.set($any($event.target).value)"
+            >
+              @for (type of documentTypes; track type) {
+                <option [value]="type">{{ documentLabel[type] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="blank" [class.blank--invalid]="shown(documentError()) !== null">
+            <span class="blank__label label">{{ documentType() }} number</span>
+            <input
+              class="blank__rule token"
+              type="text"
+              inputmode="numeric"
+              name="documentCode"
+              maxlength="20"
+              [value]="documentCode()"
+              (input)="documentCode.set($any($event.target).value)"
+            />
+            @if (shown(documentError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            } @else {
+              <span class="blank__help">Dots and dashes are fine — we strip them.</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form__set">
+        <legend class="form__legend">2 — How the shop reaches you</legend>
+        <div class="form__row">
+          <label class="blank blank--wide" [class.blank--invalid]="shown(emailError()) !== null">
+            <span class="blank__label label">Email</span>
+            <input
+              class="blank__rule"
+              type="email"
+              name="email"
+              autocomplete="username"
+              maxlength="255"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+            />
+            @if (shown(emailError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            } @else {
+              <span class="blank__help">
+                Your sign-in, and where a price to approve is sent.
+              </span>
+            }
+          </label>
+
+          <label class="blank blank--short">
+            <span class="blank__label label">Phone type</span>
+            <select
+              class="blank__rule"
+              name="phoneType"
+              [value]="phoneType()"
+              (change)="phoneType.set($any($event.target).value)"
+            >
+              @for (type of phoneTypes; track type) {
+                <option [value]="type">{{ phoneLabel[type] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="blank blank--wide" [class.blank--invalid]="shown(phoneError()) !== null">
+            <span class="blank__label label">Phone number</span>
+            <input
+              class="blank__rule"
+              type="tel"
+              name="phone"
+              autocomplete="tel"
+              maxlength="30"
+              [value]="phone()"
+              (input)="phone.set($any($event.target).value)"
+            />
+            @if (shown(phoneError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            } @else {
+              <span class="blank__help">The counter calls this one when the car is ready.</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form__set">
+        <legend class="form__legend">3 — A password</legend>
+        <div class="form__row">
+          <label class="blank blank--wide" [class.blank--invalid]="shown(passwordError()) !== null">
+            <span class="blank__label label">Password</span>
+            <input
+              class="blank__rule"
+              [type]="revealed() ? 'text' : 'password'"
+              name="password"
+              autocomplete="new-password"
+              minlength="16"
+              maxlength="72"
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+            />
+            <!-- 16 is a long floor and an unexplained refusal at character 15
+                 reads as a bug. The rule is stated, and progress toward it is
+                 drawn as a filling rule rather than a strength verdict this
+                 console is in no position to make. -->
+            <span class="pw" aria-hidden="true">
+              <span class="pw__fill" [style.width.%]="passwordProgress()"></span>
+            </span>
+            @if (shown(passwordError()); as message) {
+              <span class="blank__error">{{ message }}</span>
+            } @else {
+              <span class="blank__help">
+                16 to 72 characters. Long beats complicated — three or four words you'll remember.
+              </span>
+            }
+          </label>
+
+          <label class="blank blank--wide" [class.blank--invalid]="confirmError() !== null">
+            <span class="blank__label label">Password again</span>
+            <input
+              class="blank__rule"
+              [type]="revealed() ? 'text' : 'password'"
+              name="confirm"
+              autocomplete="new-password"
+              maxlength="72"
+              [value]="confirm()"
+              (input)="confirm.set($any($event.target).value)"
+            />
+            @if (confirmError(); as message) {
+              <span class="blank__error">{{ message }}</span>
+            }
+          </label>
+
+          <div class="blank blank--full">
+            <button class="btn btn--quiet btn--sm reveal" type="button" (click)="revealed.set(!revealed())">
+              {{ revealed() ? 'Hide password' : 'Show password' }}
+            </button>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="file">
+        @if (session.error(); as message) {
+          <app-callout tier="warning">{{ message }}</app-callout>
+        }
+        @if (touched() && !complete() && session.error() === null) {
+          <app-callout tier="caution">
+            Some blanks above still need attention — each one says what it wants.
+          </app-callout>
+        }
+
+        <div class="file__actions">
+          <button class="btn btn--primary file__primary" type="submit" [disabled]="session.busy()">
+            {{ session.busy() ? 'Opening…' : 'Open the account' }}
+          </button>
+          <p class="file__note">
+            <strong>Confirm the email we send you.</strong> This opens your account and signs you
+            in now — but the shop will not let you sign in again until that address is confirmed.
+          </p>
+        </div>
+      </div>
+    </form>
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+  <p class="foot__staff"><a routerLink="/">Book a drop-off without an account</a></p>
+</footer>

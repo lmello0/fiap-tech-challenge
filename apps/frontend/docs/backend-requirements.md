@@ -1,4 +1,4 @@
-# Backend requirements for the staff console
+# Backend requirements for the frontend
 
 What the Angular staff console needs from the API that the API does not provide yet.
 
@@ -9,6 +9,9 @@ one-for-one from the Java `record`s under `**/api/representation/`, and `core/da
 is the only thing that crosses between wire and domain.
 
 Each item below says what degrades while it is missing.
+
+Items 1–10 are the staff console's. Items 11–13 came out of building the **customer facet** and are
+the only ones still open with no workaround that survives a change of device.
 
 > **Status of this document — updated after wiring.**
 > Item 1 has **landed** and is consumed. Items 2–4 were closed a different way: rather than the
@@ -323,6 +326,104 @@ A seeding routine, or a Flyway migration behind a `dev` profile, would remove th
 
 ---
 
+---
+
+## 11. A customer's own work orders — ⛔ **missing, and the customer console works around it**
+
+**There is no way for a `CUSTOMER` principal to list their own work orders.**
+
+`GET /work-orders` is `hasAnyRole('ATTENDANT', 'MECHANIC', 'MANAGER')`. The entire customer-facing
+work order surface is addressed by id — `GET /work-orders/{id}/customer-view`,
+`.../budget/approval`, `.../budget/refusal`, `.../history` — and a customer has no call that
+hands them those ids in the first place.
+
+So the one screen the whole lifecycle waits on, the budget decision, is reachable only by
+following the link in the shop's email. A customer who deletes that email, or opens the console
+on a second device, has no route back to their own job.
+
+**What the console does instead.** `CustomerStore` keeps a `localStorage` index, scoped to the
+signed-in user, of every work order id this browser has been shown, and re-reads each one from
+`/customer-view` on load. Section 2.2 of the owner's manual lets a reference be added by hand.
+Both screens say plainly that this is a record of what the device has seen and not a statement
+about the account — the limitation is disclosed to the customer rather than hidden.
+
+**Proposed:**
+
+```
+GET /work-orders/mine?status=…          # paged CustomerWorkOrderView, scoped from the token
+```
+
+Scoped from `authentication.getName()` exactly the way `GET /vehicles` already scopes itself for a
+customer caller, so there is a working precedent in the same codebase. `CustomerWorkOrderView` is
+already the right representation and already exists.
+
+**What degrades while it is missing:** a customer cannot find a job they were not emailed a link
+to, and the local index does not follow them between devices or survive clearing site data.
+
+---
+
+## 12. A customer's own appointments — ⛔ **missing, same shape**
+
+`GET /appointments` and `GET /appointments/{id}` are both `hasAnyRole('ATTENDANT', 'MANAGER')`,
+while `POST /appointments/{id}/customer-cancel` and `.../customer-reschedule` are
+`hasRole('CUSTOMER')`. A customer may therefore *change* a booking they can never *read*.
+
+**What the console does instead.** The booking's full `AppointmentInfo` is stored locally at the
+moment it is made, because there is no endpoint to read one back. Section 3.3 says so.
+
+**Proposed:**
+
+```
+GET /appointments/mine?status=…         # paged AppointmentInfo, scoped from the token
+```
+
+**What degrades while it is missing:** a booking made on one device cannot be seen, moved or
+cancelled from another, and the shop's confirmation email is the only durable record the customer
+has.
+
+---
+
+## 13. `POST /auth/register/customer` returns a token the account cannot yet re-use
+
+Not a missing endpoint — a sequencing surprise worth writing down.
+
+Registration answers with a full token pair, so a new customer is signed in immediately. But
+`AuthServiceImpl.login` refuses **every** account whose email is unverified, so that same customer
+cannot sign in again until they open the confirmation link. The first session works; the second is
+refused with a 403 the customer has no obvious way to read.
+
+The console handles it: registration says the address must be confirmed before signing in again,
+and the sign-in screen turns that specific 403 into its own state with a "send the link again"
+action rather than a generic failure that would send someone to reset a password that is fine.
+
+Worth deciding deliberately on the backend side: either registration should not issue a session
+for an unverified address, or `login` should let an unverified account through in a reduced state.
+The current pair is defensible but surprising.
+
+---
+
+## 14. Slot instants are anchored to UTC, not to the shop's timezone
+
+Found while verifying the landing page's booking flow against the running stack.
+
+`GET /appointments/availability` returns the shop's 8am–6pm operating window as
+`2026-08-25T08:00:00Z … 2026-08-25T17:30:00Z`. The backend container has no `TZ` set, so the
+`LocalTime` business hours are anchored to UTC. A customer in `America/Sao_Paulo` — which is
+everyone this shop serves — sees those instants rendered in their own zone as **05:00–14:30**,
+directly under a line that says the shop is open 8am to 6pm.
+
+The frontend renders the instant correctly and deliberately does not compensate. Hardcoding a
+display zone would produce the right numbers today and the wrong ones the moment the backend is
+configured properly, and it would lie to anyone reading the page from another zone.
+
+**Proposed:** set the shop's zone explicitly rather than inheriting the container's. Either
+`TZ=America/Sao_Paulo` on the backend service in `compose.yaml`, or — better, because it survives
+a move to a differently-configured host — an explicit shop timezone property that
+`AppointmentService` uses when it turns `businessStartTime`/`businessEndTime` into instants.
+
+**What degrades while it is missing:** every slot the customer is offered, on the public landing
+page and in the owner's manual, is shown three hours earlier than the shop is open.
+
 ## Not requested
 
 For the avoidance of doubt, the console does **not** need any of these, because the domain already
@@ -335,5 +436,9 @@ answers them well:
 - The lifecycle and its role gating are fully derivable from `WorkOrderStatus` plus the
   `@PreAuthorize` annotations; they are transcribed in
   `src/app/core/domain/lifecycle.ts` and need no endpoint.
+- A customer-facing *reading* of that lifecycle is a copy decision, not an endpoint:
+  `src/app/core/domain/customer-procedure.ts` derives it from the same file.
+- `GET /vehicles` already scopes itself to the caller for a `CUSTOMER` principal, so the owner's
+  manual needs no separate "my vehicles" call.
 
 ---

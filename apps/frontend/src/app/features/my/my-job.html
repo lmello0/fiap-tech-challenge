@@ -1,0 +1,270 @@
+@if (loadError(); as message) {
+  <div class="gs__notice">
+    <app-callout tier="warning" heading="This job could not be opened">
+      {{ message }}
+      <a routerLink="/my/jobs">Back to your jobs</a>
+    </app-callout>
+  </div>
+} @else if (job(); as job) {
+  <header class="gs__head">
+    <div>
+      <p class="job__back"><a routerLink="/my/jobs">← Your jobs</a></p>
+      <h1 class="gs__title token">{{ job.orderCode }}</h1>
+      <p class="gs__sub">
+        <app-status-mark [status]="job.status" />
+        <span class="job__where">
+          Step <span class="token">{{ here()?.n }}</span> of 10 — {{ here()?.title }}
+        </span>
+      </p>
+    </div>
+    @if (job.status === 'WAITING_PICKUP') {
+      <div class="gs__tools">
+        <button class="btn btn--primary" type="button" (click)="bookPickup()">
+          Book a pickup slot
+        </button>
+      </div>
+    }
+  </header>
+
+  <div class="job__grid">
+    <div class="job__main">
+      <!-- 2.3 — the decision, when there is one to make. -->
+      @if (job.budget; as budget) {
+        <section class="plate job__budget" [class.job__budget--live]="decidable()">
+          <div class="plate__head">
+            <p class="plate__title">2.3 — The price</p>
+            <p class="plate__meta label">
+              {{ budget.sentAt ? 'Sent ' + when(budget.sentAt) : 'Not sent yet' }}
+            </p>
+          </div>
+
+          <div class="mt-wrap">
+            <table class="mt">
+              <caption class="sr-only">
+                Every line on the budget for {{ job.orderCode }}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">What</th>
+                  <th scope="col" class="shrink">Kind</th>
+                  <th scope="col" class="r shrink">Qty</th>
+                  <th scope="col" class="r shrink">Each</th>
+                  <th scope="col" class="r shrink">Line</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of budget.lines; track line.id) {
+                  <tr>
+                    <td>{{ line.description }}</td>
+                    <td class="shrink gs__muted">{{ line.type === 'PART' ? 'Part' : 'Labour' }}</td>
+                    <td class="r shrink num">{{ line.quantity }}</td>
+                    <td class="r shrink num">{{ money(line.unitPrice) }}</td>
+                    <td class="r shrink num">{{ money(line.lineTotal) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="gs__muted">No lines on this budget yet.</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="job__total-row">
+                  <td colspan="4" class="r">Total</td>
+                  <td class="r num job__total">{{ money(budget.grandTotal) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="plate__body">
+            @if (decidable()) {
+              <app-callout tier="warning" heading="Read this before you answer">
+                These lines are frozen. The shop cannot add to this price after you approve it —
+                extra work would need a new job. <strong>Refusing ends this job permanently</strong>;
+                a refused price is never requoted.
+              </app-callout>
+
+              @if (actionError(); as message) {
+                <div class="job__action-error">
+                  <app-callout tier="warning">{{ message }}</app-callout>
+                </div>
+              }
+
+              @switch (confirming()) {
+                @case ('approve') {
+                  <div class="decide decide--confirm">
+                    <p class="decide__ask">
+                      Approve <strong>{{ money(budget.grandTotal) }}</strong> and let the shop start
+                      the work?
+                    </p>
+                    <div class="decide__row">
+                      <button
+                        class="btn btn--primary"
+                        type="button"
+                        [disabled]="pending() !== null"
+                        (click)="approve()"
+                      >
+                        {{ pending() === 'approve' ? 'Approving…' : 'Yes, approve it' }}
+                      </button>
+                      <button
+                        class="btn btn--quiet"
+                        type="button"
+                        [disabled]="pending() !== null"
+                        (click)="confirming.set(null)"
+                      >
+                        Not yet
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('refuse') {
+                  <div class="decide decide--confirm decide--danger">
+                    <p class="decide__ask">
+                      Refusing ends job <span class="token">{{ job.orderCode }}</span>. It cannot be
+                      reopened or requoted.
+                    </p>
+                    <label class="blank blank--full decide__why">
+                      <span class="blank__label label">Why, if you'd like to say</span>
+                      <textarea
+                        class="blank__area"
+                        rows="2"
+                        maxlength="2000"
+                        placeholder="Optional — the shop reads this."
+                        [value]="reason()"
+                        (input)="reason.set($any($event.target).value)"
+                      ></textarea>
+                    </label>
+                    <div class="decide__row">
+                      <button
+                        class="btn btn--danger"
+                        type="button"
+                        [disabled]="pending() !== null"
+                        (click)="refuse()"
+                      >
+                        {{ pending() === 'refuse' ? 'Refusing…' : 'Yes, refuse and end the job' }}
+                      </button>
+                      <button
+                        class="btn btn--quiet"
+                        type="button"
+                        [disabled]="pending() !== null"
+                        (click)="confirming.set(null)"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                }
+                @default {
+                  <div class="decide">
+                    <button class="btn btn--primary decide__go" type="button" (click)="confirming.set('approve')">
+                      Approve {{ money(budget.grandTotal) }}
+                    </button>
+                    <button class="btn btn--danger" type="button" (click)="confirming.set('refuse')">
+                      Refuse this price
+                    </button>
+                  </div>
+                }
+              }
+            } @else if (job.status === 'REFUSED') {
+              <app-callout tier="warning" heading="You refused this price">
+                The job ended here. Booking the car in again starts a new one from step 1.
+              </app-callout>
+            } @else if (budget.status === 'APPROVED') {
+              <app-callout tier="note" heading="You approved this price">
+                What you see above is what the shop is authorised to do, and no more.
+              </app-callout>
+            } @else {
+              <p class="gs__muted">
+                Nothing to decide yet — the shop will email you when this price is sent.
+              </p>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="plate">
+          <div class="plate__head">
+            <p class="plate__title">2.3 — The price</p>
+          </div>
+          <div class="plate__body">
+            <div class="empty">
+              <p class="empty__title">No price yet.</p>
+              <p>
+                A mechanic has to look at the car before anything can be costed. You'll get an email
+                the moment there is a price to read.
+              </p>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- 2.5 — only the entries the shop marked customer-visible. -->
+      <section class="plate">
+        <div class="plate__head">
+          <p class="plate__title">2.5 — What has happened</p>
+          <p class="plate__meta label">Shop record</p>
+        </div>
+        <div class="plate__body">
+          @if (history().length === 0) {
+            <p class="gs__muted">Nothing recorded on this job yet.</p>
+          } @else {
+            <ol class="tl">
+              @for (entry of history(); track entry.id) {
+                <li class="tl__row">
+                  <span class="tl__when token">{{ when(entry.occurredAt) }}</span>
+                  <span class="tl__what">
+                    {{ entry.summary }}
+                    @if (entry.actorIsSystem) {
+                      <span class="tl__who">· automatically</span>
+                    } @else if (entry.actorName) {
+                      <span class="tl__who">· by {{ entry.actorName }}</span>
+                    }
+                  </span>
+                </li>
+              }
+            </ol>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- 2.4 — the rail. The same instrument as the staff console's, read from
+         this side of the counter. -->
+    <aside class="plate job__rail" aria-labelledby="rail-title">
+      <div class="plate__head">
+        <p class="plate__title" id="rail-title">2.4 — Where it stands</p>
+      </div>
+      <div class="plate__body">
+        <ol class="rail">
+          @for (s of procedure; track s.status) {
+            <li
+              class="rail__step"
+              [class.is-done]="!refused() && s.n < (here()?.n ?? 0)"
+              [class.is-here]="!refused() && s.n === here()?.n"
+              [class.is-yours]="s.waitsOnYou"
+              [attr.aria-current]="!refused() && s.n === here()?.n ? 'step' : null"
+            >
+              <span class="rail__tick token" aria-hidden="true">{{ s.n }}</span>
+              <span class="rail__text">
+                <span class="rail__title">{{ s.title }}</span>
+                @if (!refused() && s.n === here()?.n) {
+                  <span class="rail__line">{{ s.line }}</span>
+                }
+              </span>
+            </li>
+          }
+          @if (refused()) {
+            <li class="rail__step rail__step--refused" aria-current="step">
+              <span class="rail__tick token" aria-hidden="true">×</span>
+              <span class="rail__text">
+                <span class="rail__title">Budget refused</span>
+                <span class="rail__line">{{ step('REFUSED').line }}</span>
+              </span>
+            </li>
+          }
+        </ol>
+      </div>
+    </aside>
+  </div>
+} @else if (loading()) {
+  <p class="gs__muted">Reading the job…</p>
+}

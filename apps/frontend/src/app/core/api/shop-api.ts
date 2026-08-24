@@ -5,6 +5,7 @@ import type {
   BlockingShortfallInfoDto,
   BudgetInfoDto,
   ClosureInfoDto,
+  CustomerWorkOrderViewDto,
   HistoryEntryInfoDto,
   PageResponse,
   PartInfoDto,
@@ -48,6 +49,31 @@ export interface CustomerCommand {
   documentType: DocumentType;
   documentCode: string;
   phoneNumbers: PhoneCommand[];
+}
+
+/** `RegisterCustomerCommand`. The password is 16-72 characters, enforced both sides. */
+export interface RegisterCustomerCommand {
+  user: CustomerCommand;
+  rawPassword: string;
+}
+
+/** `BookGuestDropoffCommand`. Public: the walk-in path, no account required. */
+export interface GuestDropoffCommand {
+  guestName: string;
+  guestPhone: string;
+  guestEmail: string;
+  guestVehicleMake: string;
+  guestVehicleModel: string;
+  guestVehicleYear: number;
+  complaint: string;
+  slotStart: string;
+}
+
+/** `BookCustomerDropoffCommand`. The signed-in customer books against their own vehicle. */
+export interface CustomerDropoffCommand {
+  vehicleId: string;
+  complaint: string;
+  slotStart: string;
 }
 
 /** A profile update cannot change the email or the document. */
@@ -196,6 +222,43 @@ export class ShopApi {
 
   me(): Promise<UserInfoDto> {
     return this.api.get<UserInfoDto>('/users/me');
+  }
+
+  /** Rotates the caller's own password. Requires the current one; revokes every session. */
+  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.api.post<void>('/auth/password/change', { currentPassword, newPassword });
+  }
+
+  /** Always resolves — the API answers 204 whether or not the address is registered. */
+  requestPasswordReset(email: string): Promise<void> {
+    return this.api.post<void>('/auth/password/reset', { email });
+  }
+
+  /** The reset link's token doubles as its own validation: a dead one 401s here. */
+  confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    return this.api.post<void>('/auth/password/reset/confirm', { token, newPassword });
+  }
+
+  /** Always resolves — the API answers 204 whether or not the address is an unverified account. */
+  resendEmailVerification(email: string): Promise<void> {
+    return this.api.post<void>('/auth/email-verification/resend', { email });
+  }
+
+  confirmEmailVerification(token: string): Promise<void> {
+    return this.api.post<void>('/auth/email-verification/confirm', { token });
+  }
+
+  /**
+   * Starts an email change for the signed-in account. Nothing moves until the
+   * link sent to the *new* address is opened — the address on file is not
+   * touched by this call, which is why it is a flow and not a form field.
+   */
+  requestEmailChange(newEmail: string): Promise<void> {
+    return this.api.post<void>('/auth/email-change', { newEmail });
+  }
+
+  confirmEmailChange(token: string): Promise<void> {
+    return this.api.post<void>('/auth/email-change/confirm', { token });
   }
 
   /** Any staff principal may resolve a user by id — unlike `/workers/{id}`, which is MANAGER-only. */
@@ -564,5 +627,85 @@ export class ShopApi {
 
   cancelAppointment(appointmentId: string, message: string | null): Promise<AppointmentInfoDto> {
     return this.api.post<AppointmentInfoDto>(`/appointments/${appointmentId}/cancel`, { message });
+  }
+
+  /* --- the customer facet ------------------------------------------------
+     Everything a CUSTOMER principal is actually served. The set is narrow on
+     purpose: the backend answers 404 rather than 403 when a customer reaches
+     for a record that is not theirs, so nothing here can be used to probe.  */
+
+  /**
+   * Self-registration. Creates the Customer facet and signs the caller in.
+   *
+   * Unlike `createCustomer` (staff, no credential), this is the public door and
+   * it returns a token pair directly — the account exists and is usable in one
+   * step. A Worker facet is never self-served; a manager creates those.
+   */
+  registerCustomer(command: RegisterCustomerCommand): Promise<TokenResponseDto> {
+    return this.api.post<TokenResponseDto>('/auth/register/customer', command);
+  }
+
+  /** The customer's own read of a work order. 404 when it is not theirs. */
+  customerWorkOrder(id: string): Promise<CustomerWorkOrderViewDto> {
+    return this.api.get<CustomerWorkOrderViewDto>(`/work-orders/${id}/customer-view`);
+  }
+
+  /**
+   * The decision the whole lifecycle waits on. No staff principal can make it —
+   * step 6 of the procedure has no action because there is no endpoint for one.
+   */
+  approveBudget(workOrderId: string, budgetId: string): Promise<BudgetInfoDto> {
+    return this.api.post<BudgetInfoDto>(
+      `/work-orders/${workOrderId}/customer-view/budget/approval`,
+      undefined,
+      { budgetId },
+    );
+  }
+
+  /** Terminal. A refused budget cannot be requoted — the order ends there. */
+  refuseBudget(workOrderId: string, budgetId: string, reason: string | null): Promise<BudgetInfoDto> {
+    return this.api.post<BudgetInfoDto>(
+      `/work-orders/${workOrderId}/customer-view/budget/refusal`,
+      { reason },
+      { budgetId },
+    );
+  }
+
+  /** Only the entries the owning module marked customer-visible. */
+  customerWorkOrderHistory(id: string): Promise<PageResponse<HistoryEntryInfoDto>> {
+    return this.page<HistoryEntryInfoDto>(`/work-orders/${id}/customer-view/history`, {
+      sort: 'occurredAt,desc',
+    });
+  }
+
+  /** Public. The walk-in booking the landing page files without an account. */
+  bookGuestDropoff(command: GuestDropoffCommand): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/dropoff/guest', command);
+  }
+
+  bookCustomerDropoff(command: CustomerDropoffCommand): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/dropoff/customer', command);
+  }
+
+  /** Booked against a finished order, so the vehicle is collected at a real slot. */
+  bookPickup(workOrderId: string, vehicleId: string, slotStart: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/pickup', {
+      workOrderId,
+      vehicleId,
+      slotStart,
+    });
+  }
+
+  /** The customer's own cancel. Distinct endpoint from staff's, and it records who asked. */
+  cancelOwnAppointment(appointmentId: string, message: string | null): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>(`/appointments/${appointmentId}/customer-cancel`, {
+      message,
+    });
+  }
+
+  rescheduleOwnAppointment(appointmentId: string, newSlotStart: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>(`/appointments/${appointmentId}/customer-reschedule`, {
+      newSlotStart,
+    });
   }
 }

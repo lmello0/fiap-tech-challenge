@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.vem {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 2rem 1.5rem;
+}
+
+.vem__sheet {
+  width: min(26rem, 100%);
+  padding: 2rem;
+  border-top: 3px solid var(--ref);
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.vem__mark {
+  padding: 0.5rem;
+  border: 1px solid currentcolor;
+}
+
+.vem__mark--ok {
+  color: var(--ok);
+}
+
+.vem__mark--warn {
+  color: var(--warn);
+}
+
+.vem__eyebrow {
+  margin-top: 0.5rem;
+  color: var(--ink-3);
+}
+
+.vem__title {
+  font-size: var(--step-3);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.vem__sub {
+  color: var(--ink-2);
+  font-size: var(--step--1);
+  max-width: 42ch;
+}
+
+.vem__sub + .btn,
+.vem__title + .btn {
+  margin-top: 1.5rem;
+}

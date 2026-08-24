@@ -1,4 +1,4 @@
-@if (session.signedIn()) {
+@if (session.inWorkshop()) {
   @if (session.isDemo()) {
     <p class="demo-band">
       <app-icon name="alert" [size]="13" />
@@ -44,17 +44,23 @@
     <div class="masthead__authority">
       <p class="label">Signed in as</p>
       <p class="masthead__operator">{{ session.displayName() }}</p>
-      <p class="masthead__stamp token">
-        {{ roleLabel(session.role()!) }} · REV {{ revision }}
-        @if (session.alsoCustomer()) {
-          <span class="masthead__facet" title="This account also holds a Customer facet, which this console never acts on"
-            >· ALSO CUSTOMER</span
-          >
+      <p class="masthead__stamp token">{{ roleLabel(session.role()!) }} · REV {{ revision }}</p>
+      <div class="masthead__actions">
+        @if (session.hasBothFacets()) {
+          <!-- The other volume. This console never acts on the Customer facet,
+               so switching is a real switch, not a mode: the shop's cache is
+               dropped on the way out. -->
+          <button class="btn btn--quiet btn--sm" type="button" (click)="switchToGarage()">
+            Switch to your own vehicles
+          </button>
         }
-      </p>
-      <button class="btn btn--quiet btn--sm masthead__out" type="button" (click)="signOut()">
-        {{ session.isDemo() ? 'Leave demo' : 'Sign out' }}
-      </button>
+        @if (!session.isDemo()) {
+          <a class="btn btn--quiet btn--sm" routerLink="/change-password">Change password</a>
+        }
+        <button class="btn btn--quiet btn--sm masthead__out" type="button" (click)="signOut()">
+          {{ session.isDemo() ? 'Leave demo' : 'Sign out' }}
+        </button>
+      </div>
     </div>
   </header>
 

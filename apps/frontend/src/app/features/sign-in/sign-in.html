@@ -1,0 +1,109 @@
+<header class="front">
+  <p class="front__shop"><a routerLink="/">Auto Repair Shop</a></p>
+  <nav class="front__nav" aria-label="Account">
+    <span class="front__have">No account?</span>
+    <a class="btn btn--sm" routerLink="/register">Create one</a>
+  </nav>
+</header>
+
+<main class="signin">
+  <div class="signin__sheet plate">
+    <div class="signin__band">
+      <p class="label">Form 3 — Sign in</p>
+    </div>
+
+    <div class="signin__body">
+      <h1 class="signin__title">Sign in.</h1>
+      <p class="signin__sub">
+        One sign-in for both sides of the counter. If your account holds a staff role as well as a
+        customer one, you'll pick which you're here for next.
+      </p>
+
+      @if (returningTo) {
+        <app-callout tier="note">
+          You'll go back to <span class="token">{{ returningTo }}</span> once you're in.
+        </app-callout>
+      }
+
+      <form class="signin__form" (submit)="submit($event)">
+        <label class="blank">
+          <span class="blank__label label">Email</span>
+          <input
+            class="blank__rule"
+            type="email"
+            name="email"
+            autocomplete="username"
+            required
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+          />
+        </label>
+
+        <label class="blank">
+          <span class="blank__label label">Password</span>
+          <input
+            class="blank__rule"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+          />
+        </label>
+
+        @if (unverified(); as address) {
+          <!-- The API refuses every login until the address is confirmed, so
+               the recovery is the link, never a password reset. -->
+          <app-callout tier="caution" heading="Confirm your email first">
+            The shop hasn't had confirmation that <span class="token">{{ address }}</span> is
+            yours, and it won't sign anyone in until it does. The link is in the email we sent when
+            the account was opened.
+            @if (resent()) {
+              <span class="signin__resent">Sent again — check that inbox.</span>
+            }
+            @if (resendError(); as message) {
+              <span class="signin__resent signin__resent--bad">{{ message }}</span>
+            }
+          </app-callout>
+          <button
+            class="btn signin__resend"
+            type="button"
+            [disabled]="resending() || resent()"
+            (click)="resend()"
+          >
+            {{ resending() ? 'Sending…' : resent() ? 'Link sent' : 'Send the link again' }}
+          </button>
+        } @else if (session.error(); as message) {
+          <app-callout tier="warning">{{ message }}</app-callout>
+        }
+
+        <button class="btn btn--primary signin__go" type="submit" [disabled]="session.busy()">
+          {{ session.busy() ? 'Signing in…' : 'Sign in' }}
+        </button>
+
+        <a class="signin__link" routerLink="/forgot-password">Forgot your password?</a>
+      </form>
+    </div>
+
+    <footer class="signin__foot">
+      <p class="signin__note">
+        Staff accounts are created by a manager, never here. This form only ever opens what your
+        account already holds.
+      </p>
+      <button class="btn btn--quiet btn--sm" type="button" (click)="demo()">
+        Walk the staff console in demo mode
+      </button>
+      <p class="signin__note signin__note--tight">
+        Demo mode signs in to nothing and calls no API. It reads a synthetic shop so the staff
+        screens can be reviewed against an empty database.
+      </p>
+    </footer>
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+  <p class="foot__staff"><a routerLink="/">Book a drop-off without an account</a></p>
+</footer>

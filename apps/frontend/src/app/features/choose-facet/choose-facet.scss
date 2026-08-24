@@ -1,0 +1,162 @@
+/* ---------------------------------------------------------------------------
+   THE PICKER — two bound volumes on a shelf.
+
+   The only screen in the build where two things are offered at exactly equal
+   weight, so nothing here may lean: same width, same rules, same type, same
+   button. The only thing that distinguishes them is the section ink on the
+   spine, which is the same device the console's thumb tabs already use.
+   --------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.pick {
+  /* A gate, so it sits on the page rather than at the top of it. */
+  max-width: 62rem;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  padding: clamp(2rem, 6vh, 4.5rem) 1.25rem;
+}
+
+.pick__shop {
+  color: var(--ink-3);
+}
+
+.pick__title {
+  margin-top: 0.4rem;
+  font-size: clamp(2rem, 1.4rem + 2.2vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.pick__sub {
+  margin-top: 0.7rem;
+  max-width: 60ch;
+  font-size: var(--step-1);
+  color: var(--ink-2);
+}
+
+.pick__list {
+  list-style: none;
+  padding: 0;
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.pick__list > li {
+  display: flex;
+}
+
+/* A volume: the spine down the left, the printed face beside it. */
+.volume {
+  --spine: var(--sec-work-orders);
+  display: grid;
+  grid-template-columns: 0.55rem minmax(0, 1fr);
+  width: 100%;
+  text-align: left;
+  background: var(--plate);
+  border: 1px solid var(--rule-strong);
+  border-top: 2px solid var(--ink);
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 90ms linear, background-color 90ms linear;
+}
+
+/* Far enough from the shop manual's blue to read as a different book on
+   the shelf, and it is the customers section's own ink either way. */
+.volume--own {
+  --spine: var(--sec-customers);
+}
+
+.volume__spine {
+  background: var(--spine);
+}
+
+.volume:hover:not(:disabled),
+.volume:focus-visible {
+  border-color: var(--ink);
+  background: var(--stock);
+}
+
+.volume:disabled {
+  cursor: progress;
+  color: var(--ink-3);
+}
+
+.volume__body {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1.5rem 1.35rem 1.35rem;
+}
+
+.volume__vol {
+  color: var(--ink-3);
+}
+
+.volume__name {
+  font-family: var(--face-cond);
+  font-size: var(--step-3);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+
+.volume__who {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--spine);
+}
+
+.volume__what {
+  margin-top: 0.5rem;
+  font-size: var(--step-0);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+
+/* Printed as the action it is, without a nested button inside a button. */
+.volume__go {
+  margin-top: 1.1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.volume:hover:not(:disabled) .volume__go {
+  color: var(--ref);
+}
+
+.pick__foot {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  max-width: 76ch;
+}
+
+@media (max-width: 46rem) {
+  .pick {
+    padding-inline: 0.9rem;
+  }
+
+  .pick__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

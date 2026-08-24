@@ -1,0 +1,123 @@
+/* ---------------------------------------------------------------------------
+   OWNER'S MANUAL — the furniture every page in volume two is set on.
+   Shared by all five sheets the way records.scss is shared by the console's
+   three register screens: one volume, one set of rules.
+   --------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+}
+
+.plate {
+  border-top: 3px solid var(--section-ink, var(--ink));
+}
+
+.plate__meta {
+  color: var(--ink-3);
+}
+
+.gs__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.gs__title {
+  font-size: var(--step-4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.gs__sub {
+  margin-top: 0.35rem;
+  color: var(--ink-2);
+  max-width: 70ch;
+}
+
+.gs__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.gs__notice {
+  margin-bottom: 1.25rem;
+  max-width: 82ch;
+}
+
+.gs__stack {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.gs__muted {
+  color: var(--ink-2);
+}
+
+.gs__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.gs__actions > .btn {
+  flex: none;
+}
+
+/* A row of the register, on a screen too narrow for a table. Every register
+   in this volume prints as a table on a desk and as a stack on a phone; the
+   heads become labels rather than disappearing. */
+.gs__cards {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gs__card {
+  border: 1px solid var(--rule);
+  background: var(--plate);
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.gs__card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.gs__card-name {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+.gs__pairs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 1rem;
+}
+
+.gs__pair {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.gs__pair > .label {
+  font-size: 0.68rem;
+}
+
+@media (max-width: 62rem) {
+  .gs__title {
+    font-size: var(--step-3);
+  }
+}

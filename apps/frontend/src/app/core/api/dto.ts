@@ -162,6 +162,21 @@ export interface BudgetInfoDto {
   resolvedAt: string | null;
 }
 
+/**
+ * `CustomerWorkOrderView` — deliberately narrow.
+ *
+ * The customer facet is never served `WorkOrderInfoDto`. No assigned mechanic,
+ * no diagnosis notes, no internal timestamps: the code, where the job stands,
+ * and the budget they are being asked to decide on. The customer console must
+ * not reconstruct what the API withholds on purpose.
+ */
+export interface CustomerWorkOrderViewDto {
+  id: string;
+  orderCode: string;
+  status: WorkOrderStatus;
+  budget: BudgetInfoDto | null;
+}
+
 /* --- inventory ------------------------------------------------------------ */
 
 /** Catalog only. Stock lives in `PartStockInfoDto`, deliberately (ADR 0012). */

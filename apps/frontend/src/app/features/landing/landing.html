@@ -1,0 +1,296 @@
+<a class="skip" href="#card">Skip to the repair order</a>
+
+<header class="front">
+  <p class="front__shop">Auto Repair Shop</p>
+  <nav class="front__nav" aria-label="Account">
+    @if (session.signedIn()) {
+      <a class="btn btn--sm" routerLink="/my">Your account</a>
+    } @else {
+      <a class="front__link" routerLink="/sign-in">Sign in</a>
+      <a class="btn btn--sm" routerLink="/register">Create an account</a>
+    }
+  </nav>
+</header>
+
+<main class="jobcard" id="card">
+  <!-- The form header band: what this document is, and the blanks a shop
+       leaves for its own clerk to fill. The order number is genuinely unknown
+       until the counter opens the job, so it is printed as a blank rule. -->
+  <div class="jobcard__band">
+    <p class="jobcard__form label">Form 1 — Vehicle drop-off</p>
+    <p class="jobcard__no label">
+      Order no. <span class="jobcard__blank" aria-label="assigned by the counter">&nbsp;</span>
+    </p>
+    <p class="jobcard__date label">
+      <span class="token">{{ today | date: 'dd MMM yyyy' }}</span>
+    </p>
+  </div>
+
+  <div class="jobcard__grid">
+    <div class="jobcard__face">
+      @if (filed(); as receipt) {
+        <div class="done">
+          <h1 class="done__title">Booked.</h1>
+          <p class="done__lede">
+            Bring the car on
+            <strong>{{ longSlot(receipt.slotStart) }}</strong>.
+          </p>
+          <app-callout tier="note">
+            We've emailed <strong>{{ receipt.email }}</strong> a link to manage this booking, and
+            the same address will get the price to approve once a mechanic has looked at the car.
+            Nothing gets done to it until you say yes.
+          </app-callout>
+          <div class="done__next">
+            <a class="btn btn--primary" routerLink="/register">Create an account</a>
+            <p class="done__note">
+              An account keeps every job, vehicle and price in one place instead of in your inbox.
+              You can make one later from the link we sent — the booking stands either way.
+            </p>
+          </div>
+        </div>
+      } @else {
+        <div class="jobcard__head">
+          <h1 class="jobcard__title">Book the car in.</h1>
+          <p class="jobcard__lede">
+            Fill this in and bring it over. A mechanic diagnoses it, you get the price in writing,
+            and <strong>nothing is done to your car until you approve that price</strong>. No
+            account needed to start.
+          </p>
+        </div>
+
+        <form class="form" (submit)="$event.preventDefault(); fileAsGuest()" novalidate>
+          <fieldset class="form__set">
+            <legend class="form__legend">1 — Who is bringing it</legend>
+            <div class="form__row">
+              <label class="blank blank--wide">
+                <span class="blank__label label">Full name</span>
+                <input
+                  class="blank__rule"
+                  type="text"
+                  name="name"
+                  autocomplete="name"
+                  maxlength="100"
+                  [value]="name()"
+                  (input)="name.set($any($event.target).value)"
+                />
+              </label>
+              <label class="blank blank--short">
+                <span class="blank__label label">Phone</span>
+                <input
+                  class="blank__rule"
+                  type="tel"
+                  name="phone"
+                  autocomplete="tel"
+                  maxlength="30"
+                  [value]="phone()"
+                  (input)="phone.set($any($event.target).value)"
+                />
+              </label>
+              <label class="blank blank--full">
+                <span class="blank__label label">Email</span>
+                <input
+                  class="blank__rule"
+                  type="email"
+                  name="email"
+                  autocomplete="email"
+                  maxlength="255"
+                  [value]="email()"
+                  (input)="email.set($any($event.target).value)"
+                />
+                <span class="blank__help">The price to approve is sent here.</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form__set">
+            <legend class="form__legend">2 — The vehicle</legend>
+            <div class="form__row">
+              <label class="blank blank--short">
+                <span class="blank__label label">Make</span>
+                <input
+                  class="blank__rule"
+                  type="text"
+                  name="make"
+                  maxlength="50"
+                  [value]="make()"
+                  (input)="make.set($any($event.target).value)"
+                />
+              </label>
+              <label class="blank blank--short">
+                <span class="blank__label label">Model</span>
+                <input
+                  class="blank__rule"
+                  type="text"
+                  name="model"
+                  maxlength="100"
+                  [value]="model()"
+                  (input)="model.set($any($event.target).value)"
+                />
+              </label>
+              <label class="blank blank--year">
+                <span class="blank__label label">Year</span>
+                <input
+                  class="blank__rule token"
+                  type="text"
+                  inputmode="numeric"
+                  name="year"
+                  maxlength="4"
+                  [value]="year()"
+                  (input)="year.set($any($event.target).value)"
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form__set">
+            <legend class="form__legend">3 — What is wrong</legend>
+            <label class="blank blank--full">
+              <span class="sr-only">Describe the fault</span>
+              <textarea
+                class="blank__area"
+                name="complaint"
+                rows="3"
+                maxlength="2000"
+                placeholder="Describe it the way you'd describe it at the counter — when it happens, what it sounds like, how long it's been going on."
+                [value]="complaint()"
+                (input)="complaint.set($any($event.target).value)"
+              ></textarea>
+              <span class="blank__help">
+                This is what the mechanic reads first. Plain words are fine.
+              </span>
+            </label>
+          </fieldset>
+
+          <fieldset class="form__set">
+            <legend class="form__legend">4 — When you'll bring it</legend>
+            <label class="blank blank--date">
+              <span class="blank__label label">Drop-off date</span>
+              <input
+                class="blank__rule token"
+                type="date"
+                name="date"
+                [min]="minDate"
+                [value]="date()"
+                (change)="pickDate($any($event.target).value)"
+              />
+              <span class="blank__help">Open Monday to Friday, 8am to 6pm.</span>
+            </label>
+
+            <div class="slots" role="group" aria-label="Available drop-off times">
+              @if (weekendPicked()) {
+                <app-callout tier="caution">The shop is closed at weekends. Pick a weekday.</app-callout>
+              } @else if (slotsBusy()) {
+                <p class="slots__state">Reading the open slots…</p>
+              } @else if (slotsError(); as message) {
+                <app-callout tier="warning">{{ message }}</app-callout>
+              } @else if (slots().length > 0) {
+                <ul class="slots__list">
+                  @for (s of slots(); track s) {
+                    <li>
+                      <button
+                        class="slot"
+                        type="button"
+                        [class.is-picked]="slot() === s"
+                        [attr.aria-pressed]="slot() === s"
+                        (click)="slot.set(s)"
+                      >
+                        <span class="token">{{ slotLabel(s) }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              } @else if (slotsAsked()) {
+                <app-callout tier="caution">
+                  Nothing left on that date. Try the next working day.
+                </app-callout>
+              } @else {
+                <p class="slots__state">Pick a date and the open times appear here.</p>
+              }
+            </div>
+          </fieldset>
+
+          <!-- The filing band. The account offer lives here, at the moment it
+               buys something, rather than as a wall in front of the form. -->
+          <div class="file">
+            @if (error(); as message) {
+              <app-callout tier="warning">{{ message }}</app-callout>
+            }
+            @if (touched() && missing().length > 0) {
+              <app-callout tier="caution">
+                Still blank: {{ missing().join(', ') }}.
+              </app-callout>
+            }
+
+            <div class="file__actions">
+              <button class="btn btn--primary file__primary" type="submit" [disabled]="busy()">
+                {{ busy() ? 'Filing…' : 'File this card' }}
+              </button>
+              <p class="file__note">
+                Files as a guest — no account, no password. You'll get an email to manage the
+                booking and approve the price.
+              </p>
+            </div>
+
+            <div class="file__alt">
+              <p class="file__alt-lead">Rather have it on an account?</p>
+              <div class="file__alt-actions">
+                <button class="btn btn--sm" type="button" (click)="register()">
+                  Create an account
+                </button>
+                <a class="front__link" routerLink="/sign-in" [queryParams]="{ next: '/my/booking' }">
+                  Sign in
+                </a>
+              </div>
+              <p class="file__note">
+                Then every job, vehicle and price sits in one place, and you approve work without
+                digging through your inbox.
+              </p>
+            </div>
+          </div>
+        </form>
+      }
+    </div>
+
+    <!-- The routing margin. On a real job card this column is where each
+         station stamps the job as it passes. Here it prints the whole
+         procedure up front: the shop has ten steps and none of them are
+         hidden, including the two that stop dead until the customer acts. -->
+    <aside class="routing" aria-labelledby="routing-title">
+      <h2 class="routing__title" id="routing-title">Routing</h2>
+      <p class="routing__sub">
+        Every job travels these ten steps in this order. Two of them wait on you.
+      </p>
+      <ol class="routing__list">
+        @for (step of procedure; track step.status) {
+          <li class="stamp" [class.stamp--yours]="step.waitsOnYou" [class.stamp--here]="step.n === 1">
+            <span class="stamp__n token" aria-hidden="true">{{ step.n }}</span>
+            <span class="stamp__text">
+              <span class="stamp__title">
+                {{ step.title }}
+                @if (step.waitsOnYou) {
+                  <span class="stamp__flag label">Waits on you</span>
+                }
+                @if (step.n === 1) {
+                  <span class="stamp__flag stamp__flag--here label">This card</span>
+                }
+              </span>
+              <span class="stamp__line">{{ step.line }}</span>
+            </span>
+          </li>
+        }
+      </ol>
+      <p class="routing__foot">
+        A price you've been sent is frozen: the shop cannot add to it after the fact. Refusing it
+        ends the job — it is never quietly requoted.
+      </p>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+  <p class="foot__staff">
+    <a routerLink="/sign-in">Staff sign-in</a>
+  </p>
+</footer>

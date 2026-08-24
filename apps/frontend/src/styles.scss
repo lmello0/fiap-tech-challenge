@@ -432,6 +432,15 @@ p {
   border-color: var(--ref);
 }
 
+/* A filled button keeps its fill when disabled unless this says otherwise,
+   and tertiary ink on a solid ink field is unreadable. Sunk plate instead:
+   still obviously a button, still obviously not available. */
+.btn--primary:disabled {
+  background: var(--plate-sunk);
+  color: var(--ink-3);
+  border-color: var(--rule-strong);
+}
+
 .btn--danger {
   border-color: var(--warn);
   color: var(--warn);
@@ -602,4 +611,465 @@ tr.is-editing > td {
 
 .rec__dismiss {
   margin-left: 0.5rem;
+}
+
+/* ===========================================================================
+   THE SHOP'S STATIONERY
+   The public-facing counterpart to the bound manual: the loose card a shop
+   clips to a windscreen. A form-header band across the top, ruled blanks to
+   write on, and a filing band at the foot. Global for the same reason the
+   plate and the table are — the drop-off order and the account card are the
+   same document printed by the same shop, not two designs that resemble
+   each other.
+
+   The one place this diverges from the console: the console is a fixed
+   desktop workstation by decision, and these are the public door. Half the
+   people who open them are standing next to the car on a phone.
+   =========================================================================== */
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  background: var(--ink);
+  color: var(--ink-inv);
+  padding: 0.5rem 0.9rem;
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.skip:focus-visible {
+  left: 0.75rem;
+  top: 0.75rem;
+}
+
+/* --- the masthead above a card ------------------------------------------ */
+
+.front {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 1rem;
+}
+
+.front__shop {
+  font-family: var(--face-cond);
+  font-size: var(--step-3);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.front__shop a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.front__shop a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.front__nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.front__link {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--ref);
+}
+
+/* --- the card itself ----------------------------------------------------- */
+
+.jobcard {
+  max-width: 82rem;
+  margin: 0 auto 3rem;
+  background: var(--plate);
+  border: 1px solid var(--rule-strong);
+  /* The head of a printed form is ruled off from its body. One of the two
+     structural 2px rules this world allows. */
+  border-top: 2px solid var(--ink);
+}
+
+.jobcard--narrow {
+  max-width: 54rem;
+}
+
+.jobcard__band {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem 1.5rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1.25rem;
+  background: var(--plate-sunk);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.jobcard__form {
+  color: var(--ink);
+}
+
+.jobcard__no {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--ink-3);
+}
+
+/* The blank a clerk fills in — a real rule, not a placeholder box. */
+.jobcard__blank {
+  display: inline-block;
+  width: 6ch;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.jobcard__date {
+  margin-left: auto;
+  color: var(--ink-3);
+}
+
+.jobcard__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21rem;
+}
+
+.jobcard__face {
+  padding: 2rem 1.75rem 2.25rem;
+  min-width: 0;
+}
+
+.jobcard__head {
+  max-width: 46rem;
+}
+
+.jobcard__title {
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+}
+
+.jobcard__lede {
+  margin-top: 0.7rem;
+  max-width: 62ch;
+  font-size: var(--step-1);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.jobcard__lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --- the ruled form ------------------------------------------------------ */
+
+.form {
+  margin-top: 2.25rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.form__set {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.form__legend {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: 0 0 0.75rem;
+  width: 100%;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.1rem;
+}
+
+.form__row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.4rem 1.25rem;
+}
+
+/* A blank on a form is a rule to write on, not a box to type in. */
+.blank {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  grid-column: span 3;
+  min-width: 0;
+}
+
+.blank--wide {
+  grid-column: span 4;
+}
+.blank--year,
+.blank--short {
+  grid-column: span 2;
+}
+.blank--full {
+  grid-column: 1 / -1;
+}
+.blank--date {
+  grid-column: 1 / -1;
+  max-width: 16rem;
+}
+
+.blank__label {
+  color: var(--ink-2);
+}
+
+.blank__rule {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 0.3rem 0.1rem;
+  font-size: var(--step-1);
+  color: var(--ink);
+  transition: border-color 90ms linear;
+}
+
+select.blank__rule {
+  /* A select still has to look written-on, not dropped-in. */
+  appearance: none;
+  padding-right: 1.4rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%),
+    linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position: right 0.5rem center, right 0.25rem center;
+  background-size: 0.25rem 0.25rem, 0.25rem 0.25rem;
+  background-repeat: no-repeat;
+}
+
+.blank__rule:hover {
+  border-bottom-color: var(--ink-3);
+}
+
+.blank__rule:focus {
+  outline: none;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: calc(0.3rem - 1px);
+}
+
+.blank__rule:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 3px;
+}
+
+.blank--invalid .blank__rule {
+  border-bottom-color: var(--warn);
+}
+
+.blank__area {
+  width: 100%;
+  background: var(--stock);
+  border: 1px solid var(--rule-strong);
+  padding: 0.6rem 0.7rem;
+  font-family: inherit;
+  font-size: var(--step-1);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 5.5rem;
+}
+
+.blank__area::placeholder {
+  color: var(--ink-3);
+}
+
+.blank__area:focus-visible {
+  border-color: var(--ink);
+}
+
+.blank__help {
+  font-size: var(--step--1);
+  color: var(--ink-3);
+  max-width: 56ch;
+}
+
+.blank__error {
+  font-size: var(--step--1);
+  color: var(--warn);
+  max-width: 56ch;
+}
+
+/* --- the slot strip ------------------------------------------------------ */
+
+.slots {
+  margin-top: 1.25rem;
+}
+
+.slots__state {
+  font-size: var(--step--1);
+  color: var(--ink-3);
+}
+
+.slots__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+}
+
+.slot {
+  border: 1px solid var(--rule-strong);
+  background: var(--stock);
+  color: var(--ink);
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  transition:
+    background-color 90ms linear,
+    color 90ms linear,
+    border-color 90ms linear;
+}
+
+.slot:hover {
+  border-color: var(--ink);
+}
+
+.slot.is-picked {
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+}
+
+/* --- the filing band ----------------------------------------------------- */
+
+.file {
+  display: grid;
+  gap: 1.1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ink);
+}
+
+.file__actions {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: start;
+}
+
+.file__primary {
+  font-size: var(--step-1);
+  padding: 0.6rem 1.4rem;
+}
+
+.file__note {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+
+.file__alt {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+  padding: 0.9rem 1rem;
+  background: var(--stock);
+  border: 1px solid var(--rule);
+}
+
+.file__alt-lead {
+  font-family: var(--face-cond);
+  font-weight: 600;
+  font-size: var(--step-1);
+}
+
+.file__alt-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* --- foot ---------------------------------------------------------------- */
+
+.foot {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+  flex-wrap: wrap;
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 2.5rem;
+  font-size: var(--step--1);
+  color: var(--ink-3);
+}
+
+.foot__shop {
+  font-family: var(--face-cond);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.foot__staff {
+  margin-left: auto;
+}
+
+/* --- adaptation ---------------------------------------------------------- */
+
+@media (max-width: 62rem) {
+  .jobcard__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 46rem) {
+  .front,
+  .foot {
+    padding-inline: 0.9rem;
+  }
+
+  .jobcard {
+    margin-inline: 0.5rem;
+  }
+
+  .jobcard__face {
+    padding: 1.5rem 1rem 2rem;
+  }
+
+  .form__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blank,
+  .blank--wide,
+  .blank--year,
+  .blank--short {
+    grid-column: 1 / -1;
+  }
+
+  .jobcard__date,
+  .foot__staff {
+    margin-left: 0;
+  }
+}
+
+.callout__heading {
+  font-family: var(--face-cond);
+  font-weight: 600;
+  color: currentColor;
+  margin-bottom: 0.1rem;
 }

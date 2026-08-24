@@ -1,0 +1,232 @@
+<header class="gs__head">
+  <div>
+    <h1 class="gs__title">Your vehicles</h1>
+    <p class="gs__sub">
+      What the shop has on record for you. Booking a drop-off picks from this list, so a car you
+      add here is one you can book in.
+    </p>
+  </div>
+  <div class="gs__tools">
+    <button class="btn btn--primary" type="button" [disabled]="open() === 'new'" (click)="openNew()">
+      Add a vehicle
+    </button>
+  </div>
+</header>
+
+<section class="plate">
+  <div class="plate__head">
+    <p class="plate__title">1.1 — Vehicles on record</p>
+    <p class="plate__meta label">{{ store.activeVehicles().length }} active</p>
+  </div>
+
+  <div class="plate__body">
+    @if (open() === 'new') {
+      <app-entry-band
+        heading="New vehicle"
+        endpoint="POST /vehicles"
+        saveLabel="Add the vehicle"
+        [busy]="busy()"
+        [canSave]="canSave()"
+        [error]="bandError()"
+        (save)="save()"
+        (cancel)="cancel()"
+      >
+        <ng-container *ngTemplateOutlet="blanks" />
+      </app-entry-band>
+    }
+
+    @if (store.loading() && rows().length === 0) {
+      <p class="gs__muted">Reading your vehicles…</p>
+    } @else if (rows().length === 0 && open() !== 'new') {
+      <div class="empty">
+        <p class="empty__title">Nothing on record yet.</p>
+        <p>Add the car you'll be bringing in and the shop will have it before you arrive.</p>
+        <div class="rec__empty-action">
+          <button class="btn btn--primary" type="button" (click)="openNew()">Add a vehicle</button>
+        </div>
+      </div>
+    } @else {
+      <ul class="veh">
+        @for (v of rows(); track v.id) {
+          <li class="veh__row" [class.veh__row--inactive]="!v.active">
+            @if (isEditing(v.id)) {
+              <app-entry-band
+                heading="Edit vehicle"
+                [endpoint]="'PATCH /vehicles/' + v.id"
+                saveLabel="Save the changes"
+                [busy]="busy()"
+                [canSave]="canSave()"
+                [error]="bandError()"
+                (save)="save()"
+                (cancel)="cancel()"
+              >
+                <ng-container *ngTemplateOutlet="blanks" />
+              </app-entry-band>
+            } @else if (isRemoving(v.id)) {
+              <div class="veh__confirm">
+                <app-callout tier="caution" heading="Remove {{ v.make }} {{ v.model }}?">
+                  This takes it off your list. The shop keeps the vehicle and every job on it —
+                  nothing is deleted, and an attendant can put it back.
+                </app-callout>
+                @if (bandError(); as message) {
+                  <app-callout tier="warning">{{ message }}</app-callout>
+                }
+                <div class="veh__confirm-row">
+                  <button class="btn btn--danger" type="button" [disabled]="busy()" (click)="remove(v.id)">
+                    {{ busy() ? 'Removing…' : 'Remove it' }}
+                  </button>
+                  <button class="btn btn--quiet" type="button" [disabled]="busy()" (click)="cancel()">
+                    Keep it
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div class="veh__face">
+                <div class="veh__top">
+                  <span class="veh__plate token">{{ v.licensePlate }}</span>
+                  <span class="veh__name">{{ v.make }} {{ v.model }}</span>
+                  @if (!v.active) {
+                    <span class="veh__off label">Removed</span>
+                  }
+                </div>
+
+                <dl class="gs__pairs veh__pairs">
+                  <div class="gs__pair">
+                    <dt class="label">Year</dt>
+                    <dd class="num">{{ v.modelYear ?? '—' }}</dd>
+                  </div>
+                  <div class="gs__pair">
+                    <dt class="label">Colour</dt>
+                    <dd>{{ v.color ?? '—' }}</dd>
+                  </div>
+                  <div class="gs__pair">
+                    <dt class="label">Fuel</dt>
+                    <dd>{{ fuelLabel[v.fuelType] }}</dd>
+                  </div>
+                  <div class="gs__pair">
+                    <dt class="label">Gearbox</dt>
+                    <dd>{{ transmissionLabel[v.transmissionType] }}</dd>
+                  </div>
+                </dl>
+
+                @if (v.active) {
+                  <div class="gs__actions veh__actions">
+                    <button class="btn btn--sm" type="button" (click)="openEdit(v)">Edit</button>
+                    <button
+                      class="btn btn--danger btn--sm"
+                      type="button"
+                      (click)="open.set({ removing: v.id })"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+<!-- One set of blanks, used by both the new band and the edit band: a form
+     that differs between create and edit is two forms to keep in step. -->
+<ng-template #blanks>
+  <div class="band__grid band__grid--three">
+    <label class="field">
+      <span class="label">Plate</span>
+      <input
+        class="input token"
+        type="text"
+        maxlength="8"
+        autocapitalize="characters"
+        spellcheck="false"
+        [value]="plate()"
+        (input)="plate.set($any($event.target).value)"
+      />
+      @if (plateError(); as message) {
+        <span class="blank__error">{{ message }}</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="label">Make</span>
+      <input
+        class="input"
+        type="text"
+        maxlength="50"
+        [value]="make()"
+        (input)="make.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="field">
+      <span class="label">Model</span>
+      <input
+        class="input"
+        type="text"
+        maxlength="100"
+        [value]="model()"
+        (input)="model.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="field">
+      <span class="label">Model year</span>
+      <input
+        class="input token"
+        type="text"
+        inputmode="numeric"
+        maxlength="4"
+        [value]="modelYear()"
+        (input)="modelYear.set($any($event.target).value)"
+      />
+      @if (yearError(); as message) {
+        <span class="blank__error">{{ message }}</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="label">Colour</span>
+      <input
+        class="input"
+        type="text"
+        maxlength="30"
+        [value]="colour()"
+        (input)="colour.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="field">
+      <span class="label">Kind</span>
+      <select class="input" [value]="vehicleType()" (change)="vehicleType.set($any($event.target).value)">
+        @for (t of vehicleTypes; track t) {
+          <option [value]="t">{{ typeLabel[t] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="label">Fuel</span>
+      <select class="input" [value]="fuelType()" (change)="fuelType.set($any($event.target).value)">
+        @for (f of fuelTypes; track f) {
+          <option [value]="f">{{ fuelLabel[f] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="label">Gearbox</span>
+      <select
+        class="input"
+        [value]="transmission()"
+        (change)="transmission.set($any($event.target).value)"
+      >
+        @for (t of transmissions; track t) {
+          <option [value]="t">{{ transmissionLabel[t] }}</option>
+        }
+      </select>
+    </label>
+  </div>
+</ng-template>

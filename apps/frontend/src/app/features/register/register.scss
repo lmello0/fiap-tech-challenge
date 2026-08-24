@@ -1,0 +1,36 @@
+/* ---------------------------------------------------------------------------
+   THE ACCOUNT CARD — the drop-off order's sibling, same paper, no routing.
+   Only the two things this form has and the other does not live here.
+   --------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.front__have {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+
+/* The 16-character floor, drawn as a rule filling rather than a verdict.
+   The console cannot judge a password's strength and does not pretend to —
+   it only shows how far along the one rule it actually enforces you are. */
+.pw {
+  display: block;
+  height: 2px;
+  margin-top: 0.15rem;
+  background: var(--rule);
+}
+
+.pw__fill {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transition: width 90ms linear;
+}
+
+.reveal {
+  justify-self: start;
+  padding-inline: 0;
+}

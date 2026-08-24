@@ -108,11 +108,15 @@ export class ApiClient {
   ): Promise<T> {
     const token = this.tokens.accessToken();
 
-    // Nothing outside `/auth` can succeed without a token, so it is not sent.
-    // This closes a whole class of races rather than one: an in-flight read that
-    // resolves just as the operator signs out would otherwise issue its
+    // A request that cannot possibly succeed without a token is refused here
+    // rather than sent. This closes a whole class of races: an in-flight read
+    // that resolves just as the operator signs out would otherwise issue its
     // follow-up against a cleared session and come back 401.
-    if (!token && !path.startsWith('/auth/')) {
+    //
+    // It must not close the door on the endpoints that genuinely take no
+    // token — the public landing page reads open slots and files a guest
+    // booking with nobody signed in at all.
+    if (!token && !isPublic(method, path)) {
       throw new ApiError(401, 'This session is no longer signed in.', null, null);
     }
 
@@ -129,6 +133,42 @@ export class ApiClient {
       throw toApiError(error);
     }
   }
+}
+
+/**
+ * The endpoints that take no token, transcribed from `SecurityConfig`'s
+ * `permitAll` chain, method for method and path for path.
+ *
+ * Kept as a literal mirror rather than a prefix rule, because the two are not
+ * the same shape: `POST /appointments/pickup/book` is public (the guest token
+ * in its body is the credential) while `POST /appointments/pickup` is
+ * CUSTOMER-only, and a prefix match would wave the second one through. The
+ * same is true under `/auth`, where `password/change` and `email-change`
+ * require a bearer token that most of their siblings do not.
+ */
+const PUBLIC: Readonly<Record<string, readonly string[]>> = {
+  POST: [
+    '/auth/register/customer',
+    '/auth/login',
+    '/auth/refresh-token',
+    '/auth/logout',
+    '/auth/password/reset',
+    '/auth/password/reset/confirm',
+    '/auth/email-verification/resend',
+    '/auth/email-verification/confirm',
+    '/auth/email-change/confirm',
+    '/appointments/dropoff/guest',
+    '/appointments/pickup/book',
+    '/appointments/guest/view',
+    '/appointments/guest/cancel',
+    '/appointments/guest/reschedule',
+    '/appointments/guest/complete-registration',
+  ],
+  GET: ['/appointments/availability'],
+};
+
+function isPublic(method: string, path: string): boolean {
+  return PUBLIC[method.toUpperCase()]?.includes(path) ?? false;
 }
 
 /**

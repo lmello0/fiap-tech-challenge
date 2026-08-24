@@ -63,9 +63,15 @@ export class App {
     }
   }
 
+  /** Leave for the owner's manual. The staff cache is dropped by the session. */
+  protected async switchToGarage(): Promise<void> {
+    await this.session.activate('customer');
+    await this.router.navigateByUrl('/my');
+  }
+
   protected async signOut(): Promise<void> {
     await this.session.signOut();
-    await this.router.navigate(['sign-in']);
+    await this.router.navigateByUrl('/');
   }
 
   /** Re-run the whole load. The banner's only offer, and it is the right one. */

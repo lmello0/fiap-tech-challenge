@@ -291,6 +291,40 @@ export class ShopStore {
   }
 
   /**
+   * Drop the whole shop.
+   *
+   * Called on sign-out and whenever the session leaves the Worker facet.
+   * Everything in here is read from staff endpoints, so a customer principal
+   * holding a loaded shop is holding data their own token could never fetch
+   * again — and every one of those rows is somebody else's business.
+   */
+  reset(): void {
+    this._loaded.set(false);
+    this._loading.set(false);
+    this._error.set(null);
+    this._workOrders.set([]);
+    this._budgets.set([]);
+    this._parts.set([]);
+    this._blocks.set([]);
+    this._summary.set(null);
+    this._filter.set({});
+    this._appointments.set([]);
+    this._movements.set([]);
+    this._history.set({});
+    this._services.set([]);
+    this._vendors.set([]);
+    this._purchaseOrders.set([]);
+    this._reorderRules.set([]);
+    this._customers.set([]);
+    this._vehicles.set([]);
+    this._workers.set([]);
+    this._closures.set([]);
+    this._settings.set(null);
+    this.actingWorkerId = null;
+    this.directory.clear();
+  }
+
+  /**
    * Fill the cache. Safe to call from every screen's constructor: it runs once
    * unless `force` is set, and concurrent callers share the one in-flight load.
    */

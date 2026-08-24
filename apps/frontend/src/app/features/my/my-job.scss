@@ -1,0 +1,247 @@
+.job__back {
+  font-size: var(--step--1);
+  margin-bottom: 0.4rem;
+}
+
+.gs__title.token {
+  font-size: var(--step-4);
+  letter-spacing: -0.03em;
+}
+
+.gs__sub {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.job__where {
+  font-family: var(--face-cond);
+  font-weight: 600;
+}
+
+.job__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.job__main {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+/* A budget waiting on a decision is ruled in ink, not in a section colour:
+   it is the only thing on the page that is asking for something. */
+.job__budget--live {
+  border-top-color: var(--ink);
+  border-color: var(--ink);
+}
+
+.job__total-row td {
+  border-top: 1px solid var(--ink);
+  border-bottom: 0;
+  padding-top: 0.55rem;
+  font-family: var(--face-cond);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--step--1);
+}
+
+.job__total {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.job__action-error {
+  margin-top: 1rem;
+}
+
+/* --- the decision --------------------------------------------------------- */
+
+.decide {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.decide__go {
+  font-size: var(--step-1);
+  padding: 0.6rem 1.4rem;
+}
+
+/* The confirm step is set into the page, not floated over it — this world has
+   no modals, and a decision this size deserves the page's full width anyway. */
+.decide--confirm {
+  display: grid;
+  gap: 0.85rem;
+  justify-items: start;
+  padding: 1rem;
+  border: 1px solid var(--ink);
+  background: var(--stock);
+}
+
+.decide--danger {
+  border-color: var(--warn);
+}
+
+.decide__ask {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 52ch;
+}
+
+.decide__why {
+  width: min(38rem, 100%);
+  grid-column: auto;
+}
+
+.decide__row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* --- the timeline --------------------------------------------------------- */
+
+.tl {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.tl__row {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tl__row:last-child {
+  border-bottom: 0;
+}
+
+.tl__when {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.tl__who {
+  color: var(--ink-3);
+}
+
+/* --- the step rail -------------------------------------------------------- */
+
+.job__rail {
+  position: sticky;
+  top: 1.25rem;
+}
+
+.rail {
+  list-style: none;
+  padding: 0;
+  display: grid;
+}
+
+.rail__step {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  color: var(--ink-3);
+}
+
+.rail__tick {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--rule-strong);
+  font-size: 0.7rem;
+}
+
+.rail__title {
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.rail__line {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: var(--step--1);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+/* A completed step fills in press ink, never in chroma: done is not a
+   severity, so filled-versus-hollow carries the state. */
+.rail__step.is-done {
+  color: var(--ink-2);
+}
+
+.rail__step.is-done .rail__tick {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+  color: var(--ink-inv);
+}
+
+.rail__step.is-here {
+  color: var(--ink);
+}
+
+.rail__step.is-here .rail__tick {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inv);
+}
+
+/* A step the reader has to act on is the one place the rail takes colour. */
+.rail__step.is-here.is-yours .rail__tick {
+  background: var(--caution-field);
+  border-color: var(--caution);
+  color: var(--caution-ink);
+}
+
+.rail__step--refused {
+  color: var(--warn);
+}
+
+.rail__step--refused .rail__tick {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--ink-inv);
+}
+
+.rail__step--refused .rail__line {
+  color: var(--warn);
+}
+
+@media (max-width: 62rem) {
+  .job__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .job__rail {
+    position: static;
+    order: -1;
+  }
+
+  .tl__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}

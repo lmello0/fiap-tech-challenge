@@ -67,6 +67,13 @@
   text-align: right;
 }
 
+.masthead__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
 .masthead__operator {
   font-family: var(--face-cond);
   font-size: var(--step-1);

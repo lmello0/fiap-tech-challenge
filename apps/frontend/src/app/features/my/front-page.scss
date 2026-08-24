@@ -1,0 +1,154 @@
+/* The front page's own furniture. Everything else comes from garage.scss. */
+
+/* The queue that stops until the reader acts is the one plate on this page
+   that carries an ink rule rather than a section ink — it is not a section,
+   it is the page's whole reason to exist. */
+.fp__yours {
+  border-top-color: var(--ink);
+}
+
+/* "All clear" set as a line of prose with a satisfied tick, in the same ink
+   the console uses for a met precondition. */
+.fp__clear {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  color: var(--ink-2);
+  max-width: 78ch;
+}
+
+.fp__clear-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--ok);
+  background: var(--ok-field);
+  color: var(--ok);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.fp__list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fp__item {
+  border: 1px solid var(--rule-strong);
+  background: var(--stock);
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.fp__item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.fp__code {
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+.fp__line {
+  color: var(--ink-2);
+  max-width: 72ch;
+}
+
+.fp__item-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--rule);
+}
+
+.fp__total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.fp__total strong {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 700;
+}
+
+.fp__cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.fp__when {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.fp__what {
+  margin-top: 0.2rem;
+}
+
+.fp__manage {
+  margin-top: 0.9rem;
+}
+
+.fp__thin {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fp__thin > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.fp__thin > li:last-child {
+  border-bottom: 0;
+}
+
+.fp__thin-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: 100%;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.fp__thin-link:hover {
+  color: var(--ref);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.fp__veh {
+  font-weight: 500;
+}
+
+@media (max-width: 62rem) {
+  .fp__cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

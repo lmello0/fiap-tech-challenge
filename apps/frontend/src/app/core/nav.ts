@@ -74,3 +74,46 @@ export function sectionsFor(role: WorkerRole | null): readonly Section[] {
   if (!role) return [];
   return SECTIONS.filter((s) => s.roles.includes(role));
 }
+
+/**
+ * The Owner's Manual's own index.
+ *
+ * A second volume, numbered from 1 again: it is a different book, not a
+ * restricted view of the staff console. There is no role gating here — a
+ * CUSTOMER principal is a single kind of caller, and every section below maps
+ * to an endpoint the API serves them.
+ */
+export const CUSTOMER_SECTIONS: readonly Section[] = [
+  {
+    path: 'my/vehicles',
+    title: 'Your vehicles',
+    sub: 'What we have on record',
+    n: 1,
+    ink: 'var(--sec-vehicles)',
+    roles: [],
+  },
+  {
+    path: 'my/jobs',
+    title: 'Your jobs',
+    sub: 'Where each repair stands',
+    n: 2,
+    ink: 'var(--sec-work-orders)',
+    roles: [],
+  },
+  {
+    path: 'my/booking',
+    title: 'Book a drop-off',
+    sub: 'Choose a slot',
+    n: 3,
+    ink: 'var(--sec-schedule)',
+    roles: [],
+  },
+  {
+    path: 'my/details',
+    title: 'Your details',
+    sub: 'Name, phone and account',
+    n: 4,
+    ink: 'var(--sec-customers)',
+    roles: [],
+  },
+];

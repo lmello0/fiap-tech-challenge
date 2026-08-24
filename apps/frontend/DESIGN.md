@@ -218,6 +218,43 @@ components:
     textColor: "{colors.ink-2}"
     rounded: "{rounded.sharp}"
     padding: "2.5rem 1rem"
+  jobcard:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sharp}"
+  jobcard-band:
+    backgroundColor: "{colors.plate-sunk}"
+    textColor: "{colors.ink}"
+    typography: "{typography.label}"
+    padding: "0.55rem 1.25rem"
+  blank:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sharp}"
+    padding: "0.3rem 0.1rem"
+  blank-focus:
+    textColor: "{colors.ink}"
+  blank-invalid:
+    textColor: "{colors.warn}"
+  routing:
+    backgroundColor: "{colors.plate-sunk}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.sharp}"
+    padding: "2rem 1.25rem 2.25rem"
+  slot:
+    backgroundColor: "{colors.stock}"
+    textColor: "{colors.ink}"
+    typography: "{typography.identifier}"
+    rounded: "{rounded.sharp}"
+    padding: "0.35rem 0.65rem"
+  slot-picked:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.ink-inv}"
+  volume:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sharp}"
+    padding: "1.5rem 1.35rem 1.35rem"
 ---
 
 # Design System: Shop Manual
@@ -245,6 +282,22 @@ twenty rows at a glance, not a marketing surface. It refuses the generic admin
 arrangement outright: no stat tiles, no white cards floating on grey, no sidebar
 of decorative glyphs, no rounded chrome. Nothing lifts off the page, because
 paper does not lift.
+
+**The manual ships in two volumes.** The staff console is *Volume 1 — Shop
+Manual*, a bound book with thumb tabs. The customer facet is *Volume 2 —
+Owner's Manual*, the same book set for the person whose car it is: its own
+section index numbered from 1, its own reading of the same eleven-status
+procedure, and nothing in it that the API withholds from a CUSTOMER principal.
+It is not a permission-filtered view of the staff console, and it never renders
+a staff screen with rows removed.
+
+**In front of both volumes is the shop's stationery** — the loose card a shop
+clips to a windscreen. The public landing page, the account form and the
+sign-in receipt are printed on it: a form-header band across the top, blanks
+that are ruled lines to write on rather than boxes to type in, a filing band at
+the foot, and on the drop-off order a sunk carbon-copy routing margin printing
+the whole procedure the job will travel. Same stock, same ink, same hairlines,
+different artifact.
 
 **Key Characteristics:**
 - Zero corner radius on every surface, control and mark.
@@ -418,13 +471,50 @@ precondition panel occupies the space a lone pinned button would waste.
 0.5 / 0.6 / 0.75 / 1 / 1.25 / 1.5 / 2.5rem. Table cells are 0.6rem, plate bodies
 1rem, page gutters 1.25rem, head-row gaps 2rem, and a section break 2.5rem.
 
-**Responsive behaviour.** Desktop-only is a product constraint, not an omission:
-the console is built for a minimum of 1280px and targeted at 1440–1920. There is
-exactly one breakpoint, `max-width: 1180px`, and it does one thing — collapses
-the work-order detail's two-column grids to a single column. Wide tables are not
-reflowed; they scroll inside their own `overflow-x` wrapper with a sticky table
-head, and the board table holds a 72rem floor so the step rail stays legible
-across rows.
+### The stationery (public surfaces)
+
+A loose card, not a bound page. `.jobcard` is an 82rem sheet with a 2px ink
+rule across its top, a sunk form-header band (`FORM 1 — VEHICLE DROP-OFF ·
+ORDER NO. ____ · date`), and a two-column body: the face
+(`minmax(0, 1fr)`) and a 21rem routing margin on `plate-sunk`, divided by a
+strong hairline. The account card is the same sheet at `--narrow` (54rem) with
+no routing margin, because nothing is being routed yet.
+
+Its form is a six-column grid whose blanks span to fill a row exactly — a
+ragged row is an accident, not a paper texture. A blank is a label in the small-
+caps register over a 1px bottom rule; focus thickens that rule to 2px ink rather
+than boxing the field. A textarea is the one exception and keeps a full border,
+because a multi-line answer needs a container.
+
+### Volume 2 — the owner's manual
+
+The console's shell rebuilt for a reader who is not at a desk: the same masthead
+block and the same bleed thumb tabs, five sections numbered 0–4, and the sheet
+carrying its section ink. Its stamp is reference blue, not warning red — a
+customer is not an authority to be careful with.
+
+**Responsive behaviour.** Desktop-only is a product constraint of *Volume 1*,
+not of the build: the staff console is built for a minimum of 1280px and
+targeted at 1440–1920, with exactly one breakpoint, `max-width: 1180px`, which
+collapses the work-order detail's two-column grids to a single column. Wide
+tables are not reflowed; they scroll inside their own `overflow-x` wrapper with
+a sticky table head, and the board table holds a 72rem floor so the step rail
+stays legible across rows.
+
+The stationery and Volume 2 *do* adapt, because their readers are standing next
+to a car with a phone. Two breakpoints, both structural:
+
+- `max-width: 62rem` — the routing margin folds under the card's face rather
+  than narrowing (a stamp column narrower than its own type is illegible, and
+  the procedure is the proof); the tab rail becomes a horizontally scrolling
+  thumb strip with each tab's bleed moving from its left edge to its top edge;
+  the job detail's step rail moves *above* the budget, because where the car
+  stands is the first question.
+- `max-width: 46rem` — form rows collapse to one column and every blank spans
+  full width; page gutters tighten to 0.9rem.
+
+Nothing is hidden behind a hamburger. Five sections fit across a phone, and a
+menu that hides five items exists to look tidy.
 
 ### Named Rules
 
@@ -436,6 +526,17 @@ scrolls beneath it.
 **The Print Furniture Rule.** Empty margin gets furniture, not filler.
 Registration marks, sheet numbers and revision stamps are geometry that says
 where you are in the document; they are never illustration.
+
+**The Ruled Blank Rule.** On the shop's stationery a field is a line to write
+on, not a box to type in: transparent ground, one 1px bottom rule, thickening to
+2px ink on focus. Inside the bound volumes the console's boxed `.input` still
+rules, because a register entry is set into a table and needs its bounds. The
+two never mix on one surface.
+
+**The Two Volumes Rule.** A screen belongs to exactly one volume and says which.
+The customer surface is never the staff surface with rows removed, and the staff
+surface never renders a customer's own decision — the API has no endpoint for a
+worker to approve a budget, and neither does this build.
 
 ## Elevation & Depth
 
@@ -651,6 +752,28 @@ The parts nobody draws still carry the design.
   `:focus-visible`.
 - **Links:** Reference blue with a 1px underline at 0.18em offset, thickening to
   2px on hover — never a colour change alone.
+
+### Stationery components
+
+- **Job card** (`.jobcard`): the public sheet. `plate` ground, 1px strong
+  hairline all round, 2px ink rule across the top. `--narrow` at 54rem for a
+  card with no routing margin.
+- **Form-header band** (`.jobcard__band`): `plate-sunk`, label register, holding
+  the form's name, a real blank rule for the number a clerk fills in, and the
+  date as an identifier.
+- **Blank** (`.blank`): label over a 1px rule. Hover darkens the rule to
+  tertiary ink; focus replaces it with 2px ink and compensates the padding so
+  nothing shifts; invalid rules in warning red. Help and error text sit under
+  the rule at label size, never floating.
+- **Routing margin** (`.routing`): the carbon-copy strip. `plate-sunk`, a
+  numbered stamp per step, the two steps that wait on the customer marked in
+  caution, and the step the current card *is* stamped through in solid ink.
+- **Slot** (`.slot`): a bookable time, as a bounded identifier on stock;
+  picked inverts to solid ink. Never a pill.
+- **Volume** (`.volume`): the facet picker's card — a coloured spine in a
+  section ink beside a printed face. The two are given identical weight; there
+  is no recommended answer, because the shop does not know which hat someone is
+  wearing when they sit down.
 
 ### Motion
 

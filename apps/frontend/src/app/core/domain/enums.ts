@@ -131,3 +131,15 @@ export const FUEL_TYPE_LABEL: Record<FuelType, string> = {
   HYBRID: 'Hybrid',
   OTHER: 'Other',
 };
+
+export const PHONE_TYPE_LABEL: Record<PhoneType, string> = {
+  MOBILE: 'Mobile',
+  COMMERCIAL: 'Work',
+  HOME: 'Home',
+  OTHER: 'Other',
+};
+
+export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
+  CPF: 'CPF',
+  CNPJ: 'CNPJ',
+};

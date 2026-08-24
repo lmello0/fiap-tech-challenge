@@ -1,0 +1,214 @@
+<header class="gs__head">
+  <div>
+    <h1 class="gs__title">Your details</h1>
+    <p class="gs__sub">What the shop has against your account, and how to change it.</p>
+  </div>
+</header>
+
+@if (user(); as u) {
+  <div class="gs__stack">
+    <section class="plate">
+      <div class="plate__head">
+        <p class="plate__title">4.1 — Name and phone</p>
+        <p class="plate__meta label">PATCH /customers/{{ '{' }}id{{ '}' }}</p>
+      </div>
+      <div class="plate__body">
+        @if (saved()) {
+          <div class="det__saved">
+            <app-callout tier="note">Saved. The counter sees this straight away.</app-callout>
+          </div>
+        }
+
+        @if (editing()) {
+          <div class="det__form">
+            <div class="band__grid">
+              <label class="field">
+                <span class="label">First name</span>
+                <input
+                  class="input"
+                  type="text"
+                  maxlength="30"
+                  [value]="firstName()"
+                  (input)="firstName.set($any($event.target).value)"
+                />
+                @if (nameError(); as message) {
+                  <span class="blank__error">{{ message }}</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="label">Last name</span>
+                <input
+                  class="input"
+                  type="text"
+                  maxlength="30"
+                  [value]="lastName()"
+                  (input)="lastName.set($any($event.target).value)"
+                />
+              </label>
+
+              <label class="field">
+                <span class="label">Phone type</span>
+                <select
+                  class="input"
+                  [value]="phoneType()"
+                  (change)="phoneType.set($any($event.target).value)"
+                >
+                  @for (t of phoneTypes; track t) {
+                    <option [value]="t">{{ phoneLabel[t] }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="label">Phone number</span>
+                <input
+                  class="input"
+                  type="tel"
+                  maxlength="30"
+                  [value]="phone()"
+                  (input)="phone.set($any($event.target).value)"
+                />
+                @if (phoneError(); as message) {
+                  <span class="blank__error">{{ message }}</span>
+                }
+              </label>
+
+              <p class="band__note">
+                The shop keeps one number on your account. Saving replaces what is there.
+              </p>
+            </div>
+
+            @if (error(); as message) {
+              <div class="det__error">
+                <app-callout tier="warning" heading="Not saved">{{ message }}</app-callout>
+              </div>
+            }
+
+            <div class="det__row">
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="busy() || !canSave()"
+                (click)="save()"
+              >
+                {{ busy() ? 'Saving…' : 'Save' }}
+              </button>
+              <button class="btn btn--quiet" type="button" [disabled]="busy()" (click)="editing.set(false)">
+                Cancel
+              </button>
+            </div>
+          </div>
+        } @else {
+          <dl class="gs__pairs det__pairs">
+            <div class="gs__pair">
+              <dt class="label">Name</dt>
+              <dd class="det__value">{{ u.firstName }} {{ u.lastName }}</dd>
+            </div>
+            <div class="gs__pair">
+              <dt class="label">Phone</dt>
+              <dd class="det__value token">{{ shownPhone() }}</dd>
+            </div>
+          </dl>
+          <div class="det__row">
+            <button class="btn" type="button" (click)="edit()">Edit these</button>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="plate">
+      <div class="plate__head">
+        <p class="plate__title">4.2 — Fixed on the account</p>
+        <p class="plate__meta label">Not editable in place</p>
+      </div>
+      <div class="plate__body">
+        <dl class="gs__pairs det__pairs">
+          <div class="gs__pair">
+            <dt class="label">{{ u.documentType }}</dt>
+            <dd class="det__value token">{{ document() }}</dd>
+          </div>
+          <div class="gs__pair">
+            <dt class="label">Email</dt>
+            <dd class="det__value">
+              {{ u.email }}
+              @if (!u.emailVerified) {
+                <span class="det__unverified label">Unverified</span>
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <app-callout tier="note" heading="Why these two are fixed">
+          Your {{ u.documentType }} identifies the account and cannot be changed here — the counter
+          handles that with you in person. Changing your email moves where every future price is
+          sent, so it is confirmed from the new address rather than saved with a button.
+        </app-callout>
+
+        @if (emailSent()) {
+          <div class="det__saved">
+            <app-callout tier="note" heading="Check the new address">
+              We've sent a link there. The email on your account only changes once that link is
+              opened — until then, nothing has moved.
+            </app-callout>
+          </div>
+        } @else if (changingEmail()) {
+          <div class="det__form">
+            <label class="field det__email">
+              <span class="label">New email</span>
+              <input
+                class="input"
+                type="email"
+                maxlength="255"
+                [value]="newEmail()"
+                (input)="newEmail.set($any($event.target).value)"
+              />
+            </label>
+            @if (emailError(); as message) {
+              <div class="det__error">
+                <app-callout tier="warning">{{ message }}</app-callout>
+              </div>
+            }
+            <div class="det__row">
+              <button
+                class="btn btn--primary"
+                type="button"
+                [disabled]="emailBusy() || !newEmail().trim()"
+                (click)="requestEmailChange()"
+              >
+                {{ emailBusy() ? 'Sending…' : 'Send the confirmation' }}
+              </button>
+              <button class="btn btn--quiet" type="button" (click)="changingEmail.set(false)">
+                Cancel
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="det__row">
+            <button class="btn" type="button" (click)="changingEmail.set(true)">
+              Change your email
+            </button>
+            <a class="btn" routerLink="/change-password">Change your password</a>
+          </div>
+        }
+      </div>
+    </section>
+
+    @if (session.hasBothFacets()) {
+      <section class="plate">
+        <div class="plate__head">
+          <p class="plate__title">4.3 — This account also works at the shop</p>
+        </div>
+        <div class="plate__body">
+          <p class="gs__muted det__both">
+            The same sign-in holds a staff role. It is a separate volume of the manual with its own
+            screens — switch to it from the top of any page here, and nothing you do on one side
+            acts on the other.
+          </p>
+        </div>
+      </section>
+    }
+  </div>
+} @else {
+  <p class="gs__muted">Reading your account…</p>
+}

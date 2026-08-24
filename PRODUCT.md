@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Angular (`apps/frontend/`, not yet scaffolded), talking to a Spring Boot API (`apps/backend/`). Backend contract is documented at `backend-openapi.yaml`.
+Angular 22 — zoneless, signals, standalone components, lazy feature routes (`apps/frontend/`) — talking to a Spring Boot API (`apps/backend/`). Backend contract is documented at `backend-openapi.yaml`.
 
 ## Users
 
@@ -34,7 +34,13 @@ Not a generic booking or ticketing tool: work orders, budgets, and inventory res
 
 ## Capabilities and Constraints
 
-- Backend is fully modeled (Users & Auth, Inventory, Work Orders, Scheduling, History — see `apps/backend/CONTEXT.md`) and exposes a REST API (`backend-openapi.yaml`); the frontend is not yet scaffolded, so no visual implementation exists yet to preserve.
+- Backend is fully modeled (Users & Auth, Inventory, Work Orders, Scheduling, History — see `apps/backend/CONTEXT.md`) and exposes a REST API (`backend-openapi.yaml`).
+- The **staff console is built** (`apps/frontend/`): work orders, schedule, inventory, customers, vehicles, workers, plus the full auth set (sign-in, forced and voluntary password change, forgot/reset password, email verification, email-change confirmation). Its visual system is recorded in `apps/frontend/DESIGN.md` and is incumbent design authority.
+- The **customer facet is the current build**: a public shopfront landing with login/register, a facet picker for accounts holding both facets, and a customer console covering the vehicles, work orders, budget approve/refuse, drop-off and pickup booking, and profile that the API already serves.
+- The facet a dual-facet user is acting under is sticky for the session and switchable from either console's masthead; it never requires signing out.
+- Registration creates a Customer facet only (`POST /auth/register/customer`). Worker facets are created by a Manager and never self-served.
+- Customers read a deliberately narrow view of a work order (`CustomerWorkOrderView`: code, status, budget) — never the assigned mechanic or diagnosis notes. The customer console must not invent internals the API withholds.
+- Passwords are 16–72 characters; registration requires at least one phone number and a document (CPF/CNPJ), validated before submit.
 - A `User` may hold both a `Customer` and a `Worker` facet simultaneously; the frontend must account for a person who is, e.g., both a shop employee and a customer of the shop.
 - Login requires at least one active facet; UI must handle the fully-deactivated/terminated case (login refused) distinctly from ordinary auth failure.
 - Budgets are frozen once sent — no requoting UI, only approve/refuse.
@@ -46,7 +52,7 @@ None yet — no name beyond "Auto Repair Shop" (working title), no logo, palette
 
 ## Evidence on Hand
 
-None. No real content, screenshots, testimonials, or demo data exists yet for the frontend; future work must not fabricate shop branding, customer testimonials, or sample pricing beyond what's needed as clearly-labeled placeholder/demo data.
+The staff console ships a synthetic roster (`apps/frontend/src/app/core/data/demo-data.ts`) behind an explicit demo-mode band, and `apps/frontend/DESIGN.md` records the built visual system. There is still no real shop content, photography, logo, testimonial or price list; future work must not fabricate shop branding, customer testimonials, or sample pricing beyond clearly-labelled placeholder data.
 
 ## Product Principles
 

@@ -1,0 +1,67 @@
+<main class="pick">
+  <header class="pick__head">
+    <p class="pick__shop label">Auto Repair Shop</p>
+    <h1 class="pick__title">Two volumes, {{ session.displayName() }}.</h1>
+    <p class="pick__sub">
+      This account holds a staff role and a customer account. They're separate books — pick the one
+      you're here for. You can switch from the top of either at any time.
+    </p>
+  </header>
+
+  <!-- The two volumes, given identical weight. There is no recommended
+       answer here: the shop does not know which hat someone is wearing when
+       they sit down, and guessing costs more than asking. -->
+  <ul class="pick__list">
+    <li>
+      <button
+        class="volume"
+        type="button"
+        [disabled]="opening() !== null"
+        (click)="open('worker')"
+      >
+        <span class="volume__spine" aria-hidden="true"></span>
+        <span class="volume__body">
+          <span class="volume__vol label">Volume 1</span>
+          <span class="volume__name">Shop Manual</span>
+          <span class="volume__who">Staff console</span>
+          <span class="volume__what">
+            Work orders and the step every job is at, the schedule, the storeroom, and the shop's
+            records. The whole floor, at your role's reach.
+          </span>
+          <span class="volume__go">
+            {{ opening() === 'worker' ? 'Opening…' : 'Open the shop manual' }}
+          </span>
+        </span>
+      </button>
+    </li>
+
+    <li>
+      <button
+        class="volume volume--own"
+        type="button"
+        [disabled]="opening() !== null"
+        (click)="open('customer')"
+      >
+        <span class="volume__spine" aria-hidden="true"></span>
+        <span class="volume__body">
+          <span class="volume__vol label">Volume 2</span>
+          <span class="volume__name">Owner's Manual</span>
+          <span class="volume__who">Your own vehicles</span>
+          <span class="volume__what">
+            Your cars, where each of your jobs stands, the prices waiting on your decision, and
+            booking a drop-off or a pickup.
+          </span>
+          <span class="volume__go">
+            {{ opening() === 'customer' ? 'Opening…' : "Open the owner's manual" }}
+          </span>
+        </span>
+      </button>
+    </li>
+  </ul>
+
+  <p class="pick__foot">
+    Signed in as <span class="token">{{ session.user()?.email }}</span>. The two share the account
+    and nothing else — a staff sign-in cannot approve your own budget, and the shop's records are
+    not readable from the owner's side.
+  </p>
+</main>

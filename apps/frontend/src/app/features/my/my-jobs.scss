@@ -1,0 +1,126 @@
+.jobs {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.jobs__row {
+  border: 1px solid var(--rule);
+  background: var(--stock);
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* A row that waits on the reader is ruled in caution, not tinted — the same
+   device the console uses for a job waiting on a customer. */
+.jobs__row--yours {
+  border-color: var(--caution);
+}
+
+.jobs__top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.jobs__code {
+  font-size: var(--step-1);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.jobs__code:hover {
+  color: var(--ref);
+}
+
+.jobs__flag {
+  border: 1px solid var(--caution);
+  background: var(--caution-field);
+  color: var(--caution-ink);
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+}
+
+.jobs__line {
+  color: var(--ink-2);
+  max-width: 78ch;
+}
+
+.jobs__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--rule);
+}
+
+.jobs__step {
+  font-size: var(--step--1);
+}
+
+.jobs__total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.jobs__total strong {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 700;
+}
+
+.jobs__foot .gs__actions {
+  margin-left: auto;
+}
+
+.jobs__unreadable {
+  margin-top: 1.25rem;
+  max-width: 82ch;
+}
+
+.jobs__dead {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.jobs__dead > li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* --- the reference blank -------------------------------------------------- */
+
+.track {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.track .blank {
+  flex: 1 1 22rem;
+  grid-column: auto;
+}
+
+.track__result {
+  margin-top: 1rem;
+  max-width: 82ch;
+}
+
+@media (max-width: 46rem) {
+  .jobs__foot .gs__actions {
+    margin-left: 0;
+  }
+}

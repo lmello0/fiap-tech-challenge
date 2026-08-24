@@ -1,0 +1,333 @@
+/* ---------------------------------------------------------------------------
+   THE OWNER'S MANUAL — volume two of the same book.
+
+   The staff console's shell, rebuilt for a reader who is not at a desk. Same
+   masthead block, same bleed thumb tabs, same sheet with the section's ink
+   available to every plate on it. What changes is that this one adapts: the
+   rail folds into a horizontal thumb strip on a narrow screen instead of
+   assuming a 1440px workstation, because half of these readers are standing
+   next to the car.
+   --------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.garage-band__spacer {
+  flex: 1;
+}
+
+/* --- masthead ------------------------------------------------------------ */
+
+.gmast {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: end;
+  gap: 2rem;
+  padding: 1.1rem 1.25rem 0.7rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.gmast__shop {
+  font-family: var(--face-cond);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.015em;
+}
+
+.gmast__doc {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-top: 0.15rem;
+}
+
+.gmast__section-name {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.gmast__who {
+  text-align: right;
+}
+
+.gmast__name {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Stamped, not labelled — and in reference ink rather than the console's
+   warning red, because "customer" is not an authority to be careful with. */
+.gmast__stamp {
+  display: inline-block;
+  margin-top: 0.25rem;
+  border: 1px solid var(--ref);
+  color: var(--ref);
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gmast__actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+/* --- shell --------------------------------------------------------------- */
+
+.gshell {
+  display: grid;
+  grid-template-columns: var(--tab-w) minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100dvh - 8.5rem);
+}
+
+.gtabs {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 1.25rem;
+  min-height: calc(100dvh - 8.5rem);
+}
+
+.gtabs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gtab {
+  --tab-ink: var(--ink-3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem 0.55rem 1.25rem;
+  border: 1px solid var(--rule);
+  border-left: 0;
+  border-right: 0;
+  background: color-mix(in srgb, var(--plate) 55%, transparent);
+  color: var(--ink-2);
+  text-decoration: none;
+  transition:
+    background-color 90ms linear,
+    color 90ms linear;
+}
+
+.gtab__bleed {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 0.5rem;
+  background: var(--tab-ink);
+  opacity: 0.4;
+}
+
+.gtab:hover {
+  background: var(--plate);
+  color: var(--ink);
+}
+
+.gtab:hover .gtab__bleed {
+  opacity: 0.75;
+}
+
+.gtab.is-active {
+  background: var(--plate);
+  color: var(--ink);
+  border-color: var(--ink);
+  margin-right: -1px;
+  z-index: 1;
+}
+
+.gtab.is-active .gtab__bleed {
+  opacity: 1;
+  width: 0.7rem;
+}
+
+.gtab__n {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  min-width: 0.9rem;
+  text-align: center;
+}
+
+.gtab.is-active .gtab__n,
+.gtab:hover .gtab__n {
+  color: var(--tab-ink);
+}
+
+.gtab__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gtab__title {
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.gtab__sub {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gtab.is-active .gtab__sub {
+  color: var(--ink-2);
+}
+
+/* How many things on that tab are waiting on the reader. A number, printed —
+   not a dot that says "something", which is the notification-badge habit. */
+.gtab__count {
+  margin-left: auto;
+  border: 1px solid var(--caution);
+  background: var(--caution-field);
+  color: var(--caution-ink);
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+}
+
+.gtabs__foot {
+  margin-top: auto;
+  padding: 1rem 0.7rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  color: var(--ink-3);
+}
+
+/* --- the sheet ----------------------------------------------------------- */
+
+.gsheet {
+  border-left: 1px solid var(--ink);
+  min-height: calc(100dvh - 8.5rem);
+  padding: 1.25rem 1.25rem 4rem;
+  --section-ink: var(--sheet-ink);
+}
+
+/* --- adaptation ----------------------------------------------------------
+   The rail becomes a thumb strip. A tab is still a tab — the bleed moves from
+   its left edge to its top edge, which is what a tab does when the book is
+   turned on its side. Nothing is hidden behind a hamburger: four sections and
+   a front page fit across a phone, and a menu that hides four items is a menu
+   that exists to look tidy.                                                 */
+
+@media (max-width: 62rem) {
+  .gmast {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 1rem 0.9rem 0.7rem;
+  }
+
+  .gmast__who,
+  .gmast__actions {
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .gmast__section {
+    display: none;
+  }
+
+  .gshell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .gtabs {
+    position: static;
+    min-height: 0;
+    padding-top: 0;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .gtabs__list {
+    flex-direction: row;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .gtabs__list > li {
+    flex: none;
+  }
+
+  .gtab {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    padding: 0.75rem 0.9rem 0.6rem;
+    border: 1px solid var(--rule);
+    border-top: 0;
+    border-bottom: 0;
+    border-right: 0;
+    min-width: 9rem;
+  }
+
+  .gtab__bleed {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    width: auto;
+    height: 0.35rem;
+  }
+
+  .gtab.is-active {
+    margin-right: 0;
+    border-color: var(--rule);
+  }
+
+  .gtab.is-active .gtab__bleed {
+    width: auto;
+    height: 0.5rem;
+  }
+
+  .gtab__n {
+    display: none;
+  }
+
+  .gtab__count {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.6rem;
+    margin-left: 0;
+  }
+
+  .gtabs__foot {
+    display: none;
+  }
+
+  .gsheet {
+    border-left: 0;
+    min-height: 0;
+    padding: 1.25rem 0.9rem 4rem;
+  }
+}

@@ -1,0 +1,92 @@
+<a class="skip" href="#sheet">Skip to the page</a>
+
+@if (store.error(); as message) {
+  <p class="demo-band demo-band--fault">
+    <app-icon name="alert" [size]="13" />
+    <span><strong>The shop's system refused a request.</strong> {{ message }}</span>
+    <span class="garage-band__spacer"></span>
+    <button class="btn btn--quiet btn--sm" type="button" (click)="reload()">Retry</button>
+  </p>
+}
+
+<header class="gmast">
+  <div class="gmast__id">
+    <p class="gmast__shop">Auto Repair Shop</p>
+    <p class="gmast__doc">Owner's Manual · Your vehicles</p>
+  </div>
+
+  <div class="gmast__section">
+    <p class="label">Section</p>
+    <p class="gmast__section-name">{{ section()?.title ?? 'Front page' }}</p>
+  </div>
+
+  <div class="gmast__who">
+    <p class="label">Signed in as</p>
+    <p class="gmast__name">{{ session.displayName() }}</p>
+    <p class="gmast__stamp token">Customer · REV {{ revision }}</p>
+    <div class="gmast__actions">
+      @if (session.hasBothFacets()) {
+        <!-- The switch the picker promised. It lives in the masthead of both
+             volumes, so the choice made at sign-in is never a one-way door. -->
+        <button class="btn btn--quiet btn--sm" type="button" (click)="switchToWorkshop()">
+          Switch to the shop manual
+        </button>
+      }
+      <a class="btn btn--quiet btn--sm" routerLink="/change-password">Change password</a>
+      <button class="btn btn--quiet btn--sm" type="button" (click)="signOut()">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<div class="gshell">
+  <nav class="gtabs" aria-label="Owner's manual sections">
+    <ul class="gtabs__list">
+      <li>
+        <a
+          class="gtab"
+          routerLink="/my"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <span class="gtab__bleed" aria-hidden="true"></span>
+          <span class="gtab__n token" aria-hidden="true">0</span>
+          <span class="gtab__text">
+            <span class="gtab__title">Front page</span>
+            <span class="gtab__sub">What needs you</span>
+          </span>
+        </a>
+      </li>
+      @for (s of sections; track s.path) {
+        <li>
+          <a
+            class="gtab"
+            [routerLink]="'/' + s.path"
+            routerLinkActive="is-active"
+            [style.--tab-ink]="s.ink"
+          >
+            <span class="gtab__bleed" aria-hidden="true"></span>
+            <span class="gtab__n token" aria-hidden="true">{{ s.n }}</span>
+            <span class="gtab__text">
+              <span class="gtab__title">{{ s.title }}</span>
+              <span class="gtab__sub">{{ s.sub }}</span>
+            </span>
+            @if (s.path === 'my/jobs' && decisions() + pickups() > 0) {
+              <span class="gtab__count token" [attr.aria-label]="decisions() + pickups() + ' need you'">
+                {{ decisions() + pickups() }}
+              </span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+
+    <p class="gtabs__foot">
+      <span class="label">Revision</span>
+      <span class="token">{{ revision }}</span>
+    </p>
+  </nav>
+
+  <main class="gsheet" id="sheet" [style.--sheet-ink]="section()?.ink ?? 'var(--ink)'">
+    <router-outlet />
+  </main>
+</div>

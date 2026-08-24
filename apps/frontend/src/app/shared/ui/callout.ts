@@ -13,11 +13,19 @@ import type { CalloutTier } from '../../core/domain/lifecycle';
   template: `
     <div class="callout" [class]="'callout--' + tier()">
       <p class="callout__tier">{{ word() }}</p>
-      <div class="callout__body"><ng-content /></div>
+      <div class="callout__body">
+        @if (heading(); as h) {
+          <p class="callout__heading">{{ h }}</p>
+        }
+        <ng-content />
+      </div>
     </div>
   `,
 })
 export class Callout {
   readonly tier = input<CalloutTier>('note');
+
+  /** What the callout is about, in one phrase, above the body it explains. */
+  readonly heading = input<string>();
   protected readonly word = computed(() => this.tier().toUpperCase());
 }

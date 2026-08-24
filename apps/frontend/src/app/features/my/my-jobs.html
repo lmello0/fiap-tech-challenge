@@ -1,0 +1,135 @@
+<header class="gs__head">
+  <div>
+    <h1 class="gs__title">Your jobs</h1>
+    <p class="gs__sub">
+      Where each repair stands, in the shop's own ten-step procedure. Two of those steps wait on
+      you, and they are marked wherever they appear.
+    </p>
+  </div>
+</header>
+
+<div class="gs__stack">
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">2.1 — Jobs on this device</p>
+      <p class="plate__meta label">{{ store.jobs().length }} known</p>
+    </div>
+    <div class="plate__body">
+      @if (store.loading()) {
+        <p class="gs__muted">Reading each job from the shop…</p>
+      } @else if (store.jobs().length === 0) {
+        <div class="empty">
+          <p class="empty__title">No jobs here yet.</p>
+          <p>
+            When the shop emails you about a repair, opening its link on this device files it here.
+            Or add the reference by hand below.
+          </p>
+        </div>
+      } @else {
+        <ul class="jobs">
+          @for (job of store.jobs(); track job.id) {
+            <li class="jobs__row" [class.jobs__row--yours]="step(job.status).waitsOnYou">
+              <div class="jobs__top">
+                <a class="jobs__code token" [routerLink]="['/my/jobs', job.id]">{{ job.orderCode }}</a>
+                <app-status-mark [status]="job.status" />
+                @if (step(job.status).waitsOnYou) {
+                  <span class="jobs__flag label">Waits on you</span>
+                }
+              </div>
+
+              <p class="jobs__line">{{ step(job.status).line }}</p>
+
+              <div class="jobs__foot">
+                <p class="jobs__step gs__muted">
+                  Step <span class="token">{{ step(job.status).n }}</span> of 10 —
+                  {{ step(job.status).title }}
+                </p>
+                @if (job.budget) {
+                  <p class="jobs__total">
+                    <span class="label">Quoted</span>
+                    <strong>{{ money(job.budget.grandTotal) }}</strong>
+                  </p>
+                }
+                <div class="gs__actions">
+                  <a
+                    class="btn btn--sm"
+                    [class.btn--primary]="step(job.status).waitsOnYou"
+                    [routerLink]="['/my/jobs', job.id]"
+                  >
+                    Open
+                  </a>
+                  <button class="btn btn--quiet btn--sm" type="button" (click)="store.forgetJob(job.id)">
+                    Remove from this device
+                  </button>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (store.unreadable().length > 0) {
+        <div class="jobs__unreadable">
+          <app-callout tier="caution" heading="References the shop no longer answers for">
+            <ul class="jobs__dead">
+              @for (row of store.unreadable(); track row.id) {
+                <li>
+                  <span class="token">{{ row.id }}</span> — {{ row.reason }}
+                  <button class="btn btn--quiet btn--sm" type="button" (click)="store.forgetJob(row.id)">
+                    Remove
+                  </button>
+                </li>
+              }
+            </ul>
+          </app-callout>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="plate">
+    <div class="plate__head">
+      <p class="plate__title">2.2 — Add a job by reference</p>
+      <p class="plate__meta label">GET /work-orders/{{ '{' }}id{{ '}' }}/customer-view</p>
+    </div>
+    <div class="plate__body">
+      <app-callout tier="note" heading="Why this blank exists">
+        The shop's system has no call that lists a customer's own work orders — a job is addressed
+        by its reference and nothing else. So this console remembers the ones you open on this
+        device, and this blank lets you add one from the shop's email on a device that has not seen
+        it. Removing one here only forgets the address; the job itself is untouched.
+      </app-callout>
+
+      <form class="track" (submit)="track($event)">
+        <label class="blank blank--full">
+          <span class="blank__label label">Job reference</span>
+          <input
+            class="blank__rule token"
+            type="text"
+            name="reference"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="The reference in the shop's email"
+            [value]="reference()"
+            (input)="reference.set($any($event.target).value)"
+          />
+        </label>
+        <button class="btn btn--primary" type="submit" [disabled]="adding() || !reference().trim()">
+          {{ adding() ? 'Looking it up…' : 'Add this job' }}
+        </button>
+      </form>
+
+      @if (addError(); as message) {
+        <div class="track__result">
+          <app-callout tier="warning">{{ message }}</app-callout>
+        </div>
+      } @else if (added(); as code) {
+        <div class="track__result">
+          <app-callout tier="note">
+            <span class="token">{{ code }}</span> is now in your register above.
+          </app-callout>
+        </div>
+      }
+    </div>
+  </section>
+</div>
