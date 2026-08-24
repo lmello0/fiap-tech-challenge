@@ -5,6 +5,7 @@ import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 public class WorkOrderSpecifications {
@@ -24,9 +25,9 @@ public class WorkOrderSpecifications {
                 mechanicId == null ? null : cb.equal(root.get("mechanicId"), mechanicId);
     }
 
-    public static Specification<WorkOrder> withStatus(WorkOrderStatus status) {
+    public static Specification<WorkOrder> withStatus(Set<WorkOrderStatus> statuses) {
         return (root, query, cb) ->
-                status == null ? null : cb.equal(root.get("status"), status);
+                statuses == null || statuses.isEmpty() ? null : cb.in(root.get("status").in(statuses));
     }
 
     public static Specification<WorkOrder> withCode(String code) {

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.PastOrPresent;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 @ValidDateRange(
@@ -17,7 +18,7 @@ public record WorkOrderFilterQuery(
         UUID customerId,
         UUID vehicleId,
         UUID mechanicId,
-        WorkOrderStatus status,
+        Set<WorkOrderStatus> status,
         String code,
 
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)

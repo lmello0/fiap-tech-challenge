@@ -14,6 +14,7 @@ import com.fiap.techchallenge.workorder.api.commands.*;
 import com.fiap.techchallenge.workorder.api.events.*;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderSnapshot;
 import com.fiap.techchallenge.workorder.entities.Budget;
@@ -62,6 +63,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final RepairServiceCatalogService repairServiceCatalogService;
     private final PartReservationService partReservationService;
     private final VehicleService vehicleService;
+
+    @Transactional(readOnly = true)
+    public WorkOrderCountStatusInfo getWorkOrderStatusInfo(Instant startDate, Instant endDate) {
+        return repository.countByStatus(startDate, endDate);
+    }
 
     @Transactional(readOnly = true)
     public Page<WorkOrderInfo> getAllWorkOrders(WorkOrderFilterQuery filter, Pageable pageable) {

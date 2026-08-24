@@ -5,13 +5,17 @@ import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public interface WorkOrderService {
+
+    WorkOrderCountStatusInfo getWorkOrderStatusInfo(Instant startDate, Instant endDate);
 
     Page<WorkOrderInfo> getAllWorkOrders(WorkOrderFilterQuery filter, Pageable pageable);
 

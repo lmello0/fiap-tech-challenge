@@ -8,6 +8,7 @@ import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
+import com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,12 +21,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -36,6 +34,17 @@ import java.util.UUID;
 @Tag(name = "Work Orders", description = "Staff-facing work order lifecycle: creation, diagnostics, repair execution, and delivery.")
 @RequestMapping("work-orders")
 public interface WorkOrderControllerSwaggerDoc {
+
+    @Operation(
+            summary = "Count the work orders by statuses",
+            description = "Returns the count of work orders in each status, can be filtered by date"
+    )
+    @CommonApiResponses
+    @GetMapping("/summary")
+    ResponseEntity<WorkOrderCountStatusInfo> getWorkOrderStatusInfo(
+            @RequestParam(required = false) Instant start,
+            @RequestParam(required = false) Instant end
+    );
 
     @Operation(
             summary = "List work orders",
