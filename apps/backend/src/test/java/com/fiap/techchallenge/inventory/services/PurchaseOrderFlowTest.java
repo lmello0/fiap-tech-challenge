@@ -2,11 +2,13 @@ package com.fiap.techchallenge.inventory.services;
 
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.inventory.api.PartCatalogService;
+import com.fiap.techchallenge.inventory.api.StockService;
 import com.fiap.techchallenge.inventory.api.PartReservationService;
 import com.fiap.techchallenge.inventory.api.PurchaseOrderService;
 import com.fiap.techchallenge.inventory.api.VendorService;
 import com.fiap.techchallenge.inventory.api.commands.*;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.api.representation.PurchaseOrderInfo;
 import com.fiap.techchallenge.inventory.api.representation.PurchaseOrderLineInfo;
 import com.fiap.techchallenge.inventory.api.representation.VendorInfo;
@@ -50,6 +52,9 @@ class PurchaseOrderFlowTest {
     PartCatalogService partCatalogService;
 
     @Autowired
+    StockService stockService;
+
+    @Autowired
     PartReservationService reservationService;
 
     @Autowired
@@ -88,16 +93,17 @@ class PurchaseOrderFlowTest {
         assertThat(received.status()).isEqualTo(PurchaseOrderStatus.RECEIVED);
         assertThat(received.receivedAt()).isNotNull();
 
-        PartInfo afterReceipt = partCatalogService.getById(part.id());
-        assertThat(afterReceipt.quantityOnHand()).isEqualByComparingTo("10");
-        // starting averageCost is 0 (no prior stock), so the new average is exactly the receipt cost
-        assertThat(afterReceipt.averageCost()).isEqualByComparingTo("20.00");
+        PartStockInfo afterReceipt = stockService.getStock(part.id());
+        assertThat(afterReceipt.onHand()).isEqualByComparingTo("10");
+        // no prior stock, so the all-time average is exactly the receipt cost
+        assertThat(afterReceipt.avgCostAllTime()).isEqualByComparingTo("20.00");
 
         boolean hasPurchaseMovement = movementRepository.findByPartIdOrderByOccurredAtDesc(part.id(), Pageable.unpaged())
                 .stream()
                 .anyMatch(m -> m.getType() == StockMovementType.PURCHASE
                         && m.getQuantity().compareTo(BigDecimal.TEN) == 0
-                        && placed.id().equals(m.getReferenceId()));
+                        && m.getPurchaseOrderLine() != null
+                        && placed.id().equals(m.getPurchaseOrderLine().getPurchaseOrder().getId()));
         assertThat(hasPurchaseMovement).isTrue();
     }
 
@@ -115,7 +121,7 @@ class PurchaseOrderFlowTest {
 
         assertThat(partiallyReceived.status()).isEqualTo(PurchaseOrderStatus.PARTIALLY_RECEIVED);
         assertThat(partiallyReceived.receivedAt()).isNull();
-        assertThat(partCatalogService.getById(part.id()).quantityOnHand()).isEqualByComparingTo("4");
+        assertThat(stockService.getStock(part.id()).onHand()).isEqualByComparingTo("4");
     }
 
     @Test
@@ -135,9 +141,9 @@ class PurchaseOrderFlowTest {
         purchaseOrderService.receive(secondPo.id(), new ReceivePurchaseOrderCommand(
                 List.of(new ReceivePurchaseOrderLineCommand(secondPo.lines().get(0).id(), BigDecimal.TEN, BigDecimal.valueOf(20)))));
 
-        PartInfo afterBoth = partCatalogService.getById(part.id());
-        assertThat(afterBoth.quantityOnHand()).isEqualByComparingTo("20");
-        assertThat(afterBoth.averageCost()).isEqualByComparingTo("15.00");
+        PartStockInfo afterBoth = stockService.getStock(part.id());
+        assertThat(afterBoth.onHand()).isEqualByComparingTo("20");
+        assertThat(afterBoth.avgCostAllTime()).isEqualByComparingTo("15.00");
     }
 
     @Test

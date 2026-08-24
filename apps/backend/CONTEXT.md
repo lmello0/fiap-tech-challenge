@@ -54,8 +54,9 @@ order between quoting and starting the job.
 ### Language
 
 **Part**:
-A physical item held in stock and sold on a work order. Carries a shelf `salePrice` and a derived
-`averageCost` computed from purchase receipts.
+A physical item held in stock and sold on a work order. Carries a shelf `salePrice`; on-hand quantity
+and cost are never stored on it — they are derived from Stock Movement (see the `inventory.part_stock`
+view).
 _Avoid_: Item, Product, SKU (as a synonym for the part itself)
 
 **Service**:
@@ -83,31 +84,48 @@ _Avoid_: Order, PO (in prose)
 
 **Reservation**:
 A claim a work order holds on a quantity of a Part between quoting and starting work. Reduces
-`available` without moving `quantityOnHand` — a Reservation is not a Stock Movement. Every Reservation
-belongs to exactly one work order; there is no way to reserve a part outside of one.
+`available` (a derived figure — see Stock Movement) without moving on-hand stock — a Reservation is not
+a Stock Movement. Every Reservation belongs to exactly one work order; there is no way to reserve a
+part outside of one.
 _Avoid_: Hold, Lock (ambiguous with database locking)
 
 **Shortfall**:
 The part of a Reservation that could not be satisfied because on-hand stock ran out. Blocks the work
-order from starting service and is what triggers reordering.
+order from starting service. Heals automatically, FIFO by how long a Reservation has been waiting,
+whenever stock increases (a Purchase Order receipt or an upward manual adjustment) — a shortfall is
+current state the system keeps up to date, not a one-time snapshot from when the Reservation was made.
 _Avoid_: Backorder
 
 **Stock Movement**:
-An append-only record of a real change in a Part's `quantityOnHand`: `PURCHASE` (a vendor receipt),
-`CONSUMPTION` (a work order starting service), or `ADJUSTMENT` (a manual correction against a
-physical count, breakage, or loss — always carries a reason). Reservations are not movements.
+The only record of a Part's stock — on-hand is the sum of a Part's Stock Movements, never a stored
+number. Three types: `PURCHASE` (a vendor receipt), `CONSUMPTION` (a work order starting service), or
+`ADJUSTMENT` (a manual correction against a physical count, breakage, or loss — always carries a
+reason). Reservations are not movements.
 
-**Reorder Rule**:
-A per-part standing instruction holding a `min` and a `max`: when the part's inventory position
-(available stock plus anything already inbound from an open purchase order) falls to or below `min`,
-order enough to bring it back up to `max`. A Part with no Reorder Rule is one nobody has decided to
-auto-stock; a Reorder Rule that is disabled is a decision someone made.
-_Avoid_: Reorder point (names only the trigger, not the order-up-to policy)
+**Inventory Position**:
+What a Stock Policy tests against: available stock plus anything already inbound from an open Purchase
+Order. Distinct from `available` alone — a part with a large order already on the way isn't "low" even
+if nothing is on the shelf yet.
+
+**Stock Status**:
+A Part's derived standing against its Stock Policy, shown on the catalog list: `OUT` (available at or
+below zero), `LOW` (available at or below the Stock Policy's `min`), `OK` (above `min`), or `NO_POLICY`
+(no Stock Policy has ever been set — nobody has decided what "low" means for this Part). `NO_POLICY` is
+deliberately distinct from `OK`: a Part at zero with no policy is the most urgent row on the list, not
+an invisible one.
+
+**Stock Policy**:
+A per-part standing threshold holding a `min`, and optionally an order-up-to `max` and `vendor` when
+its auto-reorder flag is on: when Inventory Position falls to or below `min` and auto-reorder is
+enabled, order enough to bring it back up to `max`. With auto-reorder off, a Stock Policy is still
+meaningful — it's the threshold a Part's Stock Status is computed against, with no order ever placed
+automatically. A Part with no Stock Policy is one nobody has decided to track at all.
+_Avoid_: Reorder Rule, Reorder point (names only the auto-order behavior, not the standalone threshold)
 
 **Stockist**:
 The `Worker` facet role that runs the storeroom: the part and service catalogs, purchasing, receiving,
-reorder rules, and stock adjustments. Holds the same inventory rights as `Manager` — the role exists to
-name who is expected to do this work day to day, not to fence `Manager` out of it.
+stock policies, and stock adjustments. Holds the same inventory rights as `Manager` — the role exists
+to name who is expected to do this work day to day, not to fence `Manager` out of it.
 _Avoid_: Stock clerk, Storekeeper
 
 ## Work Orders

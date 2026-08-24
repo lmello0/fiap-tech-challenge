@@ -1,6 +1,7 @@
 package com.fiap.techchallenge.inventory.api;
 
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
+import com.fiap.techchallenge.inventory.api.representation.BlockingShortfallInfo;
 
 import java.time.Instant;
 import java.util.List;
@@ -47,4 +48,12 @@ public interface PartReservationService {
      * actually held stock. Returns the number of reservations expired.
      */
     int expireStaleReservations(Instant cutoff);
+
+    /**
+     * The parts still short on {@code workOrderId}'s reservations — the answer to "is this work order
+     * blocked from starting service because of stock?" Empty means nothing here is blocking it. Parts
+     * only: budget, assignment, and status reasons are for the work-order module to compose alongside
+     * this, not for inventory to know about.
+     */
+    List<BlockingShortfallInfo> getBlockingShortfalls(UUID workOrderId);
 }

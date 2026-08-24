@@ -24,7 +24,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Safety net for the inline reorder checks (ReorderRuleFlowTest covers those): {@code create()}/
+ * Safety net for the inline reorder checks (StockPolicyFlowTest covers those): {@code create()}/
  * {@code update()} always evaluate their own rule immediately, so the only way to prove the sweep
  * itself does anything is to plant a rule that bypasses that inline path entirely — the exact "a rule
  * created against stale data" scenario the class's javadoc describes — and let the sweep be the only
@@ -55,14 +55,14 @@ class ReorderSweepTest {
         PartInfo part = partCatalogService.create(new CreatePartCommand(
                 "SWEEP-1", "Test Part SWEEP-1", null, null, UnitOfMeasure.UNIT, BigDecimal.valueOf(50)));
 
-        // Bypasses ReorderRuleServiceImpl.create(), which would otherwise evaluate the rule inline
+        // Bypasses StockPolicyServiceImpl.create(), which would otherwise evaluate the rule inline
         // and leave nothing for the sweep to catch.
         jdbcTemplate.update("""
-                INSERT INTO inventory.reorder_rules (part_id, min_quantity, max_quantity, vendor_id, enabled)
+                INSERT INTO inventory.stock_policies (part_id, min_quantity, max_quantity, vendor_id, auto_reorder_enabled)
                 VALUES (?, 5, 20, ?, true)
                 """, part.id(), vendor.id());
 
-        // job.runSweep() evaluates every ReorderRule row in the database, not just this one — its
+        // job.runSweep() evaluates every StockPolicy row in the database, not just this one — its
         // return value isn't asserted here since other tests in the full suite leave their own rules
         // behind; what matters is that the sweep evaluated *this* rule specifically.
         job.runSweep();

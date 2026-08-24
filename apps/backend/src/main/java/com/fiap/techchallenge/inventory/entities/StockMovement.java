@@ -14,8 +14,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * An append-only record of a real change in a {@link Part}'s on-hand quantity. Reservations are
- * deliberately not movements — they claim stock without moving it.
+ * The only record of a {@link Part}'s stock: on-hand is {@code SUM(quantity)} over a part's
+ * movements, nothing else stores it. Reservations are deliberately not movements — they claim stock
+ * without moving it. Each type carries exactly the source reference that explains it: {@code
+ * purchaseOrderLine} for a {@code PURCHASE}, {@code workOrderId} for a {@code CONSUMPTION}, {@code
+ * reason} for an {@code ADJUSTMENT} (enforced by {@code chk_movement_source_matches_type} in the
+ * schema).
  */
 @Entity
 @Table(name = "stock_movements", schema = "inventory")
@@ -42,14 +46,19 @@ public class StockMovement {
     @Column(nullable = false)
     private BigDecimal quantity;
 
+    /** Required for {@link StockMovementType#PURCHASE}; null otherwise. */
     private BigDecimal unitCost;
 
-    /** The purchase order or work order this movement traces back to, when it has one. */
-    private UUID referenceId;
-
-    /** Required for {@link StockMovementType#ADJUSTMENT}; optional otherwise (see {@code chk_adjustment_has_reason}). */
+    /** Required for {@link StockMovementType#ADJUSTMENT}; null otherwise. */
     @Column(length = 500)
     private String reason;
+
+    /** Required for {@link StockMovementType#CONSUMPTION}; null otherwise. */
+    private UUID workOrderId;
+
+    /** Required for {@link StockMovementType#PURCHASE}; null otherwise. */
+    @ManyToOne
+    private PurchaseOrderLine purchaseOrderLine;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

@@ -19,3 +19,9 @@ holds: reservation is still best-effort per line, shortfalls still only hard-blo
 and `workorder → inventory` is still the only direction of dependency — this ADR only changes how many
 times, and with what net effect, `workorder` calls `PartReservationService` during the life of one
 Budget.
+
+Shortfall healing (ADR 0019) interacts with this: a Draft's live reservations are just as eligible for
+FIFO top-up as an approved work order's, since inventory has no way to tell them apart without reading
+budget state. A Draft edited down to a smaller quantity releases its excess immediately (per this ADR),
+so healing never tops up more than what the Draft's current lines actually ask for — but a Draft left
+open can still absorb stock ahead of an approved order that reserved later.

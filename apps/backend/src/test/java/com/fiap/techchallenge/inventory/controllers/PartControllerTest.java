@@ -158,7 +158,7 @@ class PartControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(adjustmentPayload("10", "Initial physical count")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.quantityOnHand").value(10))
+                .andExpect(jsonPath("$.onHand").value(10))
                 .andExpect(jsonPath("$.available").value(10));
 
         mvc.perform(post("/parts/{id}/stock/adjustments", partId)
@@ -166,7 +166,7 @@ class PartControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(adjustmentPayload("-3", "Breakage")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.quantityOnHand").value(7));
+                .andExpect(jsonPath("$.onHand").value(7));
 
         mvc.perform(get("/parts/{id}/stock/movements", partId)
                         .header("Authorization", "Bearer " + stockist.accessToken()))

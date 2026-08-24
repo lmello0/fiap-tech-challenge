@@ -1,7 +1,7 @@
 package com.fiap.techchallenge.inventory.controllers;
 
 import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
-import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.api.representation.StockMovementInfo;
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.shared.responses.PageResponse;
@@ -42,7 +42,7 @@ public interface StockControllerSwaggerDoc {
     @ApiResponse(responseCode = "422", description = "The adjustment would drop on-hand quantity below zero, or below what is already reserved.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/adjustments")
-    ResponseEntity<PartInfo> adjust(
+    ResponseEntity<PartStockInfo> adjust(
             @Parameter(description = "Part id") @PathVariable UUID partId,
             @Valid @RequestBody AdjustStockCommand command
     );

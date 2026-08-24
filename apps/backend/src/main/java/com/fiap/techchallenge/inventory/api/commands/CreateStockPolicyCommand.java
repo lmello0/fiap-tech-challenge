@@ -6,7 +6,11 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record CreateReorderRuleCommand(
+/**
+ * {@code maxQuantity} and {@code vendorId} are required only when {@code autoReorderEnabled} is
+ * true — a policy that only flags low stock has no order-up-to target and no vendor to place with.
+ */
+public record CreateStockPolicyCommand(
         @NotNull(message = "Part ID may not be null")
         UUID partId,
 
@@ -14,13 +18,11 @@ public record CreateReorderRuleCommand(
         @PositiveOrZero(message = "Minimum quantity must be positive or zero")
         BigDecimal minQuantity,
 
-        @NotNull(message = "Maximum quantity may not be null")
         BigDecimal maxQuantity,
 
-        @NotNull(message = "Vendor ID may not be null")
         UUID vendorId,
 
-        @NotNull(message = "Enabled may not be null")
-        Boolean enabled
+        @NotNull(message = "Auto-reorder enabled may not be null")
+        Boolean autoReorderEnabled
 ) {
 }

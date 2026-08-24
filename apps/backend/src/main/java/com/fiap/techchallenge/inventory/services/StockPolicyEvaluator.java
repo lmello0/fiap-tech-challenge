@@ -3,14 +3,12 @@ package com.fiap.techchallenge.inventory.services;
 import com.fiap.techchallenge.inventory.api.PurchaseOrderService;
 import com.fiap.techchallenge.inventory.api.commands.PlacePurchaseOrderCommand;
 import com.fiap.techchallenge.inventory.api.commands.PlacePurchaseOrderLineCommand;
+import com.fiap.techchallenge.inventory.api.events.PartPositionMayHaveDroppedEvent;
 import com.fiap.techchallenge.inventory.api.events.PartStockLowEvent;
-import com.fiap.techchallenge.inventory.entities.Part;
-import com.fiap.techchallenge.inventory.entities.ReorderRule;
+import com.fiap.techchallenge.inventory.entities.StockPolicy;
 import com.fiap.techchallenge.inventory.enums.PurchaseOrderStatus;
-import com.fiap.techchallenge.inventory.exceptions.PartNotFoundException;
-import com.fiap.techchallenge.inventory.repositories.PartRepository;
 import com.fiap.techchallenge.inventory.repositories.PurchaseOrderLineRepository;
-import com.fiap.techchallenge.inventory.repositories.ReorderRuleRepository;
+import com.fiap.techchallenge.inventory.repositories.StockPolicyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -24,11 +22,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Evaluates one part's reorder rule (min/max order-up-to) and auto-places a purchase order when it
- * fires. Called wherever a part's inventory <b>position</b> — {@code available + inbound} — can drop:
- * after a reservation claims stock, after a manual adjustment, after a receipt (which moves stock from
- * inbound to available but, combined with the shortfall top-up that follows it, can still lower
- * position), and after a purchase order is cancelled (inbound disappears with nothing to replace it).
+ * Evaluates one part's stock policy (min threshold, optional max order-up-to) and auto-places a
+ * purchase order when it fires and auto-reorder is on. Called wherever a part's inventory
+ * <b>position</b> — {@code available + inbound} — can drop: after a reservation claims stock, after a
+ * manual adjustment, after a receipt (which moves stock from inbound to available but, combined with
+ * the shortfall top-up that follows it, can still lower position), and after a purchase order is
+ * cancelled (inbound disappears with nothing to replace it).
  *
  * <p>Deliberately <b>not</b> called after consuming a reservation ({@code startService}): consuming
  * moves the same quantity out of both {@code onHand} and {@code reserved} at once, so {@code
@@ -43,14 +42,14 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ReorderRuleEvaluator {
+public class StockPolicyEvaluator {
 
     private static final List<PurchaseOrderStatus> OPEN_STATUSES =
             List.of(PurchaseOrderStatus.PLACED, PurchaseOrderStatus.PARTIALLY_RECEIVED);
 
-    private final ReorderRuleRepository reorderRuleRepository;
+    private final StockPolicyRepository stockPolicyRepository;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
-    private final PartRepository partRepository;
+    private final StockLedger ledger;
     private final PurchaseOrderService purchaseOrderService;
     private final ApplicationEventPublisher events;
 
@@ -61,45 +60,44 @@ public class ReorderRuleEvaluator {
 
     @Transactional
     public void evaluate(UUID partId) {
-        Optional<ReorderRule> maybeRule = reorderRuleRepository.findByPart_Id(partId);
+        Optional<StockPolicy> maybePolicy = stockPolicyRepository.findByPart_Id(partId);
 
-        if (maybeRule.isEmpty()) {
+        if (maybePolicy.isEmpty()) {
             return;
         }
 
-        ReorderRule rule = maybeRule.get();
+        StockPolicy policy = maybePolicy.get();
         BigDecimal position = position(partId);
 
-        if (position.compareTo(rule.getMinQuantity()) > 0) {
+        if (position.compareTo(policy.getMinQuantity()) > 0) {
             return;
         }
 
-        if (!rule.isEnabled()) {
-            events.publishEvent(new PartStockLowEvent(partId, position, rule.getMinQuantity()));
+        if (!policy.isAutoReorderEnabled()) {
+            events.publishEvent(new PartStockLowEvent(partId, position, policy.getMinQuantity()));
             return;
         }
 
-        BigDecimal quantity = rule.quantityToOrder(position);
+        BigDecimal quantity = policy.quantityToOrder(position);
 
         if (quantity.signum() <= 0) {
-            log.warn("Reorder rule for part {} fired at position {} but computed a non-positive quantity {}",
+            log.warn("Stock policy for part {} fired at position {} but computed a non-positive quantity {}",
                     partId, position, quantity);
             return;
         }
 
         purchaseOrderService.place(new PlacePurchaseOrderCommand(
-                rule.getVendor().getId(),
+                policy.getVendor().getId(),
                 List.of(new PlacePurchaseOrderLineCommand(partId, quantity))
         ));
 
         log.info("Auto-placed purchase order for part {}: position {} <= min {}, ordered {} up to max {}",
-                partId, position, rule.getMinQuantity(), quantity, rule.getMaxQuantity());
+                partId, position, policy.getMinQuantity(), quantity, policy.getMaxQuantity());
     }
 
     private BigDecimal position(UUID partId) {
-        Part part = partRepository.findById(partId).orElseThrow(() -> new PartNotFoundException(partId));
         BigDecimal inbound = purchaseOrderLineRepository.sumInboundForPart(partId, OPEN_STATUSES);
 
-        return part.getAvailable().add(inbound);
+        return ledger.available(partId).add(inbound);
     }
 }

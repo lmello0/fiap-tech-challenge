@@ -2,7 +2,7 @@ package com.fiap.techchallenge.inventory.controllers;
 
 import com.fiap.techchallenge.inventory.api.StockService;
 import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
-import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.api.representation.StockMovementInfo;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class StockController implements StockControllerSwaggerDoc {
 
     @Override
     @PreAuthorize("hasAnyRole('STOCKIST', 'MANAGER')")
-    public ResponseEntity<PartInfo> adjust(UUID partId, AdjustStockCommand command) {
+    public ResponseEntity<PartStockInfo> adjust(UUID partId, AdjustStockCommand command) {
         return ResponseEntity.ok(stockService.adjust(partId, command));
     }
 

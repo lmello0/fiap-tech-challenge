@@ -1,21 +1,22 @@
 package com.fiap.techchallenge.inventory.api.events;
 
-import com.fiap.techchallenge.inventory.api.representation.ReorderRuleInfo;
+import com.fiap.techchallenge.inventory.api.representation.StockPolicyInfo;
 import com.fiap.techchallenge.shared.audit.DomainEvent;
 import com.fiap.techchallenge.shared.audit.EventMetadata;
 
 import java.util.UUID;
 
-public record ReorderRuleUpdatedEvent(
+/** Belongs to the owning Part's Timeline — a Reorder Rule is a per-part standing instruction. */
+public record StockPolicyCreatedEvent(
         UUID partId,
-        UUID reorderRuleId,
+        UUID stockPolicyId,
         EventMetadata metadata,
-        ReorderRuleInfo snapshot
+        StockPolicyInfo snapshot
 ) implements DomainEvent {
 
     @Override
     public String eventType() {
-        return "REORDER_RULE_UPDATED";
+        return "REORDER_RULE_CREATED";
     }
 
     @Override
@@ -35,6 +36,6 @@ public record ReorderRuleUpdatedEvent(
 
     @Override
     public UUID entityId() {
-        return reorderRuleId;
+        return stockPolicyId;
     }
 }

@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Placing, receiving, and cancelling purchase orders. PurchaseOrderFlowTest/ReorderRuleFlowTest
+ * Placing, receiving, and cancelling purchase orders. PurchaseOrderFlowTest/StockPolicyFlowTest
  * already cover the domain rules (partial receipt, moving-average cost, position arithmetic) at the
  * service layer; this covers the HTTP wiring on top, which had no coverage at all.
  */

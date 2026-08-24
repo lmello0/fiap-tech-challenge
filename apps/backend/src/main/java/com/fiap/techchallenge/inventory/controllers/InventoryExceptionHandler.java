@@ -7,7 +7,7 @@ import com.fiap.techchallenge.inventory.exceptions.InvalidStockAdjustmentExcepti
 import com.fiap.techchallenge.inventory.exceptions.PartNotFoundException;
 import com.fiap.techchallenge.inventory.exceptions.PurchaseOrderNotFoundException;
 import com.fiap.techchallenge.inventory.exceptions.RepairServiceNotFoundException;
-import com.fiap.techchallenge.inventory.exceptions.ReorderRuleNotFoundException;
+import com.fiap.techchallenge.inventory.exceptions.StockPolicyNotFoundException;
 import com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException;
 import com.fiap.techchallenge.shared.exceptions.ExceptionHandlerOrder;
 import com.fiap.techchallenge.shared.exceptions.ProblemDetails;
@@ -41,8 +41,8 @@ public class InventoryExceptionHandler {
         return ProblemDetails.of(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
     }
 
-    @ExceptionHandler(ReorderRuleNotFoundException.class)
-    ProblemDetail handleReorderRuleNotFound(ReorderRuleNotFoundException e) {
+    @ExceptionHandler(StockPolicyNotFoundException.class)
+    ProblemDetail handleStockPolicyNotFound(StockPolicyNotFoundException e) {
         return ProblemDetails.of(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
     }
 

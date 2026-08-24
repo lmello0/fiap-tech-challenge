@@ -9,6 +9,7 @@ import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.events.PartReservationExpiredEvent;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.entities.PartReservation;
 import com.fiap.techchallenge.inventory.enums.ReservationStatus;
 import com.fiap.techchallenge.inventory.enums.UnitOfMeasure;
@@ -65,7 +66,7 @@ class PartReservationServiceImplTest {
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HELD);
         assertThat(reservation.getQuantityReserved()).isEqualByComparingTo("3");
         assertThat(reservation.getQuantityRequested()).isEqualByComparingTo("3");
-        assertThat(partCatalogService.getById(part.id()).available()).isEqualByComparingTo("2");
+        assertThat(stockService.getStock(part.id()).available()).isEqualByComparingTo("2");
     }
 
     @Test
@@ -81,7 +82,7 @@ class PartReservationServiceImplTest {
         assertThat(reservation.getQuantityReserved()).isEqualByComparingTo("0");
         assertThat(reservation.getQuantityRequested()).isEqualByComparingTo("0");
         assertThat(reservation.getResolvedAt()).isNotNull();
-        assertThat(partCatalogService.getById(part.id()).available()).isEqualByComparingTo("5");
+        assertThat(stockService.getStock(part.id()).available()).isEqualByComparingTo("5");
     }
 
     @Test
@@ -102,7 +103,7 @@ class PartReservationServiceImplTest {
         assertThat(released).hasSize(1);
         assertThat(released.get(0).getQuantityReserved()).isEqualByComparingTo("0");
 
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("2");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("2");
     }
 
     @Test
@@ -119,7 +120,7 @@ class PartReservationServiceImplTest {
         reservationService.expireStaleReservations(Instant.now().plusSeconds(60));
 
         assertThat(onlyReservation(workOrderId).getStatus()).isEqualTo(ReservationStatus.EXPIRED);
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("0");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("0");
         assertThat(events.stream(PartReservationExpiredEvent.class)
                 .filter(e -> e.workOrderId().equals(workOrderId))
                 .toList()).isEmpty();

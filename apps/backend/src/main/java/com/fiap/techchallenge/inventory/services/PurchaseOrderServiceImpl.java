@@ -5,27 +5,22 @@ import com.fiap.techchallenge.inventory.api.commands.PlacePurchaseOrderCommand;
 import com.fiap.techchallenge.inventory.api.commands.PlacePurchaseOrderLineCommand;
 import com.fiap.techchallenge.inventory.api.commands.ReceivePurchaseOrderCommand;
 import com.fiap.techchallenge.inventory.api.commands.ReceivePurchaseOrderLineCommand;
+import com.fiap.techchallenge.inventory.api.events.PartPositionMayHaveDroppedEvent;
 import com.fiap.techchallenge.inventory.api.events.PurchaseOrderPlacedEvent;
 import com.fiap.techchallenge.inventory.api.events.PurchaseOrderReceivedEvent;
 import com.fiap.techchallenge.inventory.api.queries.PurchaseOrderFilterQuery;
 import com.fiap.techchallenge.inventory.api.representation.PurchaseOrderInfo;
 import com.fiap.techchallenge.inventory.entities.Part;
-import com.fiap.techchallenge.inventory.entities.PartReservation;
 import com.fiap.techchallenge.inventory.entities.PurchaseOrder;
 import com.fiap.techchallenge.inventory.entities.PurchaseOrderLine;
-import com.fiap.techchallenge.inventory.entities.StockMovement;
 import com.fiap.techchallenge.inventory.entities.Vendor;
 import com.fiap.techchallenge.inventory.enums.PurchaseOrderStatus;
-import com.fiap.techchallenge.inventory.enums.ReservationStatus;
-import com.fiap.techchallenge.inventory.enums.StockMovementType;
 import com.fiap.techchallenge.inventory.exceptions.PartNotFoundException;
 import com.fiap.techchallenge.inventory.exceptions.PurchaseOrderNotFoundException;
 import com.fiap.techchallenge.inventory.exceptions.VendorNotFoundException;
 import com.fiap.techchallenge.inventory.mappers.PurchaseOrderMapper;
 import com.fiap.techchallenge.inventory.repositories.PartRepository;
-import com.fiap.techchallenge.inventory.repositories.PartReservationRepository;
 import com.fiap.techchallenge.inventory.repositories.PurchaseOrderRepository;
-import com.fiap.techchallenge.inventory.repositories.StockMovementRepository;
 import com.fiap.techchallenge.inventory.repositories.VendorRepository;
 import com.fiap.techchallenge.inventory.repositories.specifications.PurchaseOrderSpecifications;
 import com.fiap.techchallenge.inventory.vendor.PartVendorClient;
@@ -60,8 +55,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final VendorRepository vendorRepository;
     private final PartRepository partRepository;
-    private final PartReservationRepository reservationRepository;
-    private final StockMovementRepository movementRepository;
+    private final StockLedger ledger;
 
     private final PartVendorClient vendorClient;
     private final PurchaseOrderMapper mapper;
@@ -223,41 +217,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .findByIdForUpdate(line.getPart().getId())
                 .orElseThrow(() -> new PartNotFoundException(line.getPart().getId()));
 
-        part.receive(quantityReceivedNow, unitCost);
-
         line.setQuantityReceived(line.getQuantityReceived().add(quantityReceivedNow));
         line.setUnitCost(unitCost);
 
-        StockMovement movement = new StockMovement();
-        movement.setPart(part);
-        movement.setType(StockMovementType.PURCHASE);
-        movement.setQuantity(quantityReceivedNow);
-        movement.setUnitCost(unitCost);
-        movement.setReferenceId(po.getId());
-
-        movementRepository.save(movement);
-
-        topUpShortfalls(part);
-    }
-
-    private void topUpShortfalls(Part part) {
-        List<PartReservation> waiting = reservationRepository
-                .findByPart_IdAndStatusOrderByReservedAtAsc(part.getId(), ReservationStatus.HELD)
-                .stream()
-                .filter(PartReservation::hasShortfall)
-                .toList();
-
-        for (PartReservation reservation : waiting) {
-            if (part.getAvailable().signum() <= 0) {
-                break;
-            }
-
-            BigDecimal topUp = part.reserve(reservation.getShortfall());
-
-            if (topUp.signum() > 0) {
-                reservation.setQuantityReserved(reservation.getQuantityReserved().add(topUp));
-            }
-        }
+        ledger.recordPurchase(part, quantityReceivedNow, unitCost, line);
     }
 
     private String nextPurchaseOrderCode() {

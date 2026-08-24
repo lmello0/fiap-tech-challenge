@@ -2,9 +2,9 @@ package com.fiap.techchallenge.inventory.api.queries;
 
 import java.util.UUID;
 
-public record ReorderRuleFilterQuery(
+public record StockPolicyFilterQuery(
         UUID partId,
         UUID vendorId,
-        Boolean enabled
+        Boolean autoReorderEnabled
 ) {
 }

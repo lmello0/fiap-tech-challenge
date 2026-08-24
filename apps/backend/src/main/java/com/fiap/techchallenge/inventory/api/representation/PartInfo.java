@@ -14,10 +14,6 @@ public record PartInfo(
         String brand,
         UnitOfMeasure unitOfMeasure,
         BigDecimal salePrice,
-        BigDecimal averageCost,
-        BigDecimal quantityOnHand,
-        BigDecimal quantityReserved,
-        BigDecimal available,
         boolean active,
         Instant createdAt,
         Instant updatedAt

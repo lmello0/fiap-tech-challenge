@@ -1,17 +1,17 @@
 package com.fiap.techchallenge.inventory.api.events;
 
-import com.fiap.techchallenge.inventory.api.representation.ReorderRuleInfo;
+import com.fiap.techchallenge.inventory.api.representation.StockPolicyInfo;
 import com.fiap.techchallenge.shared.audit.DomainEvent;
 import com.fiap.techchallenge.shared.audit.EventMetadata;
 
 import java.util.UUID;
 
 /** {@code snapshot} is the rule's last state before deletion — the only way it survives at all. */
-public record ReorderRuleDeletedEvent(
+public record StockPolicyDeletedEvent(
         UUID partId,
-        UUID reorderRuleId,
+        UUID stockPolicyId,
         EventMetadata metadata,
-        ReorderRuleInfo snapshot
+        StockPolicyInfo snapshot
 ) implements DomainEvent {
 
     @Override
@@ -36,6 +36,6 @@ public record ReorderRuleDeletedEvent(
 
     @Override
     public UUID entityId() {
-        return reorderRuleId;
+        return stockPolicyId;
     }
 }

@@ -9,6 +9,7 @@ import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
 import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
 import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
 import com.fiap.techchallenge.inventory.entities.PartReservation;
 import com.fiap.techchallenge.inventory.enums.ReservationStatus;
@@ -111,8 +112,8 @@ class PartReservationFlowTest {
 
         assertThat(afterQuote.status()).isEqualTo(WorkOrderStatus.BUDGET_IN_DRAFT);
 
-        PartInfo afterReserve = partCatalogService.getById(part.id());
-        assertThat(afterReserve.quantityReserved()).isEqualByComparingTo("2");
+        PartStockInfo afterReserve = stockService.getStock(part.id());
+        assertThat(afterReserve.reserved()).isEqualByComparingTo("2");
         assertThat(afterReserve.available()).isEqualByComparingTo("0");
 
         List<PartReservation> reservations =
@@ -137,15 +138,15 @@ class PartReservationFlowTest {
         advanceToInDiagnostics(workOrderId);
         WorkOrderInfo afterQuote = finishDiagnosticsWith(workOrderId, part.id(), BigDecimal.valueOf(3), service.id());
 
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("3");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("3");
 
         UUID budgetId = afterQuote.budgetId();
         sendAndConfirm(budgetId);
         budgetService.refuse(budgetId, afterQuote.customerId(), new RefuseWorkOrderCommand("Too expensive"));
 
-        PartInfo afterRefusal = partCatalogService.getById(part.id());
-        assertThat(afterRefusal.quantityReserved()).isEqualByComparingTo("0");
-        assertThat(afterRefusal.quantityOnHand()).isEqualByComparingTo("5");
+        PartStockInfo afterRefusal = stockService.getStock(part.id());
+        assertThat(afterRefusal.reserved()).isEqualByComparingTo("0");
+        assertThat(afterRefusal.onHand()).isEqualByComparingTo("5");
 
         List<PartReservation> released =
                 reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.RELEASED);
@@ -176,9 +177,9 @@ class PartReservationFlowTest {
         WorkOrderInfo started = workOrderService.startService(workOrderId);
         assertThat(started.status()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
 
-        PartInfo afterConsume = partCatalogService.getById(part.id());
-        assertThat(afterConsume.quantityOnHand()).isEqualByComparingTo("2");
-        assertThat(afterConsume.quantityReserved()).isEqualByComparingTo("0");
+        PartStockInfo afterConsume = stockService.getStock(part.id());
+        assertThat(afterConsume.onHand()).isEqualByComparingTo("2");
+        assertThat(afterConsume.reserved()).isEqualByComparingTo("0");
 
         List<PartReservation> consumed =
                 reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.CONSUMED);
@@ -188,7 +189,7 @@ class PartReservationFlowTest {
                 .stream()
                 .anyMatch(m -> m.getType() == StockMovementType.CONSUMPTION
                         && m.getQuantity().compareTo(BigDecimal.valueOf(-3)) == 0
-                        && workOrderId.equals(m.getReferenceId()));
+                        && workOrderId.equals(m.getWorkOrderId()));
         assertThat(hasConsumptionMovement).isTrue();
     }
 
@@ -213,7 +214,7 @@ class PartReservationFlowTest {
         int expired = reservationService.expireStaleReservations(Instant.now().minus(Duration.ofDays(7)));
 
         assertThat(expired).isEqualTo(1);
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("0");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("0");
         assertThat(reservationRepository.findByWorkOrderIdAndStatus(workOrderId, ReservationStatus.EXPIRED))
                 .hasSize(1);
     }

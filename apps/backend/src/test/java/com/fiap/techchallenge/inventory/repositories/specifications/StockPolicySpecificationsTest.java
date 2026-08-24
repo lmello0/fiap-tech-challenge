@@ -1,6 +1,6 @@
 package com.fiap.techchallenge.inventory.repositories.specifications;
 
-import com.fiap.techchallenge.inventory.entities.ReorderRule;
+import com.fiap.techchallenge.inventory.entities.StockPolicy;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Path;
@@ -17,16 +17,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class ReorderRuleSpecificationsTest {
+class StockPolicySpecificationsTest {
 
-    private final Root<ReorderRule> root = mock();
+    private final Root<StockPolicy> root = mock();
     private final CriteriaQuery<?> query = mock();
     private final CriteriaBuilder cb = mock();
     private final Predicate predicate = mock();
 
     @Test
     void partIdEqualsIsANoOpWhenPartIdIsNull() {
-        assertThat(ReorderRuleSpecifications.partIdEquals(null).toPredicate(root, query, cb)).isNull();
+        assertThat(StockPolicySpecifications.partIdEquals(null).toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
     }
 
@@ -37,13 +37,13 @@ class ReorderRuleSpecificationsTest {
         Path<Object> partIdPath = mockPath(partPath, "id");
         when(cb.equal(partIdPath, partId)).thenReturn(predicate);
 
-        assertThat(ReorderRuleSpecifications.partIdEquals(partId).toPredicate(root, query, cb)).isEqualTo(predicate);
+        assertThat(StockPolicySpecifications.partIdEquals(partId).toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(partIdPath, partId);
     }
 
     @Test
     void vendorIdEqualsIsANoOpWhenVendorIdIsNull() {
-        assertThat(ReorderRuleSpecifications.vendorIdEquals(null).toPredicate(root, query, cb)).isNull();
+        assertThat(StockPolicySpecifications.vendorIdEquals(null).toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
     }
 
@@ -54,22 +54,22 @@ class ReorderRuleSpecificationsTest {
         Path<Object> vendorIdPath = mockPath(vendorPath, "id");
         when(cb.equal(vendorIdPath, vendorId)).thenReturn(predicate);
 
-        assertThat(ReorderRuleSpecifications.vendorIdEquals(vendorId).toPredicate(root, query, cb)).isEqualTo(predicate);
+        assertThat(StockPolicySpecifications.vendorIdEquals(vendorId).toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(vendorIdPath, vendorId);
     }
 
     @Test
-    void enabledEqualsIsANoOpWhenEnabledIsNull() {
-        assertThat(ReorderRuleSpecifications.enabledEquals(null).toPredicate(root, query, cb)).isNull();
+    void autoReorderEnabledEqualsIsANoOpWhenNull() {
+        assertThat(StockPolicySpecifications.autoReorderEnabledEquals(null).toPredicate(root, query, cb)).isNull();
         verifyNoInteractionsWithCriteriaBuilder();
     }
 
     @Test
-    void enabledEqualsFiltersByEnabledWhenPresent() {
-        Path<Object> enabledPath = mockPath(root, "enabled");
+    void autoReorderEnabledEqualsFiltersWhenPresent() {
+        Path<Object> enabledPath = mockPath(root, "autoReorderEnabled");
         when(cb.equal(enabledPath, true)).thenReturn(predicate);
 
-        assertThat(ReorderRuleSpecifications.enabledEquals(true).toPredicate(root, query, cb)).isEqualTo(predicate);
+        assertThat(StockPolicySpecifications.autoReorderEnabledEquals(true).toPredicate(root, query, cb)).isEqualTo(predicate);
         verify(cb).equal(enabledPath, true);
     }
 

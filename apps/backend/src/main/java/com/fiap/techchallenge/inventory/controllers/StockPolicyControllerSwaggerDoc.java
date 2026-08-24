@@ -1,9 +1,9 @@
 package com.fiap.techchallenge.inventory.controllers;
 
-import com.fiap.techchallenge.inventory.api.commands.CreateReorderRuleCommand;
-import com.fiap.techchallenge.inventory.api.commands.UpdateReorderRuleCommand;
-import com.fiap.techchallenge.inventory.api.queries.ReorderRuleFilterQuery;
-import com.fiap.techchallenge.inventory.api.representation.ReorderRuleInfo;
+import com.fiap.techchallenge.inventory.api.commands.CreateStockPolicyCommand;
+import com.fiap.techchallenge.inventory.api.commands.UpdateStockPolicyCommand;
+import com.fiap.techchallenge.inventory.api.queries.StockPolicyFilterQuery;
+import com.fiap.techchallenge.inventory.api.representation.StockPolicyInfo;
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,35 +27,35 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.UUID;
 
-/** Full Swagger/OpenAPI contract for {@link ReorderRuleController} — per-part, per-vendor
+/** Full Swagger/OpenAPI contract for {@link StockPolicyController} — per-part, per-vendor
  * automatic-reorder thresholds. */
-@Tag(name = "Reorder Rules", description = "Per-part, per-vendor automatic-reorder thresholds.")
-@RequestMapping("reorder-rules")
-public interface ReorderRuleControllerSwaggerDoc {
+@Tag(name = "Stock Policies", description = "Per-part, per-vendor automatic-reorder thresholds.")
+@RequestMapping("stock-policies")
+public interface StockPolicyControllerSwaggerDoc {
 
     @Operation(
-            summary = "List reorder rules",
-            description = "Returns a paginated, filterable list of reorder rules. Requires the STOCKIST or MANAGER role."
+            summary = "List stock policys",
+            description = "Returns a paginated, filterable list of stock policys. Requires the STOCKIST or MANAGER role."
     )
     @CommonApiResponses
     @GetMapping
-    ResponseEntity<PageResponse<ReorderRuleInfo>> getAll(
+    ResponseEntity<PageResponse<StockPolicyInfo>> getAll(
             @PageableDefault Pageable pageable,
-            ReorderRuleFilterQuery filter
+            StockPolicyFilterQuery filter
     );
 
     @Operation(
-            summary = "Get a reorder rule by id",
+            summary = "Get a stock policy by id",
             description = "Requires the STOCKIST or MANAGER role."
     )
     @CommonApiResponses
-    @ApiResponse(responseCode = "404", description = "No reorder rule exists with the given id.",
+    @ApiResponse(responseCode = "404", description = "No stock policy exists with the given id.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping("/{id}")
-    ResponseEntity<ReorderRuleInfo> getById(@Parameter(description = "Reorder rule id") @PathVariable UUID id);
+    ResponseEntity<StockPolicyInfo> getById(@Parameter(description = "Stock policy id") @PathVariable UUID id);
 
     @Operation(
-            summary = "Create a reorder rule",
+            summary = "Create a stock policy",
             description = "Creates a minimum/maximum quantity threshold for a part, pointing at the vendor to reorder "
                     + "from. Evaluated immediately, so a part already below the given minimum triggers a reorder "
                     + "signal right away. Requires the STOCKIST or MANAGER role."
@@ -64,30 +64,30 @@ public interface ReorderRuleControllerSwaggerDoc {
     @ApiResponse(responseCode = "404", description = "The referenced part or vendor does not exist.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping
-    ResponseEntity<ReorderRuleInfo> create(@Valid @RequestBody CreateReorderRuleCommand command);
+    ResponseEntity<StockPolicyInfo> create(@Valid @RequestBody CreateStockPolicyCommand command);
 
     @Operation(
-            summary = "Update a reorder rule",
-            description = "Updates a reorder rule's thresholds, vendor, and enabled flag, and re-evaluates the part "
+            summary = "Update a stock policy",
+            description = "Updates a stock policy's thresholds, vendor, and enabled flag, and re-evaluates the part "
                     + "immediately. Requires the STOCKIST or MANAGER role."
     )
     @CommonApiResponses
-    @ApiResponse(responseCode = "404", description = "No reorder rule exists with the given id, or the referenced vendor does not exist.",
+    @ApiResponse(responseCode = "404", description = "No stock policy exists with the given id, or the referenced vendor does not exist.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PatchMapping("/{id}")
-    ResponseEntity<ReorderRuleInfo> update(
-            @Parameter(description = "Reorder rule id") @PathVariable UUID id,
-            @Valid @RequestBody UpdateReorderRuleCommand command
+    ResponseEntity<StockPolicyInfo> update(
+            @Parameter(description = "Stock policy id") @PathVariable UUID id,
+            @Valid @RequestBody UpdateStockPolicyCommand command
     );
 
     @Operation(
-            summary = "Delete a reorder rule",
-            description = "Permanently deletes a reorder rule. Requires the STOCKIST or MANAGER role."
+            summary = "Delete a stock policy",
+            description = "Permanently deletes a stock policy. Requires the STOCKIST or MANAGER role."
     )
     @CommonApiResponses
-    @ApiResponse(responseCode = "204", description = "The reorder rule was deleted.")
-    @ApiResponse(responseCode = "404", description = "No reorder rule exists with the given id.",
+    @ApiResponse(responseCode = "204", description = "The stock policy was deleted.")
+    @ApiResponse(responseCode = "404", description = "No stock policy exists with the given id.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @DeleteMapping("/{id}")
-    ResponseEntity<Void> delete(@Parameter(description = "Reorder rule id") @PathVariable UUID id);
+    ResponseEntity<Void> delete(@Parameter(description = "Stock policy id") @PathVariable UUID id);
 }

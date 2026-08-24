@@ -134,7 +134,7 @@ class BudgetControllerTest {
                                 {"type": "PART", "quantity": 2, "partId": "%s"}""".formatted(part.id())))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("2");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("2");
 
         UUID lineId = UUID.fromString(json.readTree(addResult.getResponse().getContentAsString())
                 .get("lines").get(1).get("id").asText());
@@ -145,7 +145,7 @@ class BudgetControllerTest {
                         .content("""
                                 {"quantity": 5}"""))
                 .andExpect(status().isOk());
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("5");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("5");
 
         mvc.perform(patch("/budgets/{id}/lines/{lineId}/quantity", budgetId, lineId)
                         .header("Authorization", "Bearer " + mechanic.accessToken())
@@ -153,12 +153,12 @@ class BudgetControllerTest {
                         .content("""
                                 {"quantity": 1}"""))
                 .andExpect(status().isOk());
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("1");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("1");
 
         mvc.perform(delete("/budgets/{id}/lines/{lineId}", budgetId, lineId)
                         .header("Authorization", "Bearer " + mechanic.accessToken()))
                 .andExpect(status().isOk());
-        assertThat(partCatalogService.getById(part.id()).quantityReserved()).isEqualByComparingTo("0");
+        assertThat(stockService.getStock(part.id()).reserved()).isEqualByComparingTo("0");
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.fiap.techchallenge.inventory.api.commands.AdjustStockCommand;
 import com.fiap.techchallenge.inventory.api.commands.CreatePartCommand;
 import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
+import com.fiap.techchallenge.inventory.api.representation.PartStockInfo;
 import com.fiap.techchallenge.inventory.enums.UnitOfMeasure;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,8 +66,8 @@ class ExpireStaleReservationsTest {
 
         // The stale (10-unit) reservation is released back to availability; the fresh (5-unit) one
         // keeps its claim.
-        PartInfo afterExpiry = partCatalogService.getById(part.id());
-        assertThat(afterExpiry.quantityReserved()).isEqualByComparingTo("5");
+        PartStockInfo afterExpiry = stockService.getStock(part.id());
+        assertThat(afterExpiry.reserved()).isEqualByComparingTo("5");
     }
 
     private void backdateReservation(UUID workOrderId, Instant reservedAt) {

@@ -33,14 +33,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Per-part, per-vendor automatic-reorder thresholds. ReorderRuleFlowTest already covers the
+ * Per-part, per-vendor automatic-reorder thresholds. StockPolicyFlowTest already covers the
  * position/evaluation arithmetic at the service layer; this covers the HTTP wiring on top, which had
  * no coverage at all.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-class ReorderRuleControllerTest {
+class StockPolicyControllerTest {
 
     private static final String PASSWORD = "aVeryLongPassword1";
 
@@ -59,7 +59,7 @@ class ReorderRuleControllerTest {
     final ObjectMapper json = new ObjectMapper();
 
     @Test
-    void mechanicCanReadButNotWriteReorderRules() throws Exception {
+    void mechanicCanReadButNotWriteStockPolicys() throws Exception {
         Fixture stockist = registerWorker(WorkerRole.STOCKIST);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
         UUID vendorId = createVendor(stockist);
@@ -67,13 +67,13 @@ class ReorderRuleControllerTest {
 
         UUID ruleId = createRule(stockist, partId, vendorId);
 
-        mvc.perform(get("/reorder-rules").header("Authorization", "Bearer " + mechanic.accessToken()))
+        mvc.perform(get("/stock-policies").header("Authorization", "Bearer " + mechanic.accessToken()))
                 .andExpect(status().isForbidden());
 
-        mvc.perform(get("/reorder-rules/{id}", ruleId).header("Authorization", "Bearer " + mechanic.accessToken()))
+        mvc.perform(get("/stock-policies/{id}", ruleId).header("Authorization", "Bearer " + mechanic.accessToken()))
                 .andExpect(status().isForbidden());
 
-        mvc.perform(post("/reorder-rules")
+        mvc.perform(post("/stock-policies")
                         .header("Authorization", "Bearer " + mechanic.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(rulePayload(partId, vendorId)))
@@ -89,30 +89,30 @@ class ReorderRuleControllerTest {
 
         UUID ruleId = createRule(stockist, partId, vendorId);
 
-        mvc.perform(get("/reorder-rules/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
+        mvc.perform(get("/stock-policies/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.minQuantity").value(5))
-                .andExpect(jsonPath("$.enabled").value(true));
+                .andExpect(jsonPath("$.autoReorderEnabled").value(true));
 
-        mvc.perform(get("/reorder-rules")
+        mvc.perform(get("/stock-policies")
                         .param("partId", partId.toString())
                         .header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        mvc.perform(patch("/reorder-rules/{id}", ruleId)
+        mvc.perform(patch("/stock-policies/{id}", ruleId)
                         .header("Authorization", "Bearer " + stockist.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"minQuantity": 8, "maxQuantity": 30, "vendorId": "%s", "enabled": false}""".formatted(otherVendorId)))
+                                {"minQuantity": 8, "maxQuantity": 30, "vendorId": "%s", "autoReorderEnabled": false}""".formatted(otherVendorId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.minQuantity").value(8))
-                .andExpect(jsonPath("$.enabled").value(false));
+                .andExpect(jsonPath("$.autoReorderEnabled").value(false));
 
-        mvc.perform(delete("/reorder-rules/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
+        mvc.perform(delete("/stock-policies/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isNoContent());
 
-        mvc.perform(get("/reorder-rules/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
+        mvc.perform(get("/stock-policies/{id}", ruleId).header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isNotFound());
     }
 
@@ -122,17 +122,17 @@ class ReorderRuleControllerTest {
         UUID vendorId = createVendor(stockist);
         UUID randomId = UUID.randomUUID();
 
-        mvc.perform(get("/reorder-rules/{id}", randomId).header("Authorization", "Bearer " + stockist.accessToken()))
+        mvc.perform(get("/stock-policies/{id}", randomId).header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isNotFound());
 
-        mvc.perform(patch("/reorder-rules/{id}", randomId)
+        mvc.perform(patch("/stock-policies/{id}", randomId)
                         .header("Authorization", "Bearer " + stockist.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"minQuantity": 1, "maxQuantity": 2, "vendorId": "%s", "enabled": true}""".formatted(vendorId)))
+                                {"minQuantity": 1, "maxQuantity": 2, "vendorId": "%s", "autoReorderEnabled": true}""".formatted(vendorId)))
                 .andExpect(status().isNotFound());
 
-        mvc.perform(delete("/reorder-rules/{id}", randomId).header("Authorization", "Bearer " + stockist.accessToken()))
+        mvc.perform(delete("/stock-policies/{id}", randomId).header("Authorization", "Bearer " + stockist.accessToken()))
                 .andExpect(status().isNotFound());
     }
 
@@ -142,11 +142,11 @@ class ReorderRuleControllerTest {
         UUID vendorId = createVendor(stockist);
         UUID partId = createPart(stockist, "RR-BAD-1");
 
-        mvc.perform(post("/reorder-rules")
+        mvc.perform(post("/stock-policies")
                         .header("Authorization", "Bearer " + stockist.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"partId": "%s", "minQuantity": 10, "maxQuantity": 10, "vendorId": "%s", "enabled": true}"""
+                                {"partId": "%s", "minQuantity": 10, "maxQuantity": 10, "vendorId": "%s", "autoReorderEnabled": true}"""
                                 .formatted(partId, vendorId)))
                 .andExpect(status().isConflict());
     }
@@ -154,7 +154,7 @@ class ReorderRuleControllerTest {
     // --- fixtures ---------------------------------------------------------------------------------
 
     private UUID createRule(Fixture caller, UUID partId, UUID vendorId) throws Exception {
-        MvcResult result = mvc.perform(post("/reorder-rules")
+        MvcResult result = mvc.perform(post("/stock-policies")
                         .header("Authorization", "Bearer " + caller.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(rulePayload(partId, vendorId)))
@@ -166,7 +166,7 @@ class ReorderRuleControllerTest {
 
     private String rulePayload(UUID partId, UUID vendorId) {
         return """
-                {"partId": "%s", "minQuantity": 5, "maxQuantity": 20, "vendorId": "%s", "enabled": true}"""
+                {"partId": "%s", "minQuantity": 5, "maxQuantity": 20, "vendorId": "%s", "autoReorderEnabled": true}"""
                 .formatted(partId, vendorId);
     }
 
