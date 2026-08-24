@@ -15,22 +15,23 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID>, Jpa
     Long getNextSequence();
 
     @Query("""
-        SELECT new com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo(
-            COALESCE(SUM(CASE WHEN wo.status = 'RECEIVED'            THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'WAITING_DIAGNOSTICS' THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'IN_DIAGNOSTICS'      THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'BUDGET_IN_DRAFT'     THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'WAITING_APPROVAL'    THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'APPROVED'            THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'REFUSED'             THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'IN_PROGRESS'         THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'FINISHED'            THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'WAITING_PICKUP'      THEN 1L ELSE 0L END), 0L),
-            COALESCE(SUM(CASE WHEN wo.status = 'DELIVERED'           THEN 1L ELSE 0L END), 0L)
-        )
-        FROM WorkOrder wo
-        WHERE wo.createdAt BETWEEN :start AND :end
-    """)
+                SELECT new com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo(
+                    COALESCE(SUM(CASE WHEN wo.status = 'RECEIVED'            THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'WAITING_DIAGNOSTICS' THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'IN_DIAGNOSTICS'      THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'BUDGET_IN_DRAFT'     THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'WAITING_APPROVAL'    THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'APPROVED'            THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'REFUSED'             THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'IN_PROGRESS'         THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'FINISHED'            THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'WAITING_PICKUP'      THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'DELIVERED'           THEN 1L ELSE 0L END), 0L)
+                )
+                FROM WorkOrder wo
+                WHERE wo.createdAt >= COALESCE(:start, wo.createdAt)
+                  AND wo.createdAt <= COALESCE(:end, wo.createdAt)
+            """)
     WorkOrderCountStatusInfo countByStatus(
             @Param("start") Instant start,
             @Param("end") Instant end
