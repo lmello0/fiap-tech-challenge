@@ -13,6 +13,7 @@ import com.fiap.techchallenge.workorder.enums.BudgetStatus;
 import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import com.fiap.techchallenge.workorder.mappers.BudgetMapper;
 import com.fiap.techchallenge.workorder.mappers.WorkOrderMapper;
+import com.fiap.techchallenge.workorder.notifications.WorkOrderEmails;
 import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
 import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
 import org.junit.jupiter.api.Test;
@@ -45,11 +46,14 @@ class BudgetServiceImplTest {
     private final RepairServiceCatalogService repairServiceCatalogService = mock();
     private final PartReservationService partReservationService = mock();
     private final UserService userService = mock();
+    private final BudgetDecisionTokenService tokenService = mock();
+    private final WorkOrderEmails workOrderEmails = mock();
 
     private final BudgetServiceImpl service = new BudgetServiceImpl(
             budgetRepository, workOrderRepository, budgetStateMachine, workOrderStateMachine,
             events, actorResolver, budgetMapper, workOrderMapper,
-            partCatalogService, repairServiceCatalogService, partReservationService, userService);
+            partCatalogService, repairServiceCatalogService, partReservationService, userService,
+            tokenService, workOrderEmails);
 
     @Test
     void emailDeliveredMovesAWaitingSendBudgetToSent() {

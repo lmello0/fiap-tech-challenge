@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.techchallenge.TestcontainersConfiguration;
 import com.fiap.techchallenge.auth.entities.UserAuth;
 import com.fiap.techchallenge.auth.repositories.UserAuthRepository;
+import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
 import com.fiap.techchallenge.inventory.api.commands.CreateRepairServiceCommand;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
@@ -29,6 +30,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -38,6 +41,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -52,6 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@RecordApplicationEvents
 class CustomerWorkOrderControllerTest {
 
     private static final String PASSWORD = "aVeryLongPassword1";
@@ -77,7 +83,108 @@ class CustomerWorkOrderControllerTest {
     @Autowired
     BudgetRepository budgetRepository;
 
+    @Autowired
+    ApplicationEvents events;
+
     final ObjectMapper json = new ObjectMapper();
+
+    @Test
+    void theOwningCustomerCanListTheirOwnWorkOrders() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        Fixture otherCustomer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+        createVehicle(otherCustomer);
+
+        UUID[] ids = draftAndSendBudget(attendant, mechanic, customer, vehicleId);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(get("/work-orders/mine")
+                        .header("Authorization", "Bearer " + customer.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(workOrderId.toString()))
+                .andExpect(jsonPath("$.content[0].vehiclePlate").exists())
+                .andExpect(jsonPath("$.content[0].budgetTotal").value(100.0));
+
+        mvc.perform(get("/work-orders/mine")
+                        .header("Authorization", "Bearer " + otherCustomer.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    @Test
+    void theCustomerViewIncludesVehicleAndDiagnosis() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        UUID[] ids = draftAndSendBudget(attendant, mechanic, customer, vehicleId);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(get("/work-orders/{id}/customer-view", workOrderId)
+                        .header("Authorization", "Bearer " + customer.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vehicleId").value(vehicleId.toString()))
+                .andExpect(jsonPath("$.vehiclePlate").exists())
+                .andExpect(jsonPath("$.diagnosis").value("Needs work"));
+    }
+
+    @Test
+    void theBudgetEmailLinkLetsAnyoneWithTheTokenViewAndApproveWithoutSigningIn() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        Fixture customer = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+
+        UUID[] ids = draftAndSendBudget(attendant, mechanic, customer, vehicleId);
+        UUID workOrderId = ids[0];
+        UUID budgetId = ids[1];
+        String token = tokenFromLatestBudgetEmail();
+
+        mvc.perform(post("/budgets/decision/view")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "%s"}""".formatted(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(budgetId.toString()));
+
+        mvc.perform(post("/budgets/decision/approval")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "%s"}""".formatted(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        assertThat(workOrderRepository.findById(workOrderId).orElseThrow().getStatus())
+                .isEqualTo(WorkOrderStatus.APPROVED);
+
+        // Reusable and outlives resolution: viewing again still works and reflects the outcome.
+        mvc.perform(post("/budgets/decision/view")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "%s"}""".formatted(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        // A repeat decision on an already-resolved Budget is refused, same as the authenticated path.
+        mvc.perform(post("/budgets/decision/approval")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "%s"}""".formatted(token)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void anInvalidBudgetDecisionTokenIsRejected() throws Exception {
+        mvc.perform(post("/budgets/decision/view")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "%s.forged"}""".formatted(UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+    }
 
     @Test
     void aFreshWorkOrderHasNoBudgetYet() throws Exception {
@@ -259,6 +366,20 @@ class CustomerWorkOrderControllerTest {
         return new UUID[]{workOrderId, budgetId};
     }
 
+    /** The raw token only ever reaches the outside world via the Budget email's link (ADR 0021). */
+    private String tokenFromLatestBudgetEmail() {
+        EmailRequestedEvent event = events.stream(EmailRequestedEvent.class)
+                .reduce((first, second) -> second)
+                .orElseThrow();
+
+        Matcher matcher = Pattern.compile("token=(\\S+)").matcher(event.plainText());
+        if (!matcher.find()) {
+            throw new IllegalStateException("No budget decision token found in email body");
+        }
+
+        return matcher.group(1);
+    }
+
     private void confirmDelivery(UUID budgetId) {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         budget.setStatus(BudgetStatus.SENT);
@@ -294,7 +415,7 @@ class CustomerWorkOrderControllerTest {
     }
 
     private static String uniquePlate() {
-        return "CWO" + ThreadLocalRandom.current().nextInt(1000, 9999);
+        return "CW" + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
     }
 
     // --- auth fixtures (mirrors WorkOrderAuthorizationTest.java) ----------------------------------

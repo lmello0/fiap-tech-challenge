@@ -2,7 +2,6 @@ package com.fiap.techchallenge.workorder.services;
 
 import com.fiap.techchallenge.email.api.EmailDeliveredEvent;
 import com.fiap.techchallenge.email.api.EmailDeliveryFailedEvent;
-import com.fiap.techchallenge.email.api.EmailRequestedEvent;
 import com.fiap.techchallenge.inventory.api.PartCatalogService;
 import com.fiap.techchallenge.inventory.api.PartReservationService;
 import com.fiap.techchallenge.inventory.api.RepairServiceCatalogService;
@@ -10,6 +9,7 @@ import com.fiap.techchallenge.inventory.api.commands.ReservePartCommand;
 import com.fiap.techchallenge.inventory.api.representation.PartInfo;
 import com.fiap.techchallenge.inventory.api.representation.RepairServiceInfo;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.shared.audit.EventMetadata;
 import com.fiap.techchallenge.shared.logging.LogContext;
 import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.user.api.representation.UserInfo;
@@ -34,6 +34,7 @@ import com.fiap.techchallenge.workorder.enums.WorkOrderStatus;
 import com.fiap.techchallenge.workorder.exceptions.*;
 import com.fiap.techchallenge.workorder.mappers.BudgetMapper;
 import com.fiap.techchallenge.workorder.mappers.WorkOrderMapper;
+import com.fiap.techchallenge.workorder.notifications.WorkOrderEmails;
 import com.fiap.techchallenge.workorder.repositories.BudgetRepository;
 import com.fiap.techchallenge.workorder.repositories.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +67,8 @@ public class BudgetServiceImpl implements BudgetService {
     private final RepairServiceCatalogService repairServiceCatalogService;
     private final PartReservationService partReservationService;
     private final UserService userService;
+    private final BudgetDecisionTokenService tokenService;
+    private final WorkOrderEmails workOrderEmails;
 
     @Transactional(readOnly = true)
     public BudgetInfo getById(UUID budgetId) {
@@ -176,17 +179,7 @@ public class BudgetServiceImpl implements BudgetService {
         WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
         requireOwner(wo, customerId);
 
-        budget.setStatus(budgetStateMachine.transition(budget.getStatus(), BudgetStatus.APPROVED));
-        budget.setResolvedAt(Instant.now());
-
-        wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.APPROVED));
-        wo.setApprovedAt(Instant.now());
-
-        events.publishEvent(new WorkOrderApprovedEvent(
-                wo.getId(), wo.getCustomerId(), budget.getGrandTotal(),
-                actorResolver.forCurrentUser(true), snapshot(wo, budget)));
-
-        return budgetMapper.toInfo(budget);
+        return applyApprove(budget, wo, actorResolver.forCurrentUser(true));
     }
 
     @Transactional
@@ -195,6 +188,44 @@ public class BudgetServiceImpl implements BudgetService {
         WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
         requireOwner(wo, customerId);
 
+        return applyRefuse(budget, wo, command, actorResolver.forCurrentUser(true));
+    }
+
+    @Transactional(readOnly = true)
+    public BudgetInfo viewByToken(String rawToken) {
+        return budgetMapper.toInfo(load(tokenService.resolve(rawToken)));
+    }
+
+    @Transactional
+    public BudgetInfo approveByToken(String rawToken) {
+        Budget budget = load(tokenService.resolve(rawToken));
+        WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
+
+        return applyApprove(budget, wo, actorResolver.forSelf(wo.getCustomerId(), true));
+    }
+
+    @Transactional
+    public BudgetInfo refuseByToken(String rawToken, RefuseWorkOrderCommand command) {
+        Budget budget = load(tokenService.resolve(rawToken));
+        WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
+
+        return applyRefuse(budget, wo, command, actorResolver.forSelf(wo.getCustomerId(), true));
+    }
+
+    private BudgetInfo applyApprove(Budget budget, WorkOrder wo, EventMetadata actor) {
+        budget.setStatus(budgetStateMachine.transition(budget.getStatus(), BudgetStatus.APPROVED));
+        budget.setResolvedAt(Instant.now());
+
+        wo.setStatus(workOrderStateMachine.transition(wo.getStatus(), WorkOrderStatus.APPROVED));
+        wo.setApprovedAt(Instant.now());
+
+        events.publishEvent(new WorkOrderApprovedEvent(
+                wo.getId(), wo.getCustomerId(), budget.getGrandTotal(), actor, snapshot(wo, budget)));
+
+        return budgetMapper.toInfo(budget);
+    }
+
+    private BudgetInfo applyRefuse(Budget budget, WorkOrder wo, RefuseWorkOrderCommand command, EventMetadata actor) {
         budget.setStatus(budgetStateMachine.transition(budget.getStatus(), BudgetStatus.REFUSED));
         budget.setResolvedAt(Instant.now());
 
@@ -207,8 +238,7 @@ public class BudgetServiceImpl implements BudgetService {
         partReservationService.releaseForWorkOrder(wo.getId());
 
         events.publishEvent(new WorkOrderRefusedEvent(
-                wo.getId(), wo.getCustomerId(), command.reason(),
-                actorResolver.forCurrentUser(true), snapshot(wo, budget)));
+                wo.getId(), wo.getCustomerId(), command.reason(), actor, snapshot(wo, budget)));
 
         return budgetMapper.toInfo(budget);
     }
@@ -257,16 +287,11 @@ public class BudgetServiceImpl implements BudgetService {
     private void dispatchBudgetEmail(Budget budget) {
         WorkOrder wo = loadWorkOrder(budget.getWorkOrderId());
         UserInfo customer = userService.getById(wo.getCustomerId());
+        String vehicleDescription = "%s — %s %s".formatted(wo.getVehiclePlate(), wo.getVehicleMake(), wo.getVehicleModel());
+        String rawToken = tokenService.issue(budget.getId());
 
-        String body = "Your work order " + wo.getOrderCode() + " budget total is " + budget.getGrandTotal()
-                + ". Please review and approve or refuse.";
-
-        events.publishEvent(EmailRequestedEvent.builder()
-                .to(List.of(customer.email()))
-                .subject("Budget ready for work order " + wo.getOrderCode())
-                .plainText(body)
-                .correlationId(budget.getId())
-                .build());
+        workOrderEmails.budgetReadyForApproval(
+                customer.email(), budget.getId(), wo.getOrderCode(), vehicleDescription, budget.getGrandTotal(), rawToken);
     }
 
     private Budget load(UUID id) {

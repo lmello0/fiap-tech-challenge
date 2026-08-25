@@ -400,6 +400,9 @@ Worth deciding deliberately on the backend side: either registration should not 
 for an unverified address, or `login` should let an unverified account through in a reduced state.
 The current pair is defensible but surprising.
 
+**Guest conversion no longer has this problem** — see item 15, which is the same argument applied
+where the proof already exists.
+
 ---
 
 ## 14. Slot instants are anchored to UTC, not to the shop's timezone
@@ -423,6 +426,29 @@ a move to a differently-configured host — an explicit shop timezone property t
 
 **What degrades while it is missing:** every slot the customer is offered, on the public landing
 page and in the owner's manual, is shown three hours earlier than the shop is open.
+
+---
+
+## 15. Guest conversion marks the email verified — ✅ **changed, one line**
+
+`GuestConversionService.completeRegistrationViaToken` now calls
+`userService.markEmailVerified(user.id())` after `registerCustomer`.
+
+**Why.** Self-service conversion consumes a *single-use token that was mailed to that exact
+address*. Control of the inbox is therefore already proven, which is the only thing email
+verification establishes. Without the line the flow stranded the customer completely: the shared
+`registerCustomer` path leaves the address unverified, `login` refuses every unverified account
+(item 13), and conversion returns no session of its own — so a customer who had just acted on one
+email would have had to go and find a second one.
+
+The frontend's `/appointments/complete-registration` success screen depends on this being true: it
+says there is no confirmation email to chase and sends them straight to sign in. Reverting the
+line would make that screen a lie, so the two move together.
+
+**Still open, deliberately:** `GuestConversionResult` carries no token, so the customer signs in
+rather than landing authenticated. Returning a session would mean changing that record and its
+controller. One sign-in with a password the customer chose thirty seconds earlier is a fine
+ending, and the smaller change is the better trade.
 
 ## Not requested
 

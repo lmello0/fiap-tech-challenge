@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,9 +72,12 @@ public class Budget {
         return status != BudgetStatus.DRAFT;
     }
 
+    /** Money, R$, always 2 decimal places — the one total a customer is asked to approve must read
+     * the same everywhere, not accumulate whatever scale its line prices happened to carry. */
     public BigDecimal getGrandTotal() {
         return lines.stream()
                 .map(BudgetLine::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

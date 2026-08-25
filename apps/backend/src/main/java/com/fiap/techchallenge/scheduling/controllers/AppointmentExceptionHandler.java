@@ -3,6 +3,7 @@ package com.fiap.techchallenge.scheduling.controllers;
 import com.fiap.techchallenge.scheduling.exceptions.AppointmentNotFoundException;
 import com.fiap.techchallenge.scheduling.exceptions.ClosureConflictException;
 import com.fiap.techchallenge.scheduling.exceptions.GuestBookingLimitExceededException;
+import com.fiap.techchallenge.scheduling.exceptions.GuestEmailAlreadyRegisteredException;
 import com.fiap.techchallenge.scheduling.exceptions.IllegalAppointmentStateException;
 import com.fiap.techchallenge.scheduling.exceptions.InvalidAppointmentTokenException;
 import com.fiap.techchallenge.scheduling.exceptions.InvalidBookingRequestException;
@@ -38,6 +39,11 @@ public class AppointmentExceptionHandler {
     @ExceptionHandler(GuestBookingLimitExceededException.class)
     ProblemDetail handleGuestLimit(GuestBookingLimitExceededException e) {
         return ProblemDetails.of(HttpStatus.CONFLICT, "Booking limit reached", e.getMessage());
+    }
+
+    @ExceptionHandler(GuestEmailAlreadyRegisteredException.class)
+    ProblemDetail handleGuestEmailRegistered(GuestEmailAlreadyRegisteredException e) {
+        return ProblemDetails.of(HttpStatus.CONFLICT, "Email already registered", e.getMessage());
     }
 
     @ExceptionHandler(IllegalAppointmentStateException.class)

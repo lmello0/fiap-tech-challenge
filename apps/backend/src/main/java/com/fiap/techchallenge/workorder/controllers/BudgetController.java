@@ -2,7 +2,10 @@ package com.fiap.techchallenge.workorder.controllers;
 
 import com.fiap.techchallenge.workorder.api.BudgetService;
 import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
+import com.fiap.techchallenge.workorder.api.commands.BudgetTokenCommand;
+import com.fiap.techchallenge.workorder.api.commands.BudgetTokenRefusalCommand;
 import com.fiap.techchallenge.workorder.api.commands.ChangeBudgetLineQuantityCommand;
+import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,8 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Staff-only budget draft editing and send lifecycle (ADR 0008/0009/0010). Full endpoint
- * documentation lives on {@link BudgetControllerSwaggerDoc}.
+ * Staff-only budget draft editing and send lifecycle (ADR 0008/0009/0010), plus the public,
+ * token-authenticated Budget decision endpoints (ADR 0021) a customer reaches from the Budget email
+ * without signing in. Full endpoint documentation lives on {@link BudgetControllerSwaggerDoc}.
  */
 @RestController
 @RequiredArgsConstructor
@@ -55,5 +59,20 @@ public class BudgetController implements BudgetControllerSwaggerDoc {
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
     public ResponseEntity<BudgetInfo> resend(UUID id) {
         return ResponseEntity.ok(service.resend(id));
+    }
+
+    @Override
+    public ResponseEntity<BudgetInfo> viewByToken(BudgetTokenCommand command) {
+        return ResponseEntity.ok(service.viewByToken(command.token()));
+    }
+
+    @Override
+    public ResponseEntity<BudgetInfo> approveByToken(BudgetTokenCommand command) {
+        return ResponseEntity.ok(service.approveByToken(command.token()));
+    }
+
+    @Override
+    public ResponseEntity<BudgetInfo> refuseByToken(BudgetTokenRefusalCommand command) {
+        return ResponseEntity.ok(service.refuseByToken(command.token(), new RefuseWorkOrderCommand(command.reason())));
     }
 }

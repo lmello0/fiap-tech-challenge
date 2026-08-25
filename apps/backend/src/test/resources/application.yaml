@@ -70,3 +70,10 @@ app:
       password-reset-ttl: 15m
       email-verification-ttl: 24h
       email-change-ttl: 24h
+
+  workorder:
+    budget-decision-token:
+      secret: test-budget-decision-token-secret-that-is-long-enough-for-hmac
+
+    email:
+      base-url: http://localhost:4200

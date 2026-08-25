@@ -54,4 +54,9 @@ public class WorkOrderExceptionHandler {
     ProblemDetail handleVehicleOwnership(VehicleOwnershipException e) {
         return ProblemDetails.of(HttpStatus.BAD_REQUEST, "Vehicle does not belong to customer", e.getMessage());
     }
+
+    @ExceptionHandler(InvalidBudgetTokenException.class)
+    ProblemDetail handleInvalidBudgetToken(InvalidBudgetTokenException e) {
+        return ProblemDetails.of(HttpStatus.NOT_FOUND, "Invalid token", e.getMessage());
+    }
 }

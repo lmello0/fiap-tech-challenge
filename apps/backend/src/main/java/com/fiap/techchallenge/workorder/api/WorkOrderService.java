@@ -3,7 +3,9 @@ package com.fiap.techchallenge.workorder.api;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
+import com.fiap.techchallenge.workorder.api.queries.CustomerWorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderSummary;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
@@ -23,6 +25,9 @@ public interface WorkOrderService {
 
     /** Narrow, customer-scoped read: high-level status plus the current Budget, nothing internal. */
     CustomerWorkOrderView getForCustomer(UUID workOrderId, UUID customerId);
+
+    /** The caller's own work orders — a lean row per order, newest first. */
+    Page<CustomerWorkOrderSummary> getMineForCustomer(UUID customerId, CustomerWorkOrderFilterQuery filter, Pageable pageable);
 
     WorkOrderInfo create(CreateWorkOrderCommand command);
 

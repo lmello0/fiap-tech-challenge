@@ -121,6 +121,13 @@ app:
       allowed-origins:
         - "http://localhost:4200"
 
+  workorder:
+    budget-decision-token:
+      secret: ${BUDGET_DECISION_TOKEN_SECRET}
+
+    email:
+      base-url: ${APP_BASE_URL:http://localhost:4200}
+
 management:
   endpoints:
     web:

@@ -32,4 +32,13 @@ public interface BudgetService {
 
     /** Customer decision: SENT -> REFUSED. Terminal — no requoting. */
     BudgetInfo refuse(UUID budgetId, UUID customerId, RefuseWorkOrderCommand command);
+
+    /** Public, token-authenticated read — works even after the Budget resolves. */
+    BudgetInfo viewByToken(String rawToken);
+
+    /** Same transition as {@link #approve(UUID, UUID)}; the token proves authorization instead of a JWT. */
+    BudgetInfo approveByToken(String rawToken);
+
+    /** Same transition as {@link #refuse(UUID, UUID, RefuseWorkOrderCommand)}; the token proves authorization instead of a JWT. */
+    BudgetInfo refuseByToken(String rawToken, RefuseWorkOrderCommand command);
 }

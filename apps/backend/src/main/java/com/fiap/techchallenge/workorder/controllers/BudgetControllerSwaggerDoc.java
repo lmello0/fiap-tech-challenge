@@ -2,6 +2,8 @@ package com.fiap.techchallenge.workorder.controllers;
 
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
+import com.fiap.techchallenge.workorder.api.commands.BudgetTokenCommand;
+import com.fiap.techchallenge.workorder.api.commands.BudgetTokenRefusalCommand;
 import com.fiap.techchallenge.workorder.api.commands.ChangeBudgetLineQuantityCommand;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,9 +27,10 @@ import java.util.UUID;
 
 /**
  * Full Swagger/OpenAPI contract for {@link BudgetController} — staff-only Budget draft editing and
- * send lifecycle (ADR 0008/0009/0010).
+ * send lifecycle (ADR 0008/0009/0010), plus the public {@code /decision/*} endpoints a customer
+ * reaches from the Budget email via a token (ADR 0021) instead of a JWT.
  */
-@Tag(name = "Budgets", description = "Staff-only Budget draft editing and send lifecycle.")
+@Tag(name = "Budgets", description = "Staff Budget draft editing and send lifecycle, plus the public token-based decision endpoints.")
 @RequestMapping("budgets")
 public interface BudgetControllerSwaggerDoc {
 
@@ -115,4 +118,43 @@ public interface BudgetControllerSwaggerDoc {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/{id}/resend")
     ResponseEntity<BudgetInfo> resend(@Parameter(description = "Budget id") @PathVariable UUID id);
+
+    @Operation(
+            summary = "View a Budget by decision token",
+            description = "Public — no authentication required. Resolves the Budget the emailed decision link "
+                    + "points at; possession of the token is the credential (ADR 0021). Keeps working after the "
+                    + "Budget has been approved or refused, so a customer reopening the link sees the outcome."
+    )
+    @CommonApiResponses
+    @ApiResponse(responseCode = "404", description = "The token is invalid, or no Budget exists for it.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/decision/view")
+    ResponseEntity<BudgetInfo> viewByToken(@Valid @RequestBody BudgetTokenCommand command);
+
+    @Operation(
+            summary = "Approve a Budget by decision token",
+            description = "Public — no authentication required. Same SENT -> APPROVED transition as the "
+                    + "authenticated approve endpoint; the token proves authorization instead of a JWT (ADR 0021)."
+    )
+    @CommonApiResponses
+    @ApiResponse(responseCode = "404", description = "The token is invalid, or no Budget exists for it.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "The Budget is not in a state that allows approval (e.g. already resolved).",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/decision/approval")
+    ResponseEntity<BudgetInfo> approveByToken(@Valid @RequestBody BudgetTokenCommand command);
+
+    @Operation(
+            summary = "Refuse a Budget by decision token",
+            description = "Public — no authentication required. Same SENT -> REFUSED transition as the "
+                    + "authenticated refuse endpoint, with an optional reason; the token proves authorization "
+                    + "instead of a JWT (ADR 0021)."
+    )
+    @CommonApiResponses
+    @ApiResponse(responseCode = "404", description = "The token is invalid, or no Budget exists for it.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "The Budget is not in a state that allows refusal (e.g. already resolved).",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/decision/refusal")
+    ResponseEntity<BudgetInfo> refuseByToken(@Valid @RequestBody BudgetTokenRefusalCommand command);
 }

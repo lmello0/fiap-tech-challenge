@@ -144,8 +144,20 @@ _Avoid_: Order (collides with `Purchase Order`), Job, Ticket
 **Budget**:
 A priced proposal of the Parts and Services a Work Order needs, sent to the customer to approve or
 refuse. Exactly one Budget is live per Work Order. Once sent, a Budget's lines are frozen — there is no
-requoting, only approve or refuse; a refused Budget is terminal for its Work Order.
+requoting, only approve or refuse; a refused Budget is terminal for its Work Order. Its total is money,
+R$, always rounded to two decimal places — the one figure a customer is asked to approve reads the same
+on the API, the email, and the screen.
 _Avoid_: Quote (fine in speech, but `Budget` is the canonical term in code and docs), Estimate, Proposal
+
+**Budget Decision Token**:
+The credential in a sent Budget's email that lets a customer approve or refuse without signing in —
+possession of the token is the authorization, the same shape as the Scheduling context's
+Booking-Management Token but scoped to one Budget's decision (ADR 0021). Never expires on a clock; it
+is only ever as valid as the Budget it points at, so it keeps answering read-only lookups even after
+the Budget resolves, while a second approve/refuse attempt is refused the same way a signed-in
+customer's repeat attempt already is. Resending the Budget re-mails this same token rather than issuing
+a new one.
+_Avoid_: Access token (already means something else in Scheduling), Approval link
 
 **Budget Line**:
 One priced item on a `Budget`: a `Part` or a `Service` (never both), a quantity, and the price at the
@@ -198,7 +210,12 @@ no Appointment row exists until someone actually picks a slot.
 **Guest**:
 An unregistered person booking a Drop-off Appointment — name, phone, email, and vehicle
 maker/model/year given directly on the Appointment, not backed by a `User`. Distinct from the
-`Customer` facet, which only exists once a real `User` does.
+`Customer` facet, which only exists once a real `User` does. The guest email must not already belong to
+a registered `User` — booking is refused rather than silently creating a second identity for the same
+person, since the guest email was never proven and letting it attach to an existing account would be
+an unverified takeover path. The reverse direction is deliberately left alone: someone who registers
+normally with an email that matches a live, unconverted guest booking is *not* auto-linked to it — only
+`Guest Conversion`'s own token proves the two are the same person.
 _Avoid_: Customer (when referring to an unregistered person), Anonymous user
 
 **Guest Conversion**:

@@ -8,7 +8,9 @@ import com.fiap.techchallenge.workorder.api.BudgetService;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.events.WorkOrderAggregate;
+import com.fiap.techchallenge.workorder.api.queries.CustomerWorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderSummary;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,14 @@ public class CustomerWorkOrderController implements CustomerWorkOrderControllerS
     private final WorkOrderService workOrderService;
     private final BudgetService budgetService;
     private final HistoryQueryService historyQueryService;
+
+    @Override
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<PageResponse<CustomerWorkOrderSummary>> getMine(Pageable pageable, CustomerWorkOrderFilterQuery filter, Authentication authentication) {
+        Page<CustomerWorkOrderSummary> page = workOrderService.getMineForCustomer(UUID.fromString(authentication.getName()), filter, pageable);
+
+        return ResponseEntity.ok(PageResponse.from(page));
+    }
 
     @Override
     @PreAuthorize("hasRole('CUSTOMER')")

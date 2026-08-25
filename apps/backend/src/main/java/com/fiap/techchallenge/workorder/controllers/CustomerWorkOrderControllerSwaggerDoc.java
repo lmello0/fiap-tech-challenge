@@ -5,7 +5,9 @@ import com.fiap.techchallenge.history.api.representation.HistorySnapshotInfo;
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.commands.RefuseWorkOrderCommand;
+import com.fiap.techchallenge.workorder.api.queries.CustomerWorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.representation.BudgetInfo;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderSummary;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,19 +36,33 @@ import java.util.UUID;
  * staff-facing {@link WorkOrderControllerSwaggerDoc} surface.
  */
 @Tag(name = "Customer Work Orders", description = "Customer-scoped view of a work order: status, its Budget, and approve/refuse actions.")
-@RequestMapping("work-orders/{id}/customer-view")
+@RequestMapping("work-orders")
 public interface CustomerWorkOrderControllerSwaggerDoc {
 
     @Operation(
+            summary = "List the caller's own work orders",
+            description = "A lean row per work order the caller owns: status, vehicle, and budget total, newest "
+                    + "first. Requires the CUSTOMER role."
+    )
+    @CommonApiResponses
+    @GetMapping("/mine")
+    ResponseEntity<PageResponse<CustomerWorkOrderSummary>> getMine(
+            @PageableDefault(sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable,
+            CustomerWorkOrderFilterQuery filter,
+            Authentication authentication
+    );
+
+    @Operation(
             summary = "Get a customer's own work order",
-            description = "Returns the caller's own work order: high-level status and its Budget, without staff-internal "
-                    + "detail. Requires the CUSTOMER role. Returns 404 rather than 403 if the work order belongs to "
-                    + "someone else, so as not to reveal whether it exists."
+            description = "Returns the caller's own work order: high-level status, its vehicle, the diagnosis "
+                    + "behind the Budget, and the Budget itself, without staff-internal detail (no assigned "
+                    + "mechanic). Requires the CUSTOMER role. Returns 404 rather than 403 if the work order "
+                    + "belongs to someone else, so as not to reveal whether it exists."
     )
     @CommonApiResponses
     @ApiResponse(responseCode = "404", description = "No work order exists with the given id, or it does not belong to the caller.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @GetMapping
+    @GetMapping("/{id}/customer-view")
     ResponseEntity<CustomerWorkOrderView> getForCustomer(
             @Parameter(description = "Work order id") @PathVariable UUID id,
             Authentication authentication
@@ -62,7 +78,7 @@ public interface CustomerWorkOrderControllerSwaggerDoc {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "The Budget is not in a state that allows approval (e.g. not sent, or already resolved).",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @PostMapping("/budget/approval")
+    @PostMapping("/{id}/customer-view/budget/approval")
     ResponseEntity<BudgetInfo> approve(
             @Parameter(description = "Work order id") @PathVariable UUID id,
             @Parameter(description = "The Budget being approved") @RequestParam UUID budgetId,
@@ -79,7 +95,7 @@ public interface CustomerWorkOrderControllerSwaggerDoc {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "The Budget is not in a state that allows refusal (e.g. not sent, or already resolved).",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @PostMapping("/budget/refusal")
+    @PostMapping("/{id}/customer-view/budget/refusal")
     ResponseEntity<BudgetInfo> refuse(
             @Parameter(description = "Work order id") @PathVariable UUID id,
             @Parameter(description = "The Budget being refused") @RequestParam UUID budgetId,
@@ -96,7 +112,7 @@ public interface CustomerWorkOrderControllerSwaggerDoc {
     @CommonApiResponses
     @ApiResponse(responseCode = "404", description = "No work order exists with the given id, or it does not belong to the caller.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @GetMapping("/history")
+    @GetMapping("/{id}/customer-view/history")
     ResponseEntity<PageResponse<HistoryEntryInfo>> history(
             @Parameter(description = "Work order id") @PathVariable UUID id,
             @PageableDefault Pageable pageable,
@@ -112,7 +128,7 @@ public interface CustomerWorkOrderControllerSwaggerDoc {
     @CommonApiResponses
     @ApiResponse(responseCode = "404", description = "No work order exists with the given id, it does not belong to the caller, or no history entry exists with the given entry id.",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @GetMapping("/history/{entryId}")
+    @GetMapping("/{id}/customer-view/history/{entryId}")
     ResponseEntity<HistorySnapshotInfo> historyEntry(
             @Parameter(description = "Work order id") @PathVariable UUID id,
             @Parameter(description = "History entry id") @PathVariable UUID entryId,

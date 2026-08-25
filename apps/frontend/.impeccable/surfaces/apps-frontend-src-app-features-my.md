@@ -7,8 +7,9 @@ related_targets: ["apps/frontend/src/app/features/landing","apps/frontend/src/ap
 
 # Customer facet — surface brief
 
-**Scope:** the public front door (`/`, `/register`, `/sign-in`, `/choose`) and the whole customer
-console (`/my/**`).
+**Scope:** the public front door (`/`, `/register`, `/sign-in`, `/choose`), the three token-addressed
+guest links (`/appointments/manage`, `/appointments/complete-registration`,
+`/appointments/pickup/book`), and the whole customer console (`/my/**`).
 **Visitor mode:** Persuade on the landing; Operate everywhere behind it.
 
 ## Audience and job
@@ -54,9 +55,29 @@ with the two that wait on them flagged, before filling a single blank.
 Deep: the landing job card, registration, the facet picker, and the job detail with its budget
 decision. Full but plainer: vehicles, bookings, profile.
 
+## The returned card (guest links)
+Every link `SchedulingEmails` sends now has a screen. The composition is one idea: the landing card
+goes out blank, these come back filled in — same stock, same form-header band, and on the manage
+card a routing margin with the job's real position stamped rather than all ten steps as future.
+
+Binding rules, each learned from the backend and not negotiable:
+- **Nothing destructive fires on arrival.** The token in the URL is the whole credential and every
+  guest endpoint is POST for exactly that reason: a mail scanner issuing a GET must change nothing.
+- **A reschedule spends the link.** `guest/reschedule` mints a replacement, cancels the original as
+  RESCHEDULED and emails fresh tokens; `rescheduleByToken` uses `findOrThrow`, not `resolveLive`, so
+  the held token now points at a dead record. The manage card goes terminal on success and says a
+  new link is on its way.
+- **Registration and pickup tokens are single-use; the manage token is not.** There is no
+  read-only "check this token" call, so the conversion form renders optimistically and a spent link
+  fails on submit — which is its own state, not a field error.
+- Conversion cannot read the booking before it succeeds (no read-by-registration-token endpoint,
+  and the access token is on a different link), so the form names what the shop already holds
+  instead of listing it back.
+- A signed-in customer following the pickup link is redirected to `/my/booking` — they have a
+  better route and spending a single-use invitation on them wastes a token they never needed.
+
 ## Unresolved
-- Guest booking is live on the landing (`POST /appointments/dropoff/guest`), but the guest-token
-  management flows (`/appointments/guest/view|cancel|reschedule`, `guest/complete-registration`)
-  have no screens yet — a guest manages a booking only through the shop's email.
-- Pickup booking is reachable from a `WAITING_PICKUP` job; there is no standalone pickup screen.
 - i18n: UI is English, currency BRL, dates en-GB. Native date inputs follow the browser locale.
+- Slot instants are anchored to UTC by the backend container, so every offered time renders three
+  hours early in `America/Sao_Paulo` (item 14 in `docs/backend-requirements.md`). The frontend
+  deliberately does not compensate.

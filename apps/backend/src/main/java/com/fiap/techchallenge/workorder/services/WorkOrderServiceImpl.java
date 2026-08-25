@@ -17,7 +17,9 @@ import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.events.*;
+import com.fiap.techchallenge.workorder.api.queries.CustomerWorkOrderFilterQuery;
 import com.fiap.techchallenge.workorder.api.queries.WorkOrderFilterQuery;
+import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderSummary;
 import com.fiap.techchallenge.workorder.api.representation.CustomerWorkOrderView;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderCountStatusInfo;
 import com.fiap.techchallenge.workorder.api.representation.WorkOrderInfo;
@@ -51,6 +53,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -120,8 +123,35 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 wo.getId(),
                 wo.getOrderCode(),
                 wo.getStatus(),
+                wo.getVehicleId(),
+                wo.getVehiclePlate(),
+                wo.getVehicleMake(),
+                wo.getVehicleModel(),
+                wo.getDiagnosis(),
                 budget == null ? null : budgetMapper.toInfo(budget)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CustomerWorkOrderSummary> getMineForCustomer(UUID customerId, CustomerWorkOrderFilterQuery filter, Pageable pageable) {
+        Specification<WorkOrder> spec = Specification
+                .where(WorkOrderSpecifications.belongsToCustomerId(customerId))
+                .and(WorkOrderSpecifications.ofVehicleId(filter.vehicleId()))
+                .and(WorkOrderSpecifications.withStatus(filter.status() == null ? Set.of() : Set.of(filter.status())));
+
+        return repository
+                .findAll(spec, pageable)
+                .map(wo -> new CustomerWorkOrderSummary(
+                        wo.getId(),
+                        wo.getOrderCode(),
+                        wo.getStatus(),
+                        wo.getVehicleId(),
+                        wo.getVehiclePlate(),
+                        wo.getVehicleMake(),
+                        wo.getVehicleModel(),
+                        wo.getCurrentBudget() == null ? null : wo.getCurrentBudget().getGrandTotal(),
+                        wo.getCreatedAt()
+                ));
     }
 
     @Transactional

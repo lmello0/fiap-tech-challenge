@@ -382,6 +382,39 @@ class AppointmentControllerTest {
     }
 
     @Test
+    void aCustomerCanListOnlyTheirOwnAppointments() throws Exception {
+        Fixture customer = registerCustomer();
+        Fixture other = registerCustomer();
+        UUID vehicleId = createVehicle(customer);
+        createVehicle(other);
+        Instant slot = nextWeekdaySlot(15);
+
+        MvcResult bookResult = mvc.perform(post("/appointments/dropoff/customer")
+                        .header("Authorization", "Bearer " + customer.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "vehicleId": "%s",
+                                  "complaint": "Strange noise",
+                                  "slotStart": "%s"
+                                }""".formatted(vehicleId, slot)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID appointmentId = UUID.fromString(json.readTree(bookResult.getResponse().getContentAsString()).get("id").asText());
+
+        mvc.perform(get("/appointments/mine")
+                        .header("Authorization", "Bearer " + customer.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(appointmentId.toString()));
+
+        mvc.perform(get("/appointments/mine")
+                        .header("Authorization", "Bearer " + other.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    @Test
     void aCustomerCannotCancelAnotherCustomersAppointment() throws Exception {
         Fixture owner = registerCustomer();
         Fixture other = registerCustomer();
@@ -700,6 +733,27 @@ class AppointmentControllerTest {
                                   "complaint": "Still won't start",
                                   "slotStart": "%s"
                                 }""".formatted(phone, email, secondSlot)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void bookingAGuestDropoffWithARegisteredCustomersEmailIsRejected() throws Exception {
+        Fixture customer = registerCustomer();
+        Instant slot = nextWeekdaySlot(14, 30);
+
+        mvc.perform(post("/appointments/dropoff/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "guestName": "Impersonator",
+                                  "guestPhone": "%s",
+                                  "guestEmail": "%s",
+                                  "guestVehicleMake": "Toyota",
+                                  "guestVehicleModel": "Corolla",
+                                  "guestVehicleYear": 2019,
+                                  "complaint": "Won't start",
+                                  "slotStart": "%s"
+                                }""".formatted(uniquePhone(), customer.email(), slot)))
                 .andExpect(status().isConflict());
     }
 

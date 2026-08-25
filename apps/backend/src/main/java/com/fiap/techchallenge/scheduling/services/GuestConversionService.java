@@ -62,6 +62,14 @@ public class GuestConversionService {
         UserInfo user = userService.findByEmail(userCommand.email())
                 .orElseThrow(() -> new IllegalStateException("User vanished right after registration"));
 
+        // Self-service conversion consumes a single-use token that was mailed to this exact
+        // address, so control of the inbox is already proven — which is the only thing email
+        // verification establishes. Without this the customer is stranded: registerCustomer
+        // leaves the address unverified, login refuses every unverified account, and this flow
+        // hands back no session of its own. They would have to open a second email having just
+        // acted on the first.
+        userService.markEmailVerified(user.id());
+
         VehicleInfo vehicle = vehicleService.create(buildVehicleCommand(
                 appointment, user.id(), command.licensePlate(), command.vehicleType(),
                 command.color(), command.fuelType(), command.transmissionType()));

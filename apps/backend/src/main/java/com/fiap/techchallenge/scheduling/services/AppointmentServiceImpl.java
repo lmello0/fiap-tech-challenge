@@ -26,6 +26,7 @@ import com.fiap.techchallenge.scheduling.enums.AppointmentStatus;
 import com.fiap.techchallenge.scheduling.enums.AppointmentType;
 import com.fiap.techchallenge.scheduling.exceptions.AppointmentNotFoundException;
 import com.fiap.techchallenge.scheduling.exceptions.GuestBookingLimitExceededException;
+import com.fiap.techchallenge.scheduling.exceptions.GuestEmailAlreadyRegisteredException;
 import com.fiap.techchallenge.scheduling.exceptions.IllegalAppointmentStateException;
 import com.fiap.techchallenge.scheduling.exceptions.InvalidBookingRequestException;
 import com.fiap.techchallenge.scheduling.exceptions.VehicleOwnershipException;
@@ -34,6 +35,7 @@ import com.fiap.techchallenge.scheduling.notifications.SchedulingEmails;
 import com.fiap.techchallenge.scheduling.repositories.AppointmentRepository;
 import com.fiap.techchallenge.scheduling.repositories.specifications.AppointmentSpecifications;
 import com.fiap.techchallenge.shared.audit.ActorResolver;
+import com.fiap.techchallenge.user.api.UserService;
 import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final SchedulingEmails emails;
     private final GuestConversionService guestConversionService;
     private final VehicleService vehicleService;
+    private final UserService userService;
     private final ApplicationEventPublisher events;
     private final ActorResolver actorResolver;
 
@@ -96,6 +99,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public AppointmentInfo bookGuestDropoff(BookGuestDropoffCommand command) {
+        ensureEmailNotRegistered(command.guestEmail());
         ensureGuestNotAlreadyBooked(command.guestPhone(), command.guestEmail());
         availabilityService.ensureAvailable(AppointmentType.DROPOFF, command.slotStart());
 
@@ -365,6 +369,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     private void ensureGuestNotAlreadyBooked(String phone, String email) {
         if (repository.existsActiveDropoffForGuestContact(phone, email)) {
             throw new GuestBookingLimitExceededException();
+        }
+    }
+
+    /**
+     * A Guest is by definition unregistered (CONTEXT.md) — booking with an email that already
+     * belongs to a real User would otherwise mail that stranger a "finish setting up your account"
+     * link (a phishing-shaped lure) and later hard-fail Guest Conversion at the check-in desk with an
+     * error an Attendant can't clear.
+     */
+    private void ensureEmailNotRegistered(String email) {
+        if (userService.findByEmail(email).isPresent()) {
+            throw new GuestEmailAlreadyRegisteredException();
         }
     }
 

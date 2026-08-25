@@ -58,6 +58,16 @@ public class AppointmentController implements AppointmentControllerSwaggerDoc {
     }
 
     @Override
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<PageResponse<AppointmentInfo>> getMine(Pageable pageable, AppointmentFilterQuery filter, Authentication authentication) {
+        UUID customerId = UUID.fromString(authentication.getName());
+        AppointmentFilterQuery ownFilter = new AppointmentFilterQuery(filter.type(), filter.status(), customerId, filter.workOrderId(), filter.date());
+
+        Page<AppointmentInfo> page = service.list(ownFilter, pageable);
+        return ResponseEntity.ok(PageResponse.from(page));
+    }
+
+    @Override
     public ResponseEntity<List<Instant>> availability(AppointmentType type, LocalDate date) {
         return ResponseEntity.ok(service.availableSlots(type, date));
     }

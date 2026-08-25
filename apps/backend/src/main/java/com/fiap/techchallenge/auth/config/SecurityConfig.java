@@ -75,6 +75,13 @@ public class SecurityConfig {
                                 "/appointments/guest/reschedule",
                                 "/appointments/guest/complete-registration").permitAll()
                         .requestMatchers(HttpMethod.GET, "/appointments/availability").permitAll()
+                        // Budget Decision Token (CONTEXT.md): a customer acts on a sent Budget straight
+                        // from the emailed link, no account needed — possession of the token is the
+                        // credential (ADR 0021).
+                        .requestMatchers(HttpMethod.POST,
+                                "/budgets/decision/view",
+                                "/budgets/decision/approval",
+                                "/budgets/decision/refusal").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()

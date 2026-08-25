@@ -75,6 +75,20 @@ public interface AppointmentControllerSwaggerDoc {
     ResponseEntity<AppointmentInfo> getById(@Parameter(description = "Appointment id") @PathVariable UUID id);
 
     @Operation(
+            summary = "List the caller's own appointments",
+            description = "Every appointment belonging to the caller — any status, any type (Drop-off or Pickup), "
+                    + "newest first, including appointments originally booked as a Guest and later linked via "
+                    + "Guest Conversion. Requires the CUSTOMER role."
+    )
+    @CommonApiResponses
+    @GetMapping("/mine")
+    ResponseEntity<PageResponse<AppointmentInfo>> getMine(
+            @PageableDefault(sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable,
+            @Valid AppointmentFilterQuery filter,
+            Authentication authentication
+    );
+
+    @Operation(
             summary = "List available slots",
             description = "Returns the open slot start times for the given appointment type and date. Public — no authentication required."
     )
