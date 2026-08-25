@@ -139,6 +139,28 @@ export const routes: Routes = [
       import('./features/auth/confirm-email-change').then((m) => m.ConfirmEmailChange),
   },
 
+  /* --- the guest's own links ----------------------------------------------
+     Three routes the backend already decided: `SchedulingEmails` builds every
+     guest link against these exact paths. They sit above the catch-all
+     deliberately — before they existed, a customer following the shop's email
+     was silently handed the blank booking form with no explanation. Each takes
+     its whole credential from `?token=`, so none of them is guarded.        */
+
+  {
+    path: 'appointments/manage',
+    loadComponent: () =>
+      import('./features/guest/manage-booking').then((m) => m.ManageBooking),
+  },
+  {
+    path: 'appointments/complete-registration',
+    loadComponent: () =>
+      import('./features/guest/complete-registration').then((m) => m.CompleteRegistration),
+  },
+  {
+    path: 'appointments/pickup/book',
+    loadComponent: () => import('./features/guest/book-pickup').then((m) => m.BookPickup),
+  },
+
   /* --- volume two: the owner's manual ------------------------------------ */
 
   {

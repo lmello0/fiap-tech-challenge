@@ -1,0 +1,41 @@
+/* Only what the manage card has that the other two returned cards do not. */
+
+.mb__eyebrow {
+  color: var(--ink-3);
+}
+
+.mb__head {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.mb__in {
+  margin-top: 0.4rem;
+}
+
+.mb__span {
+  grid-column: 1 / -1;
+}
+
+.mb__error {
+  margin-top: 1.5rem;
+  max-width: 62ch;
+}
+
+.gx__reason {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--ink-2);
+}
+
+@media (max-width: 46rem) {
+  .mb__span {
+    grid-column: auto;
+  }
+}
+
+/* With no booking there is no margin, so the face is the whole card rather
+   than a column with a hole beside it. */
+.jobcard__grid:not(:has(.gx__routing)) {
+  grid-template-columns: minmax(0, 1fr);
+}

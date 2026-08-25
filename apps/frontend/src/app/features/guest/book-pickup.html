@@ -1,0 +1,135 @@
+<header class="front">
+  <p class="front__shop"><a routerLink="/">Auto Repair Shop</a></p>
+  <nav class="front__nav" aria-label="Account">
+    <span class="front__have">Have an account?</span>
+    <a class="btn btn--sm" routerLink="/sign-in">Sign in</a>
+  </nav>
+</header>
+
+<main class="jobcard jobcard--narrow">
+  <div class="jobcard__band">
+    <p class="jobcard__form label">Form 3 — Vehicle pickup</p>
+    <p class="jobcard__no label">
+      Order no.
+      <span class="jobcard__blank" aria-label="on the shop's copy">&nbsp;</span>
+    </p>
+  </div>
+
+  <div class="jobcard__face">
+    @if (missingToken) {
+      <div class="gx__state">
+        <span class="gx__mark gx__mark--warn"><app-icon name="alert" [size]="20" /></span>
+        <h1 class="gx__title">This link is missing its token.</h1>
+        <p class="gx__lede">
+          Open it straight from the shop's email — copying part of the address leaves the token
+          behind. Or sign in and book the pickup from the job itself.
+        </p>
+        <a class="btn btn--primary" routerLink="/sign-in">Sign in</a>
+      </div>
+    } @else if (booked(); as appointment) {
+      <div class="gx__state">
+        <span class="gx__mark gx__mark--ok"><app-icon name="check" [size]="20" /></span>
+        <h1 class="gx__title">Booked.</h1>
+        <p class="gx__lede">
+          Collect the car <strong>{{ when(appointment.slotStart) }}</strong>. The counter will have
+          it waiting.
+        </p>
+        <app-callout tier="note">
+          Bring something with your name on it. If the time stops working, call the counter — this
+          link is finished now that it's been used.
+        </app-callout>
+      </div>
+    } @else if (spent()) {
+      <div class="gx__state">
+        <span class="gx__mark gx__mark--caution"><app-icon name="alert" [size]="20" /></span>
+        <h1 class="gx__title">This invitation has been used.</h1>
+        <p class="gx__lede">
+          It works once. If you already picked a time, you're set. If not, the invitation may have
+          run out — the counter can book you in over the phone, or sign in and book it from the
+          job.
+        </p>
+        <a class="btn btn--primary" routerLink="/sign-in">Sign in</a>
+      </div>
+    } @else {
+      <div class="jobcard__head">
+        <h1 class="jobcard__title">Your car is ready.</h1>
+        <p class="jobcard__lede">
+          The work you approved is finished. Pick a time to collect it — that's the last step, and
+          <strong>the shop already knows which car</strong>, so there is nothing else to fill in.
+        </p>
+      </div>
+
+      <form class="form bp__form" (submit)="book($event)" novalidate>
+        <fieldset class="form__set">
+          <legend class="form__legend">1 — When you'll collect it</legend>
+          <label class="blank blank--date">
+            <span class="blank__label label">Date</span>
+            <input
+              class="blank__rule token"
+              type="date"
+              [min]="minDate"
+              [value]="date()"
+              (change)="pickDate($any($event.target).value)"
+            />
+            <span class="blank__help">Open Monday to Friday, 8am to 6pm.</span>
+          </label>
+
+          <div class="slots" role="group" aria-label="Available pickup times">
+            @if (weekendPicked()) {
+              <app-callout tier="caution">The shop is closed at weekends. Pick a weekday.</app-callout>
+            } @else if (slotsBusy()) {
+              <p class="slots__state">Reading the open slots…</p>
+            } @else if (slots().length > 0) {
+              <ul class="slots__list">
+                @for (s of slots(); track s) {
+                  <li>
+                    <button
+                      class="slot"
+                      type="button"
+                      [class.is-picked]="slot() === s"
+                      [attr.aria-pressed]="slot() === s"
+                      (click)="slot.set(s)"
+                    >
+                      <span class="token">{{ slotLabel(s) }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else if (slotsAsked()) {
+              <app-callout tier="caution">
+                Nothing left on that date. Try the next working day.
+              </app-callout>
+            } @else {
+              <p class="slots__state">Pick a date and the open times appear here.</p>
+            }
+          </div>
+        </fieldset>
+
+        <div class="file">
+          @if (error(); as message) {
+            <app-callout tier="warning">{{ message }}</app-callout>
+          }
+          <div class="file__actions">
+            <button
+              class="btn btn--primary file__primary"
+              type="submit"
+              [disabled]="busy() || !slot()"
+            >
+              {{ busy() ? 'Booking…' : 'Book this time' }}
+            </button>
+            <p class="file__note">
+              This link works once, so pick a time you're sure of. The counter can move it
+              afterwards if plans change.
+            </p>
+          </div>
+        </div>
+      </form>
+    }
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+  <p class="foot__staff"><a routerLink="/sign-in">Sign in</a></p>
+</footer>

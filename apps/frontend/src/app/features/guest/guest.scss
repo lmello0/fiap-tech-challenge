@@ -1,0 +1,309 @@
+/* ---------------------------------------------------------------------------
+   THE RETURNED CARD
+
+   The landing page's job card goes out blank. These three come back filled in:
+   same stock, same form-header band, same ruled blanks — but the shop has
+   written on them. Shared by all three guest links, the way records.scss is
+   shared by the console's registers.
+
+   Nothing here is guarded, because the token in the URL is the whole
+   credential. That makes one rule absolute: no destructive call may fire on
+   arrival. A mail scanner following the link must be able to open every one of
+   these pages and change nothing.
+   --------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.front__have {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+
+/* --- the states a token page has ---------------------------------------- */
+
+.gx__state {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+  max-width: 58ch;
+}
+
+.gx__mark {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid currentColor;
+}
+
+.gx__mark--ok {
+  color: var(--ok);
+  background: var(--ok-field);
+}
+
+.gx__mark--warn {
+  color: var(--warn);
+  background: var(--warn-field);
+}
+
+.gx__mark--caution {
+  color: var(--caution-ink);
+  background: var(--caution-field);
+}
+
+.gx__title {
+  font-size: clamp(1.75rem, 1.3rem + 1.9vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.gx__lede {
+  font-size: var(--step-1);
+  line-height: 1.45;
+  color: var(--ink-2);
+  max-width: 58ch;
+}
+
+.gx__lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --- the visit, as the shop wrote it back -------------------------------- */
+
+.gx__slot {
+  font-family: var(--face-cond);
+  font-size: clamp(1.5rem, 1.15rem + 1.5vw, 2.125rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.gx__pairs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  max-width: 46rem;
+}
+
+.gx__pair {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.gx__pair dd {
+  margin: 0;
+}
+
+.gx__value {
+  font-size: var(--step-1);
+}
+
+.gx__value--quote {
+  font-size: var(--step-0);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+/* --- actions ------------------------------------------------------------- */
+
+.gx__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--ink);
+}
+
+/* An action that unfolds in place. This world has no modals, so a decision
+   this size takes the page's width rather than floating over it. */
+.gx__panel {
+  display: grid;
+  gap: 0.9rem;
+  justify-items: start;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--ink);
+  background: var(--stock);
+}
+
+.gx__panel--danger {
+  border-color: var(--warn);
+}
+
+.gx__ask {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 52ch;
+}
+
+.gx__row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.gx__note {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+
+.gx__offer {
+  margin-top: 1.75rem;
+  padding: 1rem;
+  background: var(--stock);
+  border: 1px solid var(--rule);
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+  max-width: 54rem;
+}
+
+.gx__offer-lead {
+  font-family: var(--face-cond);
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+/* --- the routing margin, stamped ----------------------------------------
+   The landing card prints all ten steps as future. A returned card prints the
+   same ten with the job's real position marked, so "where is my car" is
+   answered by the document rather than by a status word.                    */
+
+.gx__routing {
+  background: var(--plate-sunk);
+  border-left: 1px solid var(--rule-strong);
+  padding: 2rem 1.25rem 2.25rem;
+  min-width: 0;
+}
+
+.gx__routing-title {
+  font-family: var(--face-cond);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.gx__routing-sub {
+  margin-top: 0.5rem;
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.gx__steps {
+  list-style: none;
+  padding: 0;
+  margin-top: 0.4rem;
+}
+
+.gx__step {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  gap: 0.55rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-3);
+}
+
+.gx__step:last-child {
+  border-bottom: 0;
+}
+
+.gx__tick {
+  justify-self: start;
+  display: grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid var(--rule-strong);
+  font-size: var(--step--1);
+}
+
+.gx__step-title {
+  font-family: var(--face-cond);
+  font-size: var(--step-0);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.gx__step-line {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--step--1);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+/* Reached steps fill in press ink — done is not a severity, so it takes no
+   spot colour; filled-versus-hollow carries the state. */
+.gx__step.is-done {
+  color: var(--ink-2);
+}
+
+.gx__step.is-done .gx__tick {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+  color: var(--ink-inv);
+}
+
+.gx__step.is-here {
+  color: var(--ink);
+}
+
+.gx__step.is-here .gx__tick {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inv);
+}
+
+.gx__step.is-yours .gx__tick {
+  border-color: var(--caution);
+  color: var(--caution-ink);
+  background: var(--caution-field);
+}
+
+.gx__flag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid currentColor;
+  color: var(--caution-ink);
+  background: var(--caution-field);
+  vertical-align: 0.08em;
+}
+
+@media (max-width: 62rem) {
+  .gx__routing {
+    border-left: 0;
+    border-top: 1px solid var(--ink);
+  }
+}
+
+@media (max-width: 46rem) {
+  .gx__routing {
+    padding-inline: 1rem;
+  }
+
+  .gx__pairs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

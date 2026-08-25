@@ -69,6 +69,29 @@ export interface GuestDropoffCommand {
   slotStart: string;
 }
 
+/**
+ * `CompleteGuestRegistrationCommand`. Everything the guest form deliberately
+ * left out: a chosen password, the document a `User` requires, and the vehicle
+ * fields beyond make/model/year.
+ */
+export interface CompleteGuestRegistrationCommand {
+  token: string;
+  rawPassword: string;
+  documentType: DocumentType;
+  documentCode: string;
+  licensePlate: string;
+  vehicleType: VehicleType;
+  color: string;
+  fuelType: FuelType;
+  transmissionType: TransmissionType;
+}
+
+/** `GuestConversionResult`. `temporaryPassword` is null on the self-service path. */
+export interface GuestConversionResultDto {
+  appointment: AppointmentInfoDto;
+  temporaryPassword: string | null;
+}
+
 /** `BookCustomerDropoffCommand`. The signed-in customer books against their own vehicle. */
 export interface CustomerDropoffCommand {
   vehicleId: string;
@@ -707,5 +730,48 @@ export class ShopApi {
     return this.api.post<AppointmentInfoDto>(`/appointments/${appointmentId}/customer-reschedule`, {
       newSlotStart,
     });
+  }
+
+  /* --- the guest's own links ---------------------------------------------
+     A guest has no account, so the token mailed to them *is* the credential.
+     Every one of these is a POST for that reason: a mail scanner that follows
+     the link issues a GET and can never act on the token by accident.       */
+
+  /** Reusable for the access token's life — the manage page can be revisited. */
+  viewGuestBooking(token: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/guest/view', { token });
+  }
+
+  /** Takes no reason, unlike the signed-in customer's cancel. */
+  cancelGuestBooking(token: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/guest/cancel', { token });
+  }
+
+  /**
+   * Answers with the *replacement* booking, not the one that was moved: a
+   * reschedule mints a new appointment, cancels the original as RESCHEDULED,
+   * and emails fresh tokens. The token used here resolves to the original, so
+   * it manages nothing after this call succeeds.
+   */
+  rescheduleGuestBooking(token: string, newSlotStart: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/guest/reschedule', {
+      token,
+      newSlotStart,
+    });
+  }
+
+  /** Single-use. Turns the guest into a Customer and their guest vehicle into a real one. */
+  completeGuestRegistration(
+    command: CompleteGuestRegistrationCommand,
+  ): Promise<GuestConversionResultDto> {
+    return this.api.post<GuestConversionResultDto>(
+      '/appointments/guest/complete-registration',
+      command,
+    );
+  }
+
+  /** Single-use. The invitation carries the work order, customer and vehicle. */
+  bookPickupByToken(token: string, slotStart: string): Promise<AppointmentInfoDto> {
+    return this.api.post<AppointmentInfoDto>('/appointments/pickup/book', { token, slotStart });
   }
 }

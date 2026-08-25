@@ -1,0 +1,269 @@
+<header class="front">
+  <p class="front__shop"><a routerLink="/">Auto Repair Shop</a></p>
+  <nav class="front__nav" aria-label="Account">
+    <span class="front__have">Have an account?</span>
+    <a class="btn btn--sm" routerLink="/sign-in">Sign in</a>
+  </nav>
+</header>
+
+<main class="jobcard">
+  <div class="jobcard__band">
+    <p class="jobcard__form label">Form 1 — Vehicle drop-off</p>
+    <p class="jobcard__no label">
+      Order no.
+      <span class="jobcard__blank" aria-label="assigned by the counter when you arrive">&nbsp;</span>
+    </p>
+    @if (booking(); as b) {
+      <p class="jobcard__date label"><span class="token">{{ b.status.toLowerCase() }}</span></p>
+    }
+  </div>
+
+  <div class="jobcard__grid">
+    <div class="jobcard__face">
+      @if (loading()) {
+        <p class="gx__lede">Reading your booking…</p>
+      } @else if (loadError(); as message) {
+        <!-- Both "no such token" and "expired" arrive here. The API refuses to
+             tell them apart, so neither does this. -->
+        <div class="gx__state">
+          <span class="gx__mark gx__mark--warn"><app-icon name="alert" [size]="20" /></span>
+          <h1 class="gx__title">This link no longer works.</h1>
+          <p class="gx__lede">{{ message }}</p>
+          <p class="gx__note">
+            Links from the shop last a week. If yours has run out, the counter can find your
+            booking by phone — or you can book again from the front page.
+          </p>
+          <a class="btn btn--primary" routerLink="/">Book a drop-off</a>
+        </div>
+      } @else if (booking(); as b) {
+        @if (moved()) {
+          <!-- The token this page holds resolved to the booking that was just
+               replaced, so it manages nothing from here on. Saying so is the
+               whole job of this state. -->
+          <div class="gx__state">
+            <span class="gx__mark gx__mark--ok"><app-icon name="check" [size]="20" /></span>
+            <h1 class="gx__title">Moved.</h1>
+            <p class="gx__lede">
+              Your visit is now <strong>{{ when(b.slotStart) }}</strong>.
+            </p>
+            <app-callout tier="note" heading="Use the new email from here">
+              Moving a booking creates a new one, so <strong>this link is finished</strong>. We've
+              emailed a fresh one for the new time — use that if you need to change it again.
+            </app-callout>
+          </div>
+        } @else if (b.status === 'CANCELLED') {
+          <div class="gx__state">
+            <span class="gx__mark gx__mark--caution"><app-icon name="cross" [size]="20" /></span>
+            <h1 class="gx__title">This booking is cancelled.</h1>
+            <p class="gx__lede">
+              It was for {{ when(b.slotStart) }}.
+              @if (b.cancelMessage) {
+                <span class="gx__reason">“{{ b.cancelMessage }}”</span>
+              }
+            </p>
+            <a class="btn btn--primary" routerLink="/">Book another drop-off</a>
+          </div>
+        } @else if (b.status === 'NO_SHOW') {
+          <div class="gx__state">
+            <span class="gx__mark gx__mark--caution"><app-icon name="clock" [size]="20" /></span>
+            <h1 class="gx__title">This slot was missed.</h1>
+            <p class="gx__lede">
+              The car wasn't dropped off on {{ when(b.slotStart) }}. No hard feelings — book
+              another when it suits you.
+            </p>
+            <a class="btn btn--primary" routerLink="/">Book another drop-off</a>
+          </div>
+        } @else {
+          <div class="mb__head">
+            <p class="mb__eyebrow label">Your visit</p>
+            <p class="gx__slot">{{ when(b.slotStart) }}</p>
+            @if (b.status === 'COMPLETED') {
+              <p class="gx__lede mb__in">
+                <strong>The car is with us.</strong> You checked in, so this visit is done — what
+                happens next is on the right.
+              </p>
+            } @else if (inThePast()) {
+              <p class="gx__lede">This slot has passed. Call the counter and they'll sort it out.</p>
+            }
+          </div>
+
+          <dl class="gx__pairs">
+            <div class="gx__pair">
+              <dt class="label">Vehicle</dt>
+              <dd class="gx__value">{{ vehicle(b) }}</dd>
+            </div>
+            <div class="gx__pair">
+              <dt class="label">Booked for</dt>
+              <dd class="gx__value">{{ b.guestName }}</dd>
+            </div>
+            @if (b.complaint) {
+              <div class="gx__pair mb__span">
+                <dt class="label">What you told us</dt>
+                <dd class="gx__value gx__value--quote">{{ b.complaint }}</dd>
+              </div>
+            }
+          </dl>
+
+          @if (live()) {
+            @if (actionError(); as message) {
+              <div class="mb__error">
+                <app-callout tier="warning">{{ message }}</app-callout>
+              </div>
+            }
+
+            @switch (panel()) {
+              @case ('move') {
+                <div class="gx__panel">
+                  <p class="gx__ask">Move it to when?</p>
+
+                  <label class="blank blank--date">
+                    <span class="blank__label label">New date</span>
+                    <input
+                      class="blank__rule token"
+                      type="date"
+                      [min]="minDate"
+                      [value]="date()"
+                      (change)="pickDate($any($event.target).value)"
+                    />
+                    <span class="blank__help">Open Monday to Friday, 8am to 6pm.</span>
+                  </label>
+
+                  <div class="slots" role="group" aria-label="Available times">
+                    @if (weekendPicked()) {
+                      <app-callout tier="caution">
+                        The shop is closed at weekends. Pick a weekday.
+                      </app-callout>
+                    } @else if (slotsBusy()) {
+                      <p class="slots__state">Reading the open slots…</p>
+                    } @else if (slots().length > 0) {
+                      <ul class="slots__list">
+                        @for (s of slots(); track s) {
+                          <li>
+                            <button
+                              class="slot"
+                              type="button"
+                              [class.is-picked]="slot() === s"
+                              [attr.aria-pressed]="slot() === s"
+                              (click)="slot.set(s)"
+                            >
+                              <span class="token">{{ slotLabel(s) }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    } @else if (slotsAsked()) {
+                      <app-callout tier="caution">
+                        Nothing left on that date. Try the next working day.
+                      </app-callout>
+                    } @else {
+                      <p class="slots__state">Pick a date and the open times appear here.</p>
+                    }
+                  </div>
+
+                  <p class="gx__note">
+                    Moving a booking replaces it, so this link stops working and we'll email you a
+                    new one.
+                  </p>
+
+                  <div class="gx__row">
+                    <button
+                      class="btn btn--primary"
+                      type="button"
+                      [disabled]="busy() || !slot()"
+                      (click)="move()"
+                    >
+                      {{ busy() ? 'Moving…' : 'Move it' }}
+                    </button>
+                    <button class="btn btn--quiet" type="button" [disabled]="busy()" (click)="open(null)">
+                      Leave it
+                    </button>
+                  </div>
+                </div>
+              }
+              @case ('cancel') {
+                <div class="gx__panel gx__panel--danger">
+                  <p class="gx__ask">Cancel your visit on {{ when(b.slotStart) }}?</p>
+                  <p class="gx__note">
+                    The slot goes back to the shop. Booking again later starts a fresh card.
+                  </p>
+                  <div class="gx__row">
+                    <button class="btn btn--danger" type="button" [disabled]="busy()" (click)="cancel()">
+                      {{ busy() ? 'Cancelling…' : 'Yes, cancel it' }}
+                    </button>
+                    <button class="btn btn--quiet" type="button" [disabled]="busy()" (click)="open(null)">
+                      Keep it
+                    </button>
+                  </div>
+                </div>
+              }
+              @default {
+                <div class="gx__actions">
+                  <button class="btn" type="button" (click)="open('move')">Move this visit</button>
+                  <button class="btn btn--danger" type="button" (click)="open('cancel')">
+                    Cancel it
+                  </button>
+                </div>
+              }
+            }
+
+            <div class="gx__offer">
+              <p class="gx__offer-lead">Skip the form next time?</p>
+              <p class="gx__note">
+                An account keeps your vehicle, every job on it and every price in one place — and
+                you approve work without digging through your inbox.
+                {{ registrationHint }}
+              </p>
+              <a class="btn btn--sm" routerLink="/register">Create an account</a>
+            </div>
+          }
+        }
+      }
+    </div>
+
+    <!-- The routing margin, stamped. The landing card prints all ten steps as
+         future; a returned card marks where this job actually stands.
+         It renders only when there is a booking to route: printing the shop's
+         ten steps beside "this link no longer works" describes nothing. -->
+    @if (booking(); as routed) {
+    <aside class="gx__routing" aria-labelledby="routing-title">
+      <h2 class="gx__routing-title" id="routing-title">Routing</h2>
+      <p class="gx__routing-sub">
+        @if (reached() > 0) {
+          Your car is in. Here's the road it travels from here.
+        } @else {
+          Nothing is stamped yet — the shop starts the moment you drop the car off.
+        }
+      </p>
+      <ol class="gx__steps">
+        @for (step of procedure; track step.status) {
+          <li
+            class="gx__step"
+            [class.is-done]="step.n < reached()"
+            [class.is-here]="step.n === reached()"
+            [class.is-yours]="step.waitsOnYou"
+          >
+            <span class="gx__tick token" aria-hidden="true">{{ step.n }}</span>
+            <span>
+              <span class="gx__step-title">
+                {{ step.title }}
+                @if (step.waitsOnYou) {
+                  <span class="gx__flag label">Waits on you</span>
+                }
+              </span>
+              @if (step.n === reached()) {
+                <span class="gx__step-line">{{ step.line }}</span>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+    </aside>
+    }
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+  <p class="foot__staff"><a routerLink="/">Book another drop-off</a></p>
+</footer>
