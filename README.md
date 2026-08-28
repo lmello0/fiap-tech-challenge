@@ -86,6 +86,19 @@ container, via `npm start`).
 
    Resultados em http://localhost:9000.
 
+## Relatório de vulnerabilidade
+
+Para gerar o relatório de vulnerabilidade (`dependency-check` plugin no `pom.xml`) é necessário gerar um API token no [Site oficial do NIST](https://nvd.nist.gov/developers/request-an-api-key),
+após isso, execute o comando:
+
+```sh
+./mvnw verify -Dnvd.api.key="<API-KEY>" -DskipTests=true
+```
+
+O relatório será um `.html` gerado na pasta raíz em `target/`.
+
+Escolhe deliberadamente deixar esse plugin desabilitado para não impedir a compilação da aplicação
+
 ## Links úteis
 
 - Event Storming: [Miro](https://miro.com/app/board/uXjVH6Q299o=/?share_link_id=234351769480)

@@ -8,6 +8,19 @@ Java, Spring Boot, Spring Modulith (module boundaries under `src/main/java/.../t
 `auth`, `user`, `vehicle`, `workorder`, `inventory`, `scheduling`, `history`, `email`, `shared`),
 Spring Data JPA + Flyway on Postgres, Spring Security with OAuth2 resource server (JWT).
 
+## Vulnerability check
+
+To run vulnerability check (dependency-check plugin on `pom.xml`) is necessary to generate an API Token on [NIST official website](https://nvd.nist.gov/developers/request-an-api-key),
+then, is just run the command:
+
+```sh
+./mvnw verify -Dnvd.api.key="<API-KEY>" -DskipTests=true
+```
+
+The report will be a `.html` generated on `target/` root.
+
+I deliberately leave this plugin deactivated to permit the application compilation.
+
 ## Running
 
 ```sh
