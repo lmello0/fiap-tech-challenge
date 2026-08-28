@@ -1,4 +1,4 @@
-import { LIFECYCLE, REFUSED_STEP, type LifecycleStep } from './lifecycle';
+import { CANCELLED_STEP, LIFECYCLE, REFUSED_STEP, type LifecycleStep } from './lifecycle';
 import type { WorkOrderStatus } from './enums';
 
 /**
@@ -71,6 +71,10 @@ const LINES: Record<WorkOrderStatus, { line: string; waitsOnYou: boolean }> = {
     line: 'You collected it. The job is closed.',
     waitsOnYou: false,
   },
+  CANCELLED: {
+    line: 'The shop cancelled this order. It cannot be reopened — call the counter if you still need the work done.',
+    waitsOnYou: false,
+  },
 };
 
 function toCustomerStep(step: LifecycleStep): CustomerStep {
@@ -80,12 +84,14 @@ function toCustomerStep(step: LifecycleStep): CustomerStep {
 /** The main line, ten steps, in order. */
 export const CUSTOMER_PROCEDURE: readonly CustomerStep[] = LIFECYCLE.map(toCustomerStep);
 
-/** The one branch off it. Terminal. */
+/** The branches off it. Both terminal. */
 export const CUSTOMER_REFUSED: CustomerStep = toCustomerStep(REFUSED_STEP);
+export const CUSTOMER_CANCELLED: CustomerStep = toCustomerStep(CANCELLED_STEP);
 
 const BY_STATUS = new Map<WorkOrderStatus, CustomerStep>([
   ...CUSTOMER_PROCEDURE.map((s) => [s.status, s] as const),
   ['REFUSED', CUSTOMER_REFUSED] as const,
+  ['CANCELLED', CUSTOMER_CANCELLED] as const,
 ]);
 
 export function customerStepFor(status: WorkOrderStatus): CustomerStep {

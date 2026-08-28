@@ -11,5 +11,6 @@ public enum WorkOrderStatus {
     IN_PROGRESS,
     FINISHED,
     WAITING_PICKUP,
-    DELIVERED
+    DELIVERED,
+    CANCELLED
 }

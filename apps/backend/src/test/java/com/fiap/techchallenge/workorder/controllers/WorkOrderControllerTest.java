@@ -154,6 +154,84 @@ class WorkOrderControllerTest {
     }
 
     @Test
+    void anAttendantCancelsAWorkOrderAndTheReasonIsRecorded() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(post("/work-orders/{id}/cancel", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason": "Customer took the car elsewhere"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelReason").value("Customer took the car elsewhere"));
+
+        assertThat(workOrderRepository.findById(workOrderId).orElseThrow().getStatus())
+                .isEqualTo(WorkOrderStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelWithNoBodyIsAccepted() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(post("/work-orders/{id}/cancel", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    void aMechanicCannotCancelAWorkOrder() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+
+        mvc.perform(post("/work-orders/{id}/cancel", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aDeliveredWorkOrderCannotBeCancelled() throws Exception {
+        Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
+        Fixture mechanic = registerWorker(WorkerRole.MECHANIC);
+        UUID[] ids = approvedWorkOrder(attendant, mechanic);
+        UUID workOrderId = ids[0];
+        UUID budgetId = ids[1];
+        UUID lineId = firstLineId(mechanic, budgetId);
+
+        mvc.perform(post("/work-orders/{id}/service/start", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/start", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+        mvc.perform(post("/work-orders/{id}/lines/{lineId}/finish", workOrderId, lineId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+        mvc.perform(post("/work-orders/{id}/service/finish", workOrderId)
+                        .header("Authorization", "Bearer " + mechanic.accessToken()))
+                .andExpect(status().isOk());
+        mvc.perform(post("/work-orders/{id}/pickup-ready", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isOk());
+        mvc.perform(post("/work-orders/{id}/delivery", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/work-orders/{id}/cancel", workOrderId)
+                        .header("Authorization", "Bearer " + attendant.accessToken()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void anAttendantCannotStartOrFinishRepairLines() throws Exception {
         Fixture attendant = registerWorker(WorkerRole.ATTENDANT);
         Fixture mechanic = registerWorker(WorkerRole.MECHANIC);

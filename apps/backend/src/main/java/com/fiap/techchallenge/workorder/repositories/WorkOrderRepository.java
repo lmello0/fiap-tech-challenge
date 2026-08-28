@@ -26,7 +26,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID>, Jpa
                     COALESCE(SUM(CASE WHEN wo.status = 'IN_PROGRESS'         THEN 1L ELSE 0L END), 0L),
                     COALESCE(SUM(CASE WHEN wo.status = 'FINISHED'            THEN 1L ELSE 0L END), 0L),
                     COALESCE(SUM(CASE WHEN wo.status = 'WAITING_PICKUP'      THEN 1L ELSE 0L END), 0L),
-                    COALESCE(SUM(CASE WHEN wo.status = 'DELIVERED'           THEN 1L ELSE 0L END), 0L)
+                    COALESCE(SUM(CASE WHEN wo.status = 'DELIVERED'           THEN 1L ELSE 0L END), 0L),
+                    COALESCE(SUM(CASE WHEN wo.status = 'CANCELLED'          THEN 1L ELSE 0L END), 0L)
                 )
                 FROM WorkOrder wo
                 WHERE wo.createdAt >= COALESCE(:start, wo.createdAt)

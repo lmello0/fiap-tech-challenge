@@ -140,11 +140,12 @@ export const routes: Routes = [
   },
 
   /* --- the guest's own links ----------------------------------------------
-     Three routes the backend already decided: `SchedulingEmails` builds every
-     guest link against these exact paths. They sit above the catch-all
-     deliberately — before they existed, a customer following the shop's email
-     was silently handed the blank booking form with no explanation. Each takes
-     its whole credential from `?token=`, so none of them is guarded.        */
+     Four routes the backend already decided: `SchedulingEmails` and
+     `WorkOrderEmails` build every guest/token link against these exact paths.
+     They sit above the catch-all deliberately — before they existed, a
+     customer following the shop's email was silently handed the blank
+     booking form with no explanation. Each takes its whole credential from
+     `?token=`, so none of them is guarded.                                  */
 
   {
     path: 'appointments/manage',
@@ -159,6 +160,10 @@ export const routes: Routes = [
   {
     path: 'appointments/pickup/book',
     loadComponent: () => import('./features/guest/book-pickup').then((m) => m.BookPickup),
+  },
+  {
+    path: 'budgets/decide',
+    loadComponent: () => import('./features/guest/budget-decide').then((m) => m.BudgetDecide),
   },
 
   /* --- volume two: the owner's manual ------------------------------------ */

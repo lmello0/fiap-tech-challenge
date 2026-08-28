@@ -11,17 +11,18 @@ import java.util.Set;
 @Service
 public class WorkOrderStateMachine {
     private static final Map<WorkOrderStatus, Set<WorkOrderStatus>> TRANSITIONS = Map.ofEntries(
-            Map.entry(WorkOrderStatus.RECEIVED, EnumSet.of(WorkOrderStatus.WAITING_DIAGNOSTICS)),
-            Map.entry(WorkOrderStatus.WAITING_DIAGNOSTICS, EnumSet.of(WorkOrderStatus.IN_DIAGNOSTICS)),
-            Map.entry(WorkOrderStatus.IN_DIAGNOSTICS, EnumSet.of(WorkOrderStatus.BUDGET_IN_DRAFT)),
-            Map.entry(WorkOrderStatus.BUDGET_IN_DRAFT, EnumSet.of(WorkOrderStatus.WAITING_APPROVAL)),
-            Map.entry(WorkOrderStatus.WAITING_APPROVAL, EnumSet.of(WorkOrderStatus.APPROVED, WorkOrderStatus.REFUSED)),
-            Map.entry(WorkOrderStatus.APPROVED, EnumSet.of(WorkOrderStatus.IN_PROGRESS)),
-            Map.entry(WorkOrderStatus.IN_PROGRESS, EnumSet.of(WorkOrderStatus.FINISHED)),
-            Map.entry(WorkOrderStatus.FINISHED, EnumSet.of(WorkOrderStatus.WAITING_PICKUP)),
+            Map.entry(WorkOrderStatus.RECEIVED, EnumSet.of(WorkOrderStatus.WAITING_DIAGNOSTICS, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.WAITING_DIAGNOSTICS, EnumSet.of(WorkOrderStatus.IN_DIAGNOSTICS, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.IN_DIAGNOSTICS, EnumSet.of(WorkOrderStatus.BUDGET_IN_DRAFT, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.BUDGET_IN_DRAFT, EnumSet.of(WorkOrderStatus.WAITING_APPROVAL, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.WAITING_APPROVAL, EnumSet.of(WorkOrderStatus.APPROVED, WorkOrderStatus.REFUSED, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.APPROVED, EnumSet.of(WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.IN_PROGRESS, EnumSet.of(WorkOrderStatus.FINISHED, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.FINISHED, EnumSet.of(WorkOrderStatus.WAITING_PICKUP, WorkOrderStatus.CANCELLED)),
             Map.entry(WorkOrderStatus.REFUSED, EnumSet.of(WorkOrderStatus.WAITING_PICKUP)),
-            Map.entry(WorkOrderStatus.WAITING_PICKUP, EnumSet.of(WorkOrderStatus.DELIVERED)),
-            Map.entry(WorkOrderStatus.DELIVERED, EnumSet.noneOf(WorkOrderStatus.class))
+            Map.entry(WorkOrderStatus.WAITING_PICKUP, EnumSet.of(WorkOrderStatus.DELIVERED, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.DELIVERED, EnumSet.noneOf(WorkOrderStatus.class)),
+            Map.entry(WorkOrderStatus.CANCELLED, EnumSet.noneOf(WorkOrderStatus.class))
     );
 
     public boolean canTransition(WorkOrderStatus from, WorkOrderStatus to) {

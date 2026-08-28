@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { ApiError } from '../api/api-client';
+import { Router } from '@angular/router';
+import { ApiClient, ApiError } from '../api/api-client';
 import { ShopApi, type RegisterCustomerCommand } from '../api/shop-api';
 import type { UserInfoDto } from '../api/dto';
 import type { WorkerRole } from '../domain/enums';
@@ -73,6 +74,14 @@ export class Session {
   private readonly tokens = inject(TokenStore);
   private readonly store = inject(ShopStore);
   private readonly directory = inject(Directory);
+  private readonly router = inject(Router);
+
+  constructor() {
+    // A refresh token that no longer works ends the session for good. ApiClient
+    // has already dropped the token pair by the time this fires; the job here is
+    // to unwind the in-memory session and get off any screen that needs one.
+    inject(ApiClient).onAuthExpired(() => this.onRefreshExhausted());
+  }
 
   private readonly _worker = signal<Worker | null>(null);
   private readonly _user = signal<UserInfoDto | null>(null);
@@ -409,6 +418,28 @@ export class Session {
 
   clearError(): void {
     this._error.set(null);
+  }
+
+  /**
+   * The access token expired and the refresh token could not renew it — spent,
+   * revoked, or aged out. There is nothing left to log out (the tokens are
+   * already gone) and nothing to retry: unwind the session the same way
+   * `signOut` does and send the operator back to sign in, with a line saying
+   * why they landed there rather than on the page they were using.
+   */
+  private onRefreshExhausted(): void {
+    if (this._user() === null && !this._demo()) return;
+    this.directory.clear();
+    this.store.reset();
+    writeFlag(DEMO_KEY, false);
+    writeFacet(null);
+    this._worker.set(null);
+    this._user.set(null);
+    this._facet.set(null);
+    this._demo.set(false);
+    this._passwordChangeRequired.set(false);
+    this._error.set('Your session expired. Sign in again to continue.');
+    void this.router.navigateByUrl('/sign-in');
   }
 }
 

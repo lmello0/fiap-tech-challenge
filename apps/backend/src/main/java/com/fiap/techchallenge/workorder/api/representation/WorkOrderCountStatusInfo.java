@@ -11,6 +11,7 @@ public record WorkOrderCountStatusInfo(
         Long inProgress,
         Long finished,
         Long waitingPickup,
-        Long delivered
+        Long delivered,
+        Long cancelled
 ) {
 }

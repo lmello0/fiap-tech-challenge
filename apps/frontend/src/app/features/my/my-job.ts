@@ -69,8 +69,10 @@ export class MyJob {
     return job ? this.step(job.status) : null;
   });
 
-  /** A refused job branched off the main line; the rail says so rather than lying about it. */
+  /** A refused or cancelled job branched off the main line; the rail says so rather than lying about it. */
   protected readonly refused = computed(() => this.job()?.status === 'REFUSED');
+  protected readonly cancelled = computed(() => this.job()?.status === 'CANCELLED');
+  protected readonly branched = computed(() => this.refused() || this.cancelled());
 
   protected readonly decidable = computed(() => {
     const job = this.job();

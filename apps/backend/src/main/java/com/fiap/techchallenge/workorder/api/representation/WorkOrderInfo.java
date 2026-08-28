@@ -15,6 +15,7 @@ public record WorkOrderInfo(
         String customerComplaint,
         String diagnosis,
         String refusalReason,
+        String cancelReason,
         UUID budgetId,
         Instant createdAt,
         Instant updatedAt,
@@ -26,7 +27,8 @@ public record WorkOrderInfo(
         Instant serviceStartedAt,
         Instant finishedAt,
         Instant pickupReadyAt,
-        Instant deliveredAt
+        Instant deliveredAt,
+        Instant cancelledAt
 ) {
 
 }

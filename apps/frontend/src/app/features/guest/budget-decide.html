@@ -1,0 +1,200 @@
+<header class="front">
+  <p class="front__shop"><a routerLink="/">Auto Repair Shop</a></p>
+  <nav class="front__nav" aria-label="Account">
+    <span class="front__have">Have an account?</span>
+    <a class="btn btn--sm" routerLink="/sign-in">Sign in</a>
+  </nav>
+</header>
+
+<main class="jobcard jobcard--narrow">
+  <div class="jobcard__band">
+    <p class="jobcard__form label">Budget decision</p>
+    @if (budget(); as b) {
+      <p class="jobcard__date label"><span class="token">{{ b.status.toLowerCase() }}</span></p>
+    }
+  </div>
+
+  <div class="jobcard__face">
+    @if (loading()) {
+      <p class="gx__lede">Reading your budget…</p>
+    } @else if (loadError(); as message) {
+      <!-- Both "no such token" and "signature doesn't match" arrive here.
+           The API refuses to tell them apart, so neither does this. -->
+      <div class="gx__state">
+        <span class="gx__mark gx__mark--warn"><app-icon name="alert" [size]="20" /></span>
+        <h1 class="gx__title">This link no longer works.</h1>
+        <p class="gx__lede">{{ message }}</p>
+        <p class="gx__note">
+          If the price on your work order still needs a decision, the shop's email has the most
+          recent link — or the counter can find your job by phone.
+        </p>
+        <a class="btn btn--primary" routerLink="/">Auto Repair Shop</a>
+      </div>
+    } @else if (budget(); as b) {
+      <div class="bd__head">
+        <p class="bd__eyebrow label">The price</p>
+        <p class="gx__slot">{{ money(b.grandTotal) }}</p>
+        @if (b.sentAt) {
+          <p class="gx__note">Sent {{ when(b.sentAt) }}</p>
+        }
+      </div>
+
+      <div class="mt-wrap">
+        <table class="mt">
+          <caption class="sr-only">Every line on this budget</caption>
+          <thead>
+            <tr>
+              <th scope="col">What</th>
+              <th scope="col" class="shrink">Kind</th>
+              <th scope="col" class="r shrink">Qty</th>
+              <th scope="col" class="r shrink">Each</th>
+              <th scope="col" class="r shrink">Line</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of b.lines; track line.id) {
+              <tr>
+                <td>{{ line.description }}</td>
+                <td class="shrink bd__muted">{{ line.type === 'PART' ? 'Part' : 'Labour' }}</td>
+                <td class="r shrink num">{{ line.quantity }}</td>
+                <td class="r shrink num">{{ money(line.unitPrice) }}</td>
+                <td class="r shrink num">{{ money(line.lineTotal) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="bd__muted">No lines on this budget.</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="bd__total-row">
+              <td colspan="4" class="r">Total</td>
+              <td class="r num bd__total">{{ money(b.grandTotal) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      @if (decidable()) {
+        <div class="bd__callout">
+          <app-callout tier="warning" heading="Read this before you answer">
+            These lines are frozen. The shop cannot add to this price after you approve it — extra
+            work would need a new job. <strong>Refusing ends the job permanently</strong>; a
+            refused price is never requoted.
+          </app-callout>
+        </div>
+
+        @if (actionError(); as message) {
+          <div class="bd__error">
+            <app-callout tier="warning">{{ message }}</app-callout>
+          </div>
+        }
+
+        @switch (confirming()) {
+          @case ('approve') {
+            <div class="decide decide--confirm">
+              <p class="decide__ask">
+                Approve <strong>{{ money(b.grandTotal) }}</strong> and let the shop start the
+                work?
+              </p>
+              <div class="decide__row">
+                <button
+                  class="btn btn--primary"
+                  type="button"
+                  [disabled]="pending() !== null"
+                  (click)="approve()"
+                >
+                  {{ pending() === 'approve' ? 'Approving…' : 'Yes, approve it' }}
+                </button>
+                <button
+                  class="btn btn--quiet"
+                  type="button"
+                  [disabled]="pending() !== null"
+                  (click)="confirming.set(null)"
+                >
+                  Not yet
+                </button>
+              </div>
+            </div>
+          }
+          @case ('refuse') {
+            <div class="decide decide--confirm decide--danger">
+              <p class="decide__ask">Refusing ends this job. It cannot be reopened or requoted.</p>
+              <label class="blank blank--full decide__why">
+                <span class="blank__label label">Why, if you'd like to say</span>
+                <textarea
+                  class="blank__area"
+                  rows="2"
+                  maxlength="2000"
+                  placeholder="Optional — the shop reads this."
+                  [value]="reason()"
+                  (input)="reason.set($any($event.target).value)"
+                ></textarea>
+              </label>
+              <div class="decide__row">
+                <button
+                  class="btn btn--danger"
+                  type="button"
+                  [disabled]="pending() !== null"
+                  (click)="refuse()"
+                >
+                  {{ pending() === 'refuse' ? 'Refusing…' : 'Yes, refuse and end the job' }}
+                </button>
+                <button
+                  class="btn btn--quiet"
+                  type="button"
+                  [disabled]="pending() !== null"
+                  (click)="confirming.set(null)"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          }
+          @default {
+            <div class="decide">
+              <button
+                class="btn btn--primary decide__go"
+                type="button"
+                (click)="confirming.set('approve')"
+              >
+                Approve {{ money(b.grandTotal) }}
+              </button>
+              <button class="btn btn--danger" type="button" (click)="confirming.set('refuse')">
+                Refuse this price
+              </button>
+            </div>
+          }
+        }
+      } @else if (b.status === 'REFUSED') {
+        <div class="bd__callout">
+          <app-callout tier="warning" heading="You refused this price">
+            The job ended here. Booking the car in again starts a new one from step 1.
+          </app-callout>
+        </div>
+      } @else if (b.status === 'APPROVED') {
+        <div class="bd__callout">
+          <app-callout tier="note" heading="You approved this price">
+            What you see above is what the shop is authorised to do, and no more.
+          </app-callout>
+        </div>
+      } @else {
+        <p class="gx__note">This price is not ready for a decision yet.</p>
+      }
+
+      <div class="gx__offer bd__offer">
+        <p class="gx__offer-lead">Skip the form next time?</p>
+        <p class="gx__note">
+          An account keeps your vehicle, every job on it and every price in one place — and you
+          decide from a page like this one without digging through your inbox.
+        </p>
+        <a class="btn btn--sm" routerLink="/register">Create an account</a>
+      </div>
+    }
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="foot__shop">Auto Repair Shop</p>
+  <p class="foot__hours">Monday to Friday, 8am–6pm</p>
+</footer>

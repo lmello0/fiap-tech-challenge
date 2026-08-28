@@ -239,9 +239,9 @@ export class ShopApi {
     return this.api.post<void>('/auth/logout', { refreshToken });
   }
 
-  refresh(refreshToken: string): Promise<TokenResponseDto> {
-    return this.api.post<TokenResponseDto>('/auth/refresh-token', { refreshToken });
-  }
+  // The access-token refresh is not listed here: it is not a console operation
+  // but a transport concern, so `ApiClient` owns it — it renews a rejected
+  // token and replays the request without the caller ever seeing the 401.
 
   me(): Promise<UserInfoDto> {
     return this.api.get<UserInfoDto>('/users/me');
@@ -378,6 +378,11 @@ export class ShopApi {
   /** ATTENDANT or MANAGER. */
   recordDelivery(id: string): Promise<WorkOrderInfoDto> {
     return this.api.post<WorkOrderInfoDto>(`/work-orders/${id}/delivery`);
+  }
+
+  /** ATTENDANT or MANAGER. Terminal — releases any parts still held in reservation. */
+  cancelWorkOrder(id: string, reason: string | null): Promise<WorkOrderInfoDto> {
+    return this.api.post<WorkOrderInfoDto>(`/work-orders/${id}/cancel`, { reason });
   }
 
   /* --- budgets ---------------------------------------------------------- */
@@ -773,5 +778,25 @@ export class ShopApi {
   /** Single-use. The invitation carries the work order, customer and vehicle. */
   bookPickupByToken(token: string, slotStart: string): Promise<AppointmentInfoDto> {
     return this.api.post<AppointmentInfoDto>('/appointments/pickup/book', { token, slotStart });
+  }
+
+  /* --- the Budget decision link -------------------------------------------
+     `WorkOrderEmails` builds every "budget ready" link against this exact
+     path (ADR 0021). The token is a stateless HMAC over the budget id, not a
+     lookup, so re-reading it costs nothing and there is nothing to revoke —
+     the Budget's own state is what makes a repeat decision fail. */
+
+  /** Reusable for as long as the Budget stays unresolved. */
+  viewBudgetByToken(token: string): Promise<BudgetInfoDto> {
+    return this.api.post<BudgetInfoDto>('/budgets/decision/view', { token });
+  }
+
+  approveBudgetByToken(token: string): Promise<BudgetInfoDto> {
+    return this.api.post<BudgetInfoDto>('/budgets/decision/approval', { token });
+  }
+
+  /** Terminal, like the signed-in path: a refused Budget cannot be requoted. */
+  refuseBudgetByToken(token: string, reason: string | null): Promise<BudgetInfoDto> {
+    return this.api.post<BudgetInfoDto>('/budgets/decision/refusal', { token, reason });
   }
 }

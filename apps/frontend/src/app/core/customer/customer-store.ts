@@ -5,6 +5,7 @@ import type { AppointmentInfoDto, CustomerWorkOrderViewDto } from '../api/dto';
 import { toAppointment, toBudget, toVehicle } from '../data/mappers';
 import type { Appointment, Budget, Vehicle } from '../domain/models';
 import type { WorkOrderStatus } from '../domain/enums';
+import { isTerminal } from '../domain/lifecycle';
 import { Session } from '../auth/session';
 
 /**
@@ -72,10 +73,8 @@ export class CustomerStore {
 
   readonly activeVehicles = computed(() => this._vehicles().filter((v) => v.active));
 
-  /** Jobs still moving. A delivered or refused job is spent and reads quiet. */
-  readonly openJobs = computed(() =>
-    this._jobs().filter((j) => j.status !== 'DELIVERED' && j.status !== 'REFUSED'),
-  );
+  /** Jobs still moving. A delivered, refused or cancelled job is spent and reads quiet. */
+  readonly openJobs = computed(() => this._jobs().filter((j) => !isTerminal(j.status)));
 
   /** The whole reason this console exists: a frozen budget waiting on a decision. */
   readonly awaitingDecision = computed(() =>

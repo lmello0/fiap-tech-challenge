@@ -67,6 +67,9 @@ public class WorkOrder {
     @Column(length = 2000)
     private String refusalReason;
 
+    @Column(length = 2000)
+    private String cancelReason;
+
     /** Budget owns the join (ADR 0013); "exactly one live Budget" is enforced only in the
      * application, not the database, so a future requoting flow costs no migration. */
     @OneToMany(mappedBy = "workOrder")
@@ -96,6 +99,8 @@ public class WorkOrder {
     private Instant pickupReadyAt;
 
     private Instant deliveredAt;
+
+    private Instant cancelledAt;
 
     public void addBudget(Budget budget) {
         budgets.add(budget);

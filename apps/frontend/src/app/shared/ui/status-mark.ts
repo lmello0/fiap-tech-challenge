@@ -18,6 +18,7 @@ const TONE: Record<WorkOrderStatus, Tone> = {
   FINISHED: 'ok',
   WAITING_PICKUP: 'caution',
   DELIVERED: 'ink',
+  CANCELLED: 'warn',
 };
 
 /**

@@ -4,6 +4,7 @@ import com.fiap.techchallenge.history.api.representation.HistoryEntryInfo;
 import com.fiap.techchallenge.history.api.representation.HistorySnapshotInfo;
 import com.fiap.techchallenge.shared.openapi.CommonApiResponses;
 import com.fiap.techchallenge.shared.responses.PageResponse;
+import com.fiap.techchallenge.workorder.api.commands.CancelWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
@@ -203,6 +204,23 @@ public interface WorkOrderControllerSwaggerDoc {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/{id}/delivery")
     ResponseEntity<WorkOrderInfo> delivery(@Parameter(description = "Work order id") @PathVariable UUID id);
+
+    @Operation(
+            summary = "Cancel a work order",
+            description = "Cancels the work order, releasing any parts held in reservation for it. Only allowed before "
+                    + "WAITING_PICKUP/DELIVERED, and not once it has already been REFUSED or CANCELLED. "
+                    + "Requires the ATTENDANT or MANAGER role."
+    )
+    @CommonApiResponses
+    @ApiResponse(responseCode = "404", description = "No work order exists with the given id.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "The work order is not in a state that allows cancellation.",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/{id}/cancel")
+    ResponseEntity<WorkOrderInfo> cancel(
+            @Parameter(description = "Work order id") @PathVariable UUID id,
+            @Valid @RequestBody(required = false) CancelWorkOrderCommand command
+    );
 
     @Operation(
             summary = "Get the work order's history timeline",

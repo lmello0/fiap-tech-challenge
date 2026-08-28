@@ -47,6 +47,7 @@ export interface WorkOrder {
   customerComplaint: string;
   diagnosis: string | null;
   refusalReason: string | null;
+  cancelReason: string | null;
   budgetId: string | null;
 
   createdAt: string;
@@ -60,6 +61,7 @@ export interface WorkOrder {
   finishedAt: string | null;
   pickupReadyAt: string | null;
   deliveredAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface BudgetLine {

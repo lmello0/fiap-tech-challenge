@@ -24,7 +24,8 @@ export type WorkOrderStatus =
   | 'IN_PROGRESS'
   | 'FINISHED'
   | 'WAITING_PICKUP'
-  | 'DELIVERED';
+  | 'DELIVERED'
+  | 'CANCELLED';
 
 export type BudgetStatus = 'DRAFT' | 'WAITING_SEND' | 'SENT' | 'APPROVED' | 'REFUSED';
 

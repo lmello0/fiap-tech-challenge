@@ -1,0 +1,89 @@
+.bd__head {
+  margin-bottom: 1.5rem;
+}
+
+.bd__eyebrow {
+  color: var(--ink-3);
+}
+
+.bd__muted {
+  color: var(--ink-3);
+}
+
+.bd__total-row td {
+  border-top: 1px solid var(--ink);
+  border-bottom: 0;
+  padding-top: 0.55rem;
+  font-family: var(--face-cond);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--step--1);
+}
+
+.bd__total {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.bd__error {
+  margin: 1.25rem 0;
+}
+
+/* --- the decision, same device as the signed-in job page's --------------- */
+
+.decide {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.decide__go {
+  font-size: var(--step-1);
+  padding: 0.6rem 1.4rem;
+}
+
+.decide--confirm {
+  display: grid;
+  gap: 0.85rem;
+  justify-items: start;
+  padding: 1rem;
+  border: 1px solid var(--ink);
+  background: var(--stock);
+  margin-top: 1.25rem;
+}
+
+.decide--danger {
+  border-color: var(--warn);
+}
+
+.decide__ask {
+  font-family: var(--face-cond);
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 52ch;
+}
+
+.decide__why {
+  width: min(38rem, 100%);
+}
+
+.decide__row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bd__callout {
+  margin-top: 1.5rem;
+}
+
+.bd__offer {
+  margin-top: 2rem;
+}

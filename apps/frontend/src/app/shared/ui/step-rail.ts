@@ -40,19 +40,21 @@ import { LIFECYCLE, type LifecycleStep, stepFor, stepIndex } from '../../core/do
             </button>
           </li>
         }
-        @if (refused()) {
+        @if (branch(); as bs) {
           <li class="rail__tick-wrap rail__tick-wrap--branch">
             <button
               type="button"
-              class="rail__tick is-refused"
+              class="rail__tick"
+              [class.is-refused]="bs.status === 'REFUSED'"
+              [class.is-cancelled]="bs.status === 'CANCELLED'"
               aria-current="step"
-              [attr.aria-label]="'Refused. ' + refusedStep().precondition"
-              (mouseenter)="peek.set(refusedStep())"
+              [attr.aria-label]="bs.title + '. ' + bs.precondition"
+              (mouseenter)="peek.set(bs)"
               (mouseleave)="peek.set(null)"
-              (focus)="peek.set(refusedStep())"
+              (focus)="peek.set(bs)"
               (blur)="peek.set(null)"
             >
-              <span class="rail__n">R</span>
+              <span class="rail__n">{{ bs.status === 'REFUSED' ? 'R' : 'C' }}</span>
             </button>
           </li>
         }
@@ -62,7 +64,9 @@ import { LIFECYCLE, type LifecycleStep, stepFor, stepIndex } from '../../core/do
         <div class="rail__panel" role="status">
           @let s = peek() ?? current();
           <p class="rail__panel-title">
-            <span class="label rail__panel-n">{{ s.status === 'REFUSED' ? 'Branch' : 'Step ' + s.n }}</span>
+            <span class="label rail__panel-n">{{
+              s.status === 'REFUSED' || s.status === 'CANCELLED' ? 'Branch' : 'Step ' + s.n
+            }}</span>
             {{ s.title }}
           </p>
           <p class="rail__panel-pre">{{ s.precondition }}</p>
@@ -75,7 +79,13 @@ import { LIFECYCLE, type LifecycleStep, stepFor, stepIndex } from '../../core/do
           } @else {
             <p class="rail__panel-roles">
               <span class="label">Performed by</span>
-              {{ s.status === 'APPROVED' || s.status === 'REFUSED' ? 'the customer — no staff action' : '—' }}
+              {{
+                s.status === 'APPROVED' || s.status === 'REFUSED'
+                  ? 'the customer — no staff action'
+                  : s.status === 'CANCELLED'
+                    ? 'an attendant or manager'
+                    : '—'
+              }}
             </p>
           }
         </div>
@@ -163,7 +173,8 @@ import { LIFECYCLE, type LifecycleStep, stepFor, stepIndex } from '../../core/do
       outline-color: var(--warn);
     }
 
-    .rail__tick.is-refused {
+    .rail__tick.is-refused,
+    .rail__tick.is-cancelled {
       background: var(--warn);
       border-color: var(--warn);
       color: var(--ink-inv);
@@ -189,7 +200,8 @@ import { LIFECYCLE, type LifecycleStep, stepFor, stepIndex } from '../../core/do
     }
 
     .rail--compact .rail__tick.is-here .rail__n,
-    .rail--compact .rail__tick.is-refused .rail__n {
+    .rail--compact .rail__tick.is-refused .rail__n,
+    .rail--compact .rail__tick.is-cancelled .rail__n {
       visibility: visible;
     }
 
@@ -248,7 +260,17 @@ export class StepRail {
   protected readonly here = computed(() => stepIndex(this.status()));
   protected readonly refused = computed(() => this.status() === 'REFUSED');
   protected readonly current = computed(() => stepFor(this.status()));
-  protected readonly refusedStep = computed(() => stepFor('REFUSED'));
+
+  /**
+   * The branch tick, when the order sits off the main line. CANCELLED has no
+   * fixed step to truncate at — the backend allows it from almost anywhere —
+   * so unlike REFUSED it does not shorten `steps()`; it only adds its own tick.
+   */
+  protected readonly branch = computed<LifecycleStep | null>(() => {
+    const status = this.status();
+    if (status === 'REFUSED' || status === 'CANCELLED') return stepFor(status);
+    return null;
+  });
 
   protected roleList(roles: readonly WorkerRole[]): string {
     return roles.map((r) => WORKER_ROLE_LABEL[r]).join(' or ');

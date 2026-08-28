@@ -106,6 +106,7 @@ export interface WorkOrderInfoDto {
   customerComplaint: string;
   diagnosis: string | null;
   refusalReason: string | null;
+  cancelReason: string | null;
   budgetId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -118,6 +119,7 @@ export interface WorkOrderInfoDto {
   finishedAt: string | null;
   pickupReadyAt: string | null;
   deliveredAt: string | null;
+  cancelledAt: string | null;
 }
 
 /**
@@ -136,6 +138,7 @@ export interface WorkOrderCountStatusInfoDto {
   finished: number;
   waitingPickup: number;
   delivered: number;
+  cancelled: number;
 }
 
 export interface BudgetLineInfoDto {

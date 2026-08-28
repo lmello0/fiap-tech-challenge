@@ -5,6 +5,7 @@ import com.fiap.techchallenge.history.api.representation.HistoryEntryInfo;
 import com.fiap.techchallenge.history.api.representation.HistorySnapshotInfo;
 import com.fiap.techchallenge.shared.responses.PageResponse;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
+import com.fiap.techchallenge.workorder.api.commands.CancelWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
@@ -146,6 +147,14 @@ public class WorkOrderController implements WorkOrderControllerSwaggerDoc {
     @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
     public ResponseEntity<WorkOrderInfo> delivery(UUID id) {
         WorkOrderInfo wo = service.deliver(id);
+
+        return ResponseEntity.ok(wo);
+    }
+
+    @Override
+    @PreAuthorize("hasAnyRole('ATTENDANT', 'MANAGER')")
+    public ResponseEntity<WorkOrderInfo> cancel(UUID id, CancelWorkOrderCommand command) {
+        WorkOrderInfo wo = service.cancel(id, command);
 
         return ResponseEntity.ok(wo);
     }

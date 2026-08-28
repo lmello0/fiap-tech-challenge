@@ -116,12 +116,70 @@
                 <span class="wo__reason">Reason given: “{{ o.refusalReason }}”</span>
               }
             </app-callout>
+          } @else if (o.status === 'CANCELLED') {
+            <app-callout tier="warning">
+              This work order was cancelled on {{ when(o.cancelledAt) }} and cannot be reopened.
+              @if (o.cancelReason) {
+                <span class="wo__reason">Reason given: “{{ o.cancelReason }}”</span>
+              }
+            </app-callout>
           } @else {
             <app-callout tier="note">
               This work order is complete. The vehicle was delivered on {{ when(o.deliveredAt) }}.
             </app-callout>
           }
         </div>
+
+        @if (canCancel() && !cancelling()) {
+          <div class="wo__span wo__cancel-trigger">
+            <button class="btn btn--sm btn--quiet" type="button" (click)="openCancel()">
+              Cancel work order
+            </button>
+          </div>
+        }
+
+        @if (cancelling()) {
+          <div class="wo__confirm wo__span">
+            <app-callout tier="warning">
+              <p class="wo__next-lead">
+                Cancelling ends job <span class="token">{{ o.orderCode }}</span> for good — it cannot
+                be reopened, and any parts still held in reservation for it are released.
+              </p>
+              <label class="wo__cancel-why">
+                <span class="label">Why, if you'd like to say</span>
+                <textarea
+                  class="input"
+                  rows="2"
+                  maxlength="2000"
+                  placeholder="Optional — recorded on the order."
+                  [value]="cancelReason()"
+                  (input)="onCancelReason($event)"
+                ></textarea>
+              </label>
+              @if (cancelError(); as message) {
+                <p class="wo__reason">{{ message }}</p>
+              }
+              <p class="wo__confirm-actions">
+                <button
+                  class="btn btn--danger btn--sm"
+                  type="button"
+                  [disabled]="cancelBusy()"
+                  (click)="confirmCancel()"
+                >
+                  {{ cancelBusy() ? 'Cancelling…' : 'Yes — cancel this work order' }}
+                </button>
+                <button
+                  class="btn btn--sm btn--quiet"
+                  type="button"
+                  [disabled]="cancelBusy()"
+                  (click)="closeCancel()"
+                >
+                  Never mind
+                </button>
+              </p>
+            </app-callout>
+          </div>
+        }
 
         @if (assigning()) {
           <div class="wo__span">

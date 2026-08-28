@@ -19,7 +19,7 @@ import {
 } from '../api/shop-api';
 import type { BudgetInfoDto } from '../api/dto';
 import type { WorkOrderStatus } from '../domain/enums';
-import { LIFECYCLE, nextStep, stepIndex } from '../domain/lifecycle';
+import { LIFECYCLE, isTerminal, nextStep, stepFor, stepIndex } from '../domain/lifecycle';
 import type {
   Appointment,
   Budget,
@@ -182,13 +182,11 @@ export class ShopStore {
   /** Live jobs — everything that has not left the shop. */
   readonly liveWorkOrders = computed(() =>
     this._workOrders()
-      .filter((o) => o.status !== 'DELIVERED' && o.status !== 'REFUSED')
+      .filter((o) => !isTerminal(o.status))
       .sort((a, b) => stepIndex(a.status) - stepIndex(b.status) || a.orderCode.localeCompare(b.orderCode)),
   );
 
-  readonly closedWorkOrders = computed(() =>
-    this._workOrders().filter((o) => o.status === 'DELIVERED' || o.status === 'REFUSED'),
-  );
+  readonly closedWorkOrders = computed(() => this._workOrders().filter((o) => isTerminal(o.status)));
 
   /**
    * Count per status, for the board's step filter.
@@ -702,6 +700,55 @@ export class ShopStore {
     } catch (error) {
       return { ok: false, error: describe(error) };
     }
+  }
+
+  /**
+   * Terminal, like a refusal — mirrors `WorkOrderStateMachine`'s CANCELLED
+   * transitions: allowed from anything short of WAITING_PICKUP moving on to
+   * DELIVERED. Releases any parts still held in reservation; a no-op once
+   * service has already consumed them.
+   */
+  async cancelWorkOrder(workOrderId: string, reason: string | null): Promise<StepResult> {
+    const order = this.workOrder(workOrderId);
+    if (!order) return { ok: false, error: 'Work order not found.' };
+    if (isTerminal(order.status)) {
+      return { ok: false, error: 'This work order has already reached the end of the procedure.' };
+    }
+
+    if (this._mode() === 'demo') return this.cancelWorkOrderDemo(order, reason);
+
+    try {
+      const updated = await this.api.cancelWorkOrder(workOrderId, reason);
+      this.applyWorkOrder(toWorkOrder(updated));
+      await Promise.all([this.refreshBlocks(), this.refreshParts(), this.refreshSummary()]);
+      await this.loadHistory(workOrderId);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: describe(error) };
+    }
+  }
+
+  private cancelWorkOrderDemo(order: WorkOrder, reason: string | null): StepResult {
+    // Once service has started, reservations are already consumed (see
+    // `consumeReservedStockDemo`) — nothing to release for those statuses.
+    const stillReserved = order.status !== 'IN_PROGRESS' && order.status !== 'FINISHED' && order.status !== 'WAITING_PICKUP';
+    if (stillReserved) {
+      const budget = this.budget(order.budgetId);
+      for (const line of budget?.lines ?? []) {
+        if (line.partId) this.reserveDemo(line.partId, -line.quantity);
+      }
+    }
+
+    const stamp = new Date().toISOString();
+    this._workOrders.update((orders) =>
+      orders.map((o) =>
+        o.id === order.id
+          ? { ...o, status: 'CANCELLED', cancelReason: reason, cancelledAt: stamp, updatedAt: stamp }
+          : o,
+      ),
+    );
+    this.recordDemo(order.id, 'CANCELLED', stamp);
+    return { ok: true };
   }
 
   /**
@@ -1433,7 +1480,7 @@ export class ShopStore {
   }
 
   private recordDemo(workOrderId: string, target: WorkOrderStatus, occurredAt: string): void {
-    const step = LIFECYCLE.find((s) => s.status === target);
+    const step = LIFECYCLE.find((s) => s.status === target) ?? stepFor(target);
     this._history.update((h) => ({
       ...h,
       [workOrderId]: [

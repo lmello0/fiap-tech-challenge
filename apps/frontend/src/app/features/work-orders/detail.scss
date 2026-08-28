@@ -193,6 +193,24 @@
   flex-wrap: wrap;
 }
 
+.wo__cancel-trigger {
+  margin-top: 0.6rem;
+}
+
+.wo__cancel-why {
+  display: block;
+  margin-top: 0.6rem;
+}
+
+.wo__cancel-why .label {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.wo__cancel-why textarea {
+  width: 100%;
+}
+
 /* --- columns -------------------------------------------------------------- */
 
 .wo__cols {

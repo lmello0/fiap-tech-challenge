@@ -51,7 +51,7 @@ class WorkOrderStateMachineTest {
     @Test
     void allowedNextListsEveryDeclaredTransition() {
         assertThat(stateMachine.allowedNext(WorkOrderStatus.WAITING_APPROVAL))
-                .containsExactlyInAnyOrder(WorkOrderStatus.APPROVED, WorkOrderStatus.REFUSED);
+                .containsExactlyInAnyOrder(WorkOrderStatus.APPROVED, WorkOrderStatus.REFUSED, WorkOrderStatus.CANCELLED);
 
         assertThat(stateMachine.allowedNext(WorkOrderStatus.DELIVERED)).isEmpty();
     }
@@ -60,6 +60,26 @@ class WorkOrderStateMachineTest {
     void onlyDeliveredIsTerminal() {
         assertThat(stateMachine.isTerminal(WorkOrderStatus.DELIVERED)).isTrue();
         assertThat(stateMachine.isTerminal(WorkOrderStatus.RECEIVED)).isFalse();
+    }
+
+    @Test
+    void cancellableFromEarlyAndLateStatusesAlike() {
+        assertThat(stateMachine.transition(WorkOrderStatus.RECEIVED, WorkOrderStatus.CANCELLED))
+                .isEqualTo(WorkOrderStatus.CANCELLED);
+        assertThat(stateMachine.transition(WorkOrderStatus.WAITING_PICKUP, WorkOrderStatus.CANCELLED))
+                .isEqualTo(WorkOrderStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelledIsTerminalAndUnreachableFromDeliveredOrRefused() {
+        assertThat(stateMachine.isTerminal(WorkOrderStatus.CANCELLED)).isTrue();
+
+        assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.DELIVERED, WorkOrderStatus.CANCELLED))
+                .isInstanceOf(IllegalWorkOrderTransitionException.class);
+        assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.REFUSED, WorkOrderStatus.CANCELLED))
+                .isInstanceOf(IllegalWorkOrderTransitionException.class);
+        assertThatThrownBy(() -> stateMachine.transition(WorkOrderStatus.CANCELLED, WorkOrderStatus.RECEIVED))
+                .isInstanceOf(IllegalWorkOrderTransitionException.class);
     }
 
     @Test

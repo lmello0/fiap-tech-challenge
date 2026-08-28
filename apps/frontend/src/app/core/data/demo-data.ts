@@ -282,6 +282,7 @@ const wo = (
     customerComplaint: complaint,
     diagnosis: null,
     refusalReason: null,
+    cancelReason: null,
     budgetId: null,
     createdAt: day(-createdDaysAgo, 8, 30),
     updatedAt: day(-createdDaysAgo + 1, 10),
@@ -294,6 +295,7 @@ const wo = (
     finishedAt: null,
     pickupReadyAt: null,
     deliveredAt: null,
+    cancelledAt: null,
     ...extra,
   };
 };

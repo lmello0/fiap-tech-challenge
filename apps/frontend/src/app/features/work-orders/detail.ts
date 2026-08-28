@@ -10,7 +10,7 @@ import {
   UOM_ABBR,
   WORKER_ROLE_LABEL,
 } from '../../core/domain/enums';
-import { type LifecycleStep, mayAdvance, nextStep, stepFor } from '../../core/domain/lifecycle';
+import { type LifecycleStep, mayAdvance, mayCancel, nextStep, stepFor } from '../../core/domain/lifecycle';
 import type { BudgetLine } from '../../core/domain/models';
 import { StepRail } from '../../shared/ui/step-rail';
 import { StatusMark } from '../../shared/ui/status-mark';
@@ -111,6 +111,47 @@ export class WorkOrderDetail {
     if (this.block().blocked && this.next()?.status === 'IN_PROGRESS') return false;
     return mayAdvance(o.status, this.session.role());
   });
+
+  protected readonly canCancel = computed(() => {
+    const o = this.order();
+    return o ? mayCancel(o.status, this.session.role()) : false;
+  });
+
+  protected readonly cancelling = signal(false);
+  protected readonly cancelReason = signal('');
+  protected readonly cancelBusy = signal(false);
+  protected readonly cancelError = signal<string | null>(null);
+
+  protected openCancel(): void {
+    this.cancelReason.set('');
+    this.cancelError.set(null);
+    this.cancelling.set(true);
+  }
+
+  protected closeCancel(): void {
+    this.cancelling.set(false);
+    this.cancelError.set(null);
+  }
+
+  protected onCancelReason(event: Event): void {
+    this.cancelReason.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected async confirmCancel(): Promise<void> {
+    const o = this.order();
+    if (!o) return;
+    this.cancelBusy.set(true);
+    this.cancelError.set(null);
+    const result = await this.store.cancelWorkOrder(o.id, this.cancelReason().trim() || null);
+    this.cancelBusy.set(false);
+    if (!result.ok) {
+      this.cancelError.set(result.error ?? 'This work order could not be cancelled.');
+      return;
+    }
+    this.cancelling.set(false);
+    this.toast.set({ tone: 'ok', text: 'Work order cancelled.' });
+    setTimeout(() => this.toast.set(null), 7000);
+  }
 
   /** A draft budget is the only editable one. Sending freezes it for good. */
   protected readonly editable = computed(() => {
@@ -261,6 +302,7 @@ export class WorkOrderDetail {
     const span = days === 0 ? 'same day' : `${days}d`;
     if (o.status === 'DELIVERED') return `Closed in ${span}`;
     if (o.status === 'REFUSED') return `Refused after ${span}`;
+    if (o.status === 'CANCELLED') return `Cancelled after ${span}`;
     return days === 0 ? 'In shop today' : `In shop ${span}`;
   }
 

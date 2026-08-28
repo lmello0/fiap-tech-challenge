@@ -135,6 +135,7 @@ export function toStatusCounts(dto: WorkOrderCountStatusInfoDto): Map<WorkOrderS
     ['FINISHED', dto.finished],
     ['WAITING_PICKUP', dto.waitingPickup],
     ['DELIVERED', dto.delivered],
+    ['CANCELLED', dto.cancelled],
   ]);
 }
 
@@ -312,6 +313,7 @@ const EVENT_SUMMARY: Record<string, string> = {
   WORK_ORDER_DIAGNOSTICS_STARTED: 'Diagnostics started',
   WORK_ORDER_APPROVED: 'Budget approved by the customer',
   WORK_ORDER_REFUSED: 'Budget refused by the customer',
+  WORK_ORDER_CANCELLED: 'Work order cancelled',
   WORK_ORDER_IN_PROGRESS: 'Service started — reserved stock consumed',
   WORK_ORDER_FINISHED: 'Service finished',
   WORK_ORDER_WAITING_PICKUP: 'Marked ready for pickup',

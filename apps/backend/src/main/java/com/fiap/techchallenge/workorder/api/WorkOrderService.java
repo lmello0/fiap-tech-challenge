@@ -1,5 +1,6 @@
 package com.fiap.techchallenge.workorder.api;
 
+import com.fiap.techchallenge.workorder.api.commands.CancelWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
@@ -54,4 +55,7 @@ public interface WorkOrderService {
     WorkOrderInfo waitingPickup(UUID id);
 
     WorkOrderInfo deliver(UUID id);
+
+    /** Cancellable from any status before WAITING_PICKUP/DELIVERED/REFUSED/CANCELLED (see WorkOrderStateMachine). */
+    WorkOrderInfo cancel(UUID id, CancelWorkOrderCommand command);
 }

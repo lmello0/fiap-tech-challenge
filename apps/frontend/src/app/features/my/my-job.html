@@ -13,7 +13,11 @@
       <p class="gs__sub">
         <app-status-mark [status]="job.status" />
         <span class="job__where">
-          Step <span class="token">{{ here()?.n }}</span> of 10 — {{ here()?.title }}
+          @if (branched()) {
+            Branch — {{ here()?.title }}
+          } @else {
+            Step <span class="token">{{ here()?.n }}</span> of 10 — {{ here()?.title }}
+          }
         </span>
       </p>
     </div>
@@ -169,6 +173,10 @@
               <app-callout tier="warning" heading="You refused this price">
                 The job ended here. Booking the car in again starts a new one from step 1.
               </app-callout>
+            } @else if (job.status === 'CANCELLED') {
+              <app-callout tier="warning" heading="The shop cancelled this job">
+                It cannot be reopened. Call the counter if you still need the work done.
+              </app-callout>
             } @else if (budget.status === 'APPROVED') {
               <app-callout tier="note" heading="You approved this price">
                 What you see above is what the shop is authorised to do, and no more.
@@ -186,13 +194,19 @@
             <p class="plate__title">2.3 — The price</p>
           </div>
           <div class="plate__body">
-            <div class="empty">
-              <p class="empty__title">No price yet.</p>
-              <p>
-                A mechanic has to look at the car before anything can be costed. You'll get an email
-                the moment there is a price to read.
-              </p>
-            </div>
+            @if (job.status === 'CANCELLED') {
+              <app-callout tier="warning" heading="The shop cancelled this job">
+                It cannot be reopened. Call the counter if you still need the work done.
+              </app-callout>
+            } @else {
+              <div class="empty">
+                <p class="empty__title">No price yet.</p>
+                <p>
+                  A mechanic has to look at the car before anything can be costed. You'll get an
+                  email the moment there is a price to read.
+                </p>
+              </div>
+            }
           </div>
         </section>
       }
@@ -238,15 +252,15 @@
           @for (s of procedure; track s.status) {
             <li
               class="rail__step"
-              [class.is-done]="!refused() && s.n < (here()?.n ?? 0)"
-              [class.is-here]="!refused() && s.n === here()?.n"
+              [class.is-done]="!branched() && s.n < (here()?.n ?? 0)"
+              [class.is-here]="!branched() && s.n === here()?.n"
               [class.is-yours]="s.waitsOnYou"
-              [attr.aria-current]="!refused() && s.n === here()?.n ? 'step' : null"
+              [attr.aria-current]="!branched() && s.n === here()?.n ? 'step' : null"
             >
               <span class="rail__tick token" aria-hidden="true">{{ s.n }}</span>
               <span class="rail__text">
                 <span class="rail__title">{{ s.title }}</span>
-                @if (!refused() && s.n === here()?.n) {
+                @if (!branched() && s.n === here()?.n) {
                   <span class="rail__line">{{ s.line }}</span>
                 }
               </span>
@@ -258,6 +272,15 @@
               <span class="rail__text">
                 <span class="rail__title">Budget refused</span>
                 <span class="rail__line">{{ step('REFUSED').line }}</span>
+              </span>
+            </li>
+          }
+          @if (cancelled()) {
+            <li class="rail__step rail__step--refused" aria-current="step">
+              <span class="rail__tick token" aria-hidden="true">×</span>
+              <span class="rail__text">
+                <span class="rail__title">Work order cancelled</span>
+                <span class="rail__line">{{ step('CANCELLED').line }}</span>
               </span>
             </li>
           }

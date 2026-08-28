@@ -181,9 +181,24 @@ export const REFUSED_STEP: LifecycleStep = {
   waitingOn: undefined,
 };
 
+/**
+ * The other branch off the main line. Unlike REFUSED, cancellation has no fixed
+ * position — the backend allows it from any status before WAITING_PICKUP is left
+ * behind (see `WorkOrderStateMachine`), so `n` is left at 0 rather than claiming
+ * a step it did not necessarily pass through.
+ */
+export const CANCELLED_STEP: LifecycleStep = {
+  n: 0,
+  status: 'CANCELLED',
+  title: 'Cancelled',
+  precondition: 'A staff member cancelled this work order. This ends the job — it cannot be reopened.',
+  waitingOn: undefined,
+};
+
 const BY_STATUS = new Map<WorkOrderStatus, LifecycleStep>([
   ...LIFECYCLE.map((s) => [s.status, s] as const),
   ['REFUSED', REFUSED_STEP] as const,
+  ['CANCELLED', CANCELLED_STEP] as const,
 ]);
 
 export function stepFor(status: WorkOrderStatus): LifecycleStep {
@@ -196,7 +211,7 @@ export function stepIndex(status: WorkOrderStatus): number {
 }
 
 export function isTerminal(status: WorkOrderStatus): boolean {
-  return status === 'REFUSED' || status === 'DELIVERED';
+  return status === 'REFUSED' || status === 'DELIVERED' || status === 'CANCELLED';
 }
 
 /** The step an order would move to next, or null at a terminal or waiting state. */
@@ -214,4 +229,17 @@ export function mayAdvance(status: WorkOrderStatus, role: WorkerRole | null): bo
   const next = nextStep(status);
   if (!next?.action || !role) return false;
   return next.action.roles.includes(role);
+}
+
+/** Roles the backend accepts on `POST /work-orders/{id}/cancel`. */
+export const CANCEL_ROLES: readonly WorkerRole[] = ['ATTENDANT', 'MANAGER'];
+
+/**
+ * Whether this role may cancel an order sitting at `status`. Mirrors
+ * `WorkOrderStateMachine`'s CANCELLED transitions: allowed from anything not
+ * already terminal and not already ready for pickup or beyond.
+ */
+export function mayCancel(status: WorkOrderStatus, role: WorkerRole | null): boolean {
+  if (!role || isTerminal(status)) return false;
+  return CANCEL_ROLES.includes(role);
 }

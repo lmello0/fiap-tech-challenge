@@ -13,6 +13,7 @@ import com.fiap.techchallenge.vehicle.api.VehicleService;
 import com.fiap.techchallenge.vehicle.api.representation.VehicleInfo;
 import com.fiap.techchallenge.workorder.api.WorkOrderService;
 import com.fiap.techchallenge.workorder.api.commands.AddBudgetLineCommand;
+import com.fiap.techchallenge.workorder.api.commands.CancelWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.CreateWorkOrderCommand;
 import com.fiap.techchallenge.workorder.api.commands.FinishDiagnosticsCommand;
 import com.fiap.techchallenge.workorder.api.commands.StartDiagnosticsCommand;
@@ -349,6 +350,27 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         events.publishEvent(new WorkOrderDeliveredEvent(
                 wo.getId(), wo.getCustomerId(), actorResolver.forCurrentUser(true), snapshot(wo)));
+
+        return woMapper.toInfo(wo);
+    }
+
+    @Transactional
+    public WorkOrderInfo cancel(UUID workOrderId, CancelWorkOrderCommand command) {
+        WorkOrder wo = load(workOrderId);
+
+        String reason = command != null ? command.reason() : null;
+
+        wo.setStatus(stateMachine.transition(wo.getStatus(), WorkOrderStatus.CANCELLED));
+        wo.setCancelReason(reason);
+        wo.setCancelledAt(Instant.now());
+
+        // Mirrors the refusal flow: a cancellation moves no metal, so every reservation the work
+        // order held is returned to availability. A no-op once parts have already been consumed
+        // (service already started) or nothing was ever reserved.
+        partReservationService.releaseForWorkOrder(wo.getId());
+
+        events.publishEvent(new WorkOrderCancelledEvent(
+                wo.getId(), wo.getCustomerId(), reason, actorResolver.forCurrentUser(true), snapshot(wo)));
 
         return woMapper.toInfo(wo);
     }

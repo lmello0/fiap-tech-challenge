@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TokenStore } from '../auth/token-store';
-import type { ProblemDetailDto } from './dto';
+import type { ProblemDetailDto, TokenResponseDto } from './dto';
 
 /**
  * Where the API lives, as the browser sees it.
@@ -80,6 +80,22 @@ export class ApiClient {
   private readonly http = inject(HttpClient);
   private readonly tokens = inject(TokenStore);
 
+  /**
+   * The one refresh attempt every concurrent caller shares. The backend
+   * rotates the refresh token on each use and treats a second use of a spent
+   * one as theft — revoking every session for the account — so two 401s must
+   * never fire two refreshes. They await this and then replay against whatever
+   * it left in the store.
+   */
+  private refreshInFlight: Promise<boolean> | null = null;
+
+  /** Session registers here so a dead refresh token can unwind the app state. */
+  private authExpired: (() => void) | null = null;
+
+  onAuthExpired(handler: () => void): void {
+    this.authExpired = handler;
+  }
+
   get<T>(path: string, query?: Record<string, QueryValue>): Promise<T> {
     return this.send<T>('GET', path, undefined, query);
   }
@@ -106,8 +122,6 @@ export class ApiClient {
     body?: unknown,
     query?: Record<string, QueryValue>,
   ): Promise<T> {
-    const token = this.tokens.accessToken();
-
     // A request that cannot possibly succeed without a token is refused here
     // rather than sent. This closes a whole class of races: an in-flight read
     // that resolves just as the operator signs out would otherwise issue its
@@ -116,21 +130,74 @@ export class ApiClient {
     // It must not close the door on the endpoints that genuinely take no
     // token — the public landing page reads open slots and files a guest
     // booking with nobody signed in at all.
-    if (!token && !isPublic(method, path)) {
-      throw new ApiError(401, 'This session is no longer signed in.', null, null);
+    if (!this.tokens.accessToken() && !isPublic(method, path)) {
+      // No access token in hand. If a refresh token is, spend it before giving
+      // up — a reloaded tab whose access token has aged out still holds a live
+      // refresh token and should come back without a trip to the sign-in screen.
+      if (!(await this.tryRefresh())) {
+        throw new ApiError(401, 'This session is no longer signed in.', null, null);
+      }
     }
 
     try {
-      return await firstValueFrom(
-        this.http.request<T>(method, `${API_BASE}${path}`, {
-          body,
-          params: toParams(query),
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          responseType: 'json',
-        }),
-      );
+      return await this.dispatch<T>(method, path, body, query);
     } catch (error) {
-      throw toApiError(error);
+      const failure = toApiError(error);
+
+      // A 401 from the API itself means the access token was rejected
+      // mid-session. Refresh once and replay the request; a second 401, or a
+      // refresh that fails, is the real answer.
+      if (failure.status === 401 && path !== '/auth/refresh-token' && (await this.tryRefresh())) {
+        try {
+          return await this.dispatch<T>(method, path, body, query);
+        } catch (retryError) {
+          throw toApiError(retryError);
+        }
+      }
+      throw failure;
+    }
+  }
+
+  private dispatch<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    query?: Record<string, QueryValue>,
+  ): Promise<T> {
+    const token = this.tokens.accessToken();
+    return firstValueFrom(
+      this.http.request<T>(method, `${API_BASE}${path}`, {
+        body,
+        params: toParams(query),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        responseType: 'json',
+      }),
+    );
+  }
+
+  /** Trade the refresh token for a fresh pair, at most one attempt at a time. */
+  private tryRefresh(): Promise<boolean> {
+    this.refreshInFlight ??= this.refreshOnce().finally(() => {
+      this.refreshInFlight = null;
+    });
+    return this.refreshInFlight;
+  }
+
+  private async refreshOnce(): Promise<boolean> {
+    const refreshToken = this.tokens.refreshToken();
+    if (!refreshToken) return false;
+    try {
+      const pair = await firstValueFrom(
+        this.http.post<TokenResponseDto>(`${API_BASE}/auth/refresh-token`, { refreshToken }),
+      );
+      this.tokens.set(pair.accessToken, pair.refreshToken);
+      return true;
+    } catch {
+      // The refresh token is spent, revoked or expired. Drop the pair so the
+      // next guarded call fails fast, and let the session tear itself down.
+      this.tokens.clear();
+      this.authExpired?.();
+      return false;
     }
   }
 }
@@ -163,6 +230,9 @@ const PUBLIC: Readonly<Record<string, readonly string[]>> = {
     '/appointments/guest/cancel',
     '/appointments/guest/reschedule',
     '/appointments/guest/complete-registration',
+    '/budgets/decision/view',
+    '/budgets/decision/approval',
+    '/budgets/decision/refusal',
   ],
   GET: ['/appointments/availability'],
 };

@@ -60,7 +60,7 @@ const LIVE_STATUSES: WorkOrderStatus[] = [
   'WAITING_PICKUP',
 ];
 
-const CLOSED_STATUSES: WorkOrderStatus[] = ['DELIVERED', 'REFUSED'];
+const CLOSED_STATUSES: WorkOrderStatus[] = ['DELIVERED', 'REFUSED', 'CANCELLED'];
 
 export interface BoardRow {
   order: WorkOrder;
@@ -154,6 +154,7 @@ export class WorkOrderBoard {
     const counts = this.store.statusCounts();
     return LIFECYCLE.map((s) => ({ status: s.status, title: s.title, count: counts.get(s.status) ?? 0 })).concat([
       { status: 'REFUSED' as WorkOrderStatus, title: 'Refused', count: counts.get('REFUSED') ?? 0 },
+      { status: 'CANCELLED' as WorkOrderStatus, title: 'Cancelled', count: counts.get('CANCELLED') ?? 0 },
     ]);
   });
 
