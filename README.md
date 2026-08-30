@@ -1,12 +1,9 @@
-# Auto Repair Shop
-
-## FIAP - Pos Tech
-## Software Architecture
-## Tech Challenge - Fase 1
+# Auto Repair Shop 
+## Tech Challenge - Fase 1 | Pos-Tech FIAP | Software Architecture
 
 ---
 
-Event Storming: [Miro](https://miro.com/app/board/uXjVH6Q299o=/?share_link_id=234351769480)
+Event Storming: [Miro](https://miro.com/app/board/uXjVH9wTsBg=/?share_link_id=625997029412)
 
 ## Visão geral
 
