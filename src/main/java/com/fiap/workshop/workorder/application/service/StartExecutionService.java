@@ -20,7 +20,7 @@ class StartExecutionService implements StartExecutionUseCase {
 	@Override
 	@Transactional
 	public void execute(UUID workOrderId, UUID budgetId) {
-		WorkOrder workOrder = support.load(workOrderId);
+		WorkOrder workOrder = support.loadForUpdate(workOrderId);
 		boolean waiting = workOrder.awaitingStock() || workOrder.status() == WorkOrderStatus.WAITING_PARTS;
 		if (!workOrder.isLastBudget(budgetId) || !waiting) {
 			return;

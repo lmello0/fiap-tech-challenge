@@ -25,6 +25,10 @@ class WorkOrderSupport {
 		return workOrders.findById(id).orElseThrow(() -> new NotFoundException("Work order " + id + " not found"));
 	}
 
+	WorkOrder loadForUpdate(UUID id) {
+		return workOrders.findByIdForUpdate(id).orElseThrow(() -> new NotFoundException("Work order " + id + " not found"));
+	}
+
 	WorkOrder loadOwned(UUID id, UUID customerScope) {
 		WorkOrder workOrder = load(id);
 		if (customerScope != null && !workOrder.customer().id().equals(customerScope)) {

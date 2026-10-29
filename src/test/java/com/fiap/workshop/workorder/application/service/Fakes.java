@@ -40,6 +40,11 @@ final class Fakes {
 		}
 
 		@Override
+		public Optional<WorkOrder> findByIdForUpdate(UUID id) {
+			return findById(id);
+		}
+
+		@Override
 		public boolean existsActiveForVehicle(UUID vehicleId) {
 			return store.values().stream().anyMatch(w -> w.vehicle().id().equals(vehicleId) && !w.status().terminal());
 		}

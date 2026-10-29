@@ -15,6 +15,8 @@ public interface WorkOrderRepository {
 
 	Optional<WorkOrder> findById(UUID id);
 
+	Optional<WorkOrder> findByIdForUpdate(UUID id);
+
 	boolean existsActiveForVehicle(UUID vehicleId);
 
 	List<WorkOrder> findActiveByCustomerId(UUID customerId);

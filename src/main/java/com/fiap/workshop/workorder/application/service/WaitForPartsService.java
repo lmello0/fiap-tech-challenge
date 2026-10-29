@@ -19,7 +19,7 @@ class WaitForPartsService implements WaitForPartsUseCase {
 	@Override
 	@Transactional
 	public void execute(UUID workOrderId, UUID budgetId) {
-		WorkOrder workOrder = support.load(workOrderId);
+		WorkOrder workOrder = support.loadForUpdate(workOrderId);
 		if (!workOrder.isLastBudget(budgetId) || !workOrder.awaitingStock()) {
 			return;
 		}

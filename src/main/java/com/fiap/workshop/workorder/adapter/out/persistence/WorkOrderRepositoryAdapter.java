@@ -43,18 +43,24 @@ class WorkOrderRepositoryAdapter implements WorkOrderRepository {
 	}
 
 	@Override
+	public Optional<WorkOrder> findByIdForUpdate(UUID id) {
+		jpa.lockById(id);
+		return findById(id);
+	}
+
+	@Override
 	public boolean existsActiveForVehicle(UUID vehicleId) {
 		return jpa.existsByVehicleIdAndStatusNotIn(vehicleId, FINISHED);
 	}
 
 	@Override
 	public List<WorkOrder> findActiveByCustomerId(UUID customerId) {
-		return jpa.findByCustomerIdAndStatusNotIn(customerId, FINISHED).stream().map(WorkOrderMapper::toDomain).toList();
+		return jpa.findByCustomerIdAndStatusNotInOrderById(customerId, FINISHED).stream().map(WorkOrderMapper::toDomain).toList();
 	}
 
 	@Override
 	public List<WorkOrder> findActiveByVehicleId(UUID vehicleId) {
-		return jpa.findByVehicleIdAndStatusNotIn(vehicleId, FINISHED).stream().map(WorkOrderMapper::toDomain).toList();
+		return jpa.findByVehicleIdAndStatusNotInOrderById(vehicleId, FINISHED).stream().map(WorkOrderMapper::toDomain).toList();
 	}
 
 	@Override
