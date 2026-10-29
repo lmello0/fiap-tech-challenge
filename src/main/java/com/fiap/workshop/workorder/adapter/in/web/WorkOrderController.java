@@ -11,6 +11,7 @@ import com.fiap.workshop.workorder.application.port.in.ChangeItemQuantityUseCase
 import com.fiap.workshop.workorder.application.port.in.CompleteDiagnosisUseCase;
 import com.fiap.workshop.workorder.application.port.in.CompleteWorkOrderUseCase;
 import com.fiap.workshop.workorder.application.port.in.DeliverWorkOrderUseCase;
+import com.fiap.workshop.workorder.application.port.in.GetWorkOrderMetricsUseCase;
 import com.fiap.workshop.workorder.application.port.in.GetWorkOrderUseCase;
 import com.fiap.workshop.workorder.application.port.in.ListWorkOrdersUseCase;
 import com.fiap.workshop.workorder.application.port.in.OpenWorkOrderUseCase;
@@ -55,13 +56,14 @@ class WorkOrderController {
 	private final CompleteWorkOrderUseCase complete;
 	private final DeliverWorkOrderUseCase deliver;
 	private final CancelWorkOrderUseCase cancel;
+	private final GetWorkOrderMetricsUseCase metrics;
 	private final CurrentActor currentActor;
 
 	WorkOrderController(OpenWorkOrderUseCase open, GetWorkOrderUseCase get, ListWorkOrdersUseCase list, AddItemUseCase addItem,
 			ChangeItemQuantityUseCase changeQuantity, RemoveItemUseCase removeItem, StartDiagnosisUseCase startDiagnosis,
 			CompleteDiagnosisUseCase completeDiagnosis, ProposeAdditionalBudgetUseCase additionalBudget, ApproveBudgetUseCase approve,
 			RejectBudgetUseCase reject, CompleteWorkOrderUseCase complete, DeliverWorkOrderUseCase deliver,
-			CancelWorkOrderUseCase cancel, CurrentActor currentActor) {
+			CancelWorkOrderUseCase cancel, GetWorkOrderMetricsUseCase metrics, CurrentActor currentActor) {
 		this.open = open;
 		this.get = get;
 		this.list = list;
@@ -76,6 +78,7 @@ class WorkOrderController {
 		this.complete = complete;
 		this.deliver = deliver;
 		this.cancel = cancel;
+		this.metrics = metrics;
 		this.currentActor = currentActor;
 	}
 
@@ -95,6 +98,13 @@ class WorkOrderController {
 			@RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
 		return PageResponse.of(list.execute(new WorkOrderFilter(customerId, status, number, plate), new PageQuery(page, size)),
 				WorkOrderSummaryResponse::from);
+	}
+
+	@GetMapping("/metrics")
+	@PreAuthorize(Access.STAFF_READ)
+	WorkOrderMetricsResponse metrics(@RequestParam(required = false) java.time.Instant from,
+			@RequestParam(required = false) java.time.Instant to) {
+		return WorkOrderMetricsResponse.from(metrics.execute(from, to));
 	}
 
 	@GetMapping("/{id}")
