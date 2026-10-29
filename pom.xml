@@ -285,6 +285,15 @@
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>${dependency-check.version}</version>
+				<configuration>
+					<suppressionFiles>
+						<suppressionFile>config/dependency-check-suppressions.xml</suppressionFile>
+					</suppressionFiles>
+					<formats>
+						<format>HTML</format>
+						<format>JSON</format>
+					</formats>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

@@ -52,6 +52,7 @@ management:
 
 springdoc:
   swagger-ui:
+    enabled: ${SWAGGER_UI_ENABLED:true}
     oauth:
       client-id: workshop-swagger
       use-pkce-with-authorization-code-grant: true

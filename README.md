@@ -98,7 +98,7 @@ Todas as mudanças são feitas pelas ações do sistema e registradas com o auto
 - Os testes de arquitetura (`ModularityTest`, `LayeringTest`) impedem que um módulo acesse o interior de outro e que o domínio dependa de framework.
 - Os testes de integração precisam do Docker (Postgres, Keycloak e Mailpit sobem via Testcontainers).
 
-Análise de vulnerabilidades: [docs/relatorio-vulnerabilidades.md](docs/relatorio-vulnerabilidades.md).
+Análise de vulnerabilidades (Dependency-Check e Trivy): [docs/relatorio-vulnerabilidades.md](docs/relatorio-vulnerabilidades.md). Em produção, desligue o Swagger UI com `SWAGGER_UI_ENABLED=false`.
 
 ## Estrutura do projeto
 
