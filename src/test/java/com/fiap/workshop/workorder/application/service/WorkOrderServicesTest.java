@@ -24,8 +24,10 @@ import com.fiap.workshop.workorder.application.port.in.ItemRequest;
 import com.fiap.workshop.workorder.application.port.in.OpenWorkOrderUseCase;
 import com.fiap.workshop.workorder.application.port.in.ProposeAdditionalBudgetUseCase;
 import com.fiap.workshop.workorder.application.port.in.RejectBudgetUseCase;
-import com.fiap.workshop.workorder.application.port.out.CustomerLookup.CustomerInfo;
-import com.fiap.workshop.workorder.application.port.out.CustomerLookup.VehicleInfo;
+import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.CustomerDetails;
+import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.CustomerInfo;
+import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.VehicleDetails;
+import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.VehicleInfo;
 import com.fiap.workshop.workorder.application.port.out.ItemCatalog.ItemInfo;
 import com.fiap.workshop.workorder.application.port.out.WorkOrderRepository.WorkOrderFilter;
 import com.fiap.workshop.workorder.domain.BudgetStatus;
@@ -79,8 +81,8 @@ class WorkOrderServicesTest {
 
 	@BeforeEach
 	void setUp() {
-		ana = new CustomerInfo(UUID.randomUUID(), "Ana Souza", "52998224725", "ana@example.com", true);
-		argo = new VehicleInfo(UUID.randomUUID(), ana.id(), "ABC1D23", "Fiat", "Argo", 2022, true);
+		ana = new CustomerInfo(UUID.randomUUID(), "Ana Souza", "52998224725", "ana@example.com");
+		argo = new VehicleInfo(UUID.randomUUID(), ana.id(), "ABC1D23", "Fiat", "Argo", 2022);
 		customers.byDocument.put(ana.document(), ana);
 		customers.byPlate.put(argo.plate(), argo);
 		oilChange = catalog.add(ItemType.SERVICE, "Oil change", "150", true);
@@ -88,7 +90,15 @@ class WorkOrderServicesTest {
 	}
 
 	private WorkOrder openOrder(ItemRequest... items) {
-		return open.execute(new OpenWorkOrderUseCase.Command(ana.document(), argo.plate(), "noise", List.of(items), ATTENDANT));
+		return open.execute(new OpenWorkOrderUseCase.Command(anaDetails(), argoDetails(), "noise", List.of(items), ATTENDANT));
+	}
+
+	private CustomerDetails anaDetails() {
+		return new CustomerDetails(ana.document(), ana.name(), ana.email(), null);
+	}
+
+	private VehicleDetails argoDetails() {
+		return new VehicleDetails(argo.plate(), argo.brand(), argo.model(), argo.year());
 	}
 
 	private ItemRequest service(int quantity) {
@@ -136,24 +146,42 @@ class WorkOrderServicesTest {
 	}
 
 	@Test
-	void refusesToOpenForUnknownOrInactiveCustomerOrVehicle() {
-		assertThatThrownBy(() -> open.execute(new OpenWorkOrderUseCase.Command("11144477735", argo.plate(), null, List.of(), ATTENDANT)))
-				.isInstanceOf(NotFoundException.class);
-		assertThatThrownBy(() -> open.execute(new OpenWorkOrderUseCase.Command(ana.document(), "ZZZ9999", null, List.of(), ATTENDANT)))
-				.isInstanceOf(NotFoundException.class);
+	void registersTheCustomerAndTheVehicleWhenTheyDoNotExistYet() {
+		WorkOrder wo = open.execute(new OpenWorkOrderUseCase.Command(new CustomerDetails("11144477735", "Bruno Lima", "bruno@example.com", "11999"),
+				new VehicleDetails("QWE4R56", "Chevrolet", "Onix", 2020), null, List.of(), ATTENDANT));
 
-		customers.byDocument.put(ana.document(), new CustomerInfo(ana.id(), ana.name(), ana.document(), ana.email(), false));
+		assertThat(wo.customer().name()).isEqualTo("Bruno Lima");
+		assertThat(wo.customer().email()).isEqualTo("bruno@example.com");
+		assertThat(wo.vehicle().plate()).isEqualTo("QWE4R56");
+		assertThat(customers.byDocument).containsKey("11144477735");
+		assertThat(customers.byPlate.get("QWE4R56").customerId()).isEqualTo(wo.customer().id());
+	}
+
+	@Test
+	void keepsTheExistingCustomerAndVehicleDataInsteadOfOverwritingIt() {
+		WorkOrder wo = open.execute(new OpenWorkOrderUseCase.Command(new CustomerDetails(ana.document(), "Another Name", "other@example.com", null),
+				new VehicleDetails(argo.plate(), "Ford", "Ka", 2010), null, List.of(), ATTENDANT));
+
+		assertThat(wo.customer().id()).isEqualTo(ana.id());
+		assertThat(wo.customer().name()).isEqualTo("Ana Souza");
+		assertThat(wo.vehicle().id()).isEqualTo(argo.id());
+		assertThat(wo.vehicle().model()).isEqualTo("Argo");
+	}
+
+	@Test
+	void refusesADeactivatedCustomerOrVehicle() {
+		customers.inactiveCustomers.add(ana.id());
 		assertThatThrownBy(this::openOrder).isInstanceOf(DomainException.class).hasMessageContaining("deactivated");
 
-		customers.byDocument.put(ana.document(), ana);
-		customers.byPlate.put(argo.plate(), new VehicleInfo(argo.id(), ana.id(), argo.plate(), "Fiat", "Argo", 2022, false));
+		customers.inactiveCustomers.clear();
+		customers.inactiveVehicles.add(argo.id());
 		assertThatThrownBy(this::openOrder).isInstanceOf(DomainException.class).hasMessageContaining("deactivated");
 		assertThat(repository.store).isEmpty();
 	}
 
 	@Test
 	void refusesAVehicleThatBelongsToSomeoneElse() {
-		customers.byPlate.put(argo.plate(), new VehicleInfo(argo.id(), UUID.randomUUID(), argo.plate(), "Fiat", "Argo", 2022, true));
+		customers.byPlate.put(argo.plate(), new VehicleInfo(argo.id(), UUID.randomUUID(), argo.plate(), "Fiat", "Argo", 2022));
 
 		assertThatThrownBy(this::openOrder).isInstanceOf(DomainException.class).hasMessageContaining("does not belong");
 	}

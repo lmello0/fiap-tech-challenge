@@ -58,11 +58,11 @@ class CustomerQueriesService implements CustomerQueries {
 		}
 	}
 
-	private static CustomerView view(Customer c) {
+	static CustomerView view(Customer c) {
 		return new CustomerView(c.id(), c.name(), c.document().value(), c.email().value(), c.phone(), c.active());
 	}
 
-	private static VehicleView view(Vehicle v) {
+	static VehicleView view(Vehicle v) {
 		return new VehicleView(v.id(), v.customerId(), v.plate().value(), v.brand(), v.model(), v.year(), v.active());
 	}
 }

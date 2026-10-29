@@ -96,7 +96,7 @@ class StockSagaTest {
 	}
 
 	private String openWithPart(Customer c, String serviceId, String partId, int quantity) throws Exception {
-		String id = JsonPath.read(send("/api/v1/work-orders", "{\"document\":\"%s\",\"plate\":\"%s\",\"items\":[{\"type\":\"SERVICE\",\"referenceId\":\"%s\",\"quantity\":1},{\"type\":\"PART\",\"referenceId\":\"%s\",\"quantity\":%d}]}"
+		String id = JsonPath.read(send("/api/v1/work-orders", "{\"customer\":{\"document\":\"%s\",\"name\":\"Ana Souza\",\"email\":\"ana@example.com\"},\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2022},\"items\":[{\"type\":\"SERVICE\",\"referenceId\":\"%s\",\"quantity\":1},{\"type\":\"PART\",\"referenceId\":\"%s\",\"quantity\":%d}]}"
 				.formatted(c.document(), c.plate(), serviceId, partId, quantity), "ATTENDANT"), "$.id");
 		send("/api/v1/work-orders/%s/diagnosis/start".formatted(id), "", "MECHANIC");
 		return id;

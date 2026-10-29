@@ -2,8 +2,9 @@ package com.fiap.workshop.workorder.application.service;
 
 import com.fiap.workshop.shared.application.PageQuery;
 import com.fiap.workshop.shared.application.PageResult;
+import com.fiap.workshop.shared.domain.DomainException;
 import com.fiap.workshop.shared.domain.Money;
-import com.fiap.workshop.workorder.application.port.out.CustomerLookup;
+import com.fiap.workshop.workorder.application.port.out.CustomerRegistry;
 import com.fiap.workshop.workorder.application.port.out.ItemCatalog;
 import com.fiap.workshop.workorder.application.port.out.WorkOrderNumbers;
 import com.fiap.workshop.workorder.application.port.out.WorkOrderRepository;
@@ -12,6 +13,8 @@ import com.fiap.workshop.workorder.domain.ItemType;
 import com.fiap.workshop.workorder.domain.WorkOrder;
 import com.fiap.workshop.workorder.domain.WorkOrderStatus;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,19 +81,34 @@ final class Fakes {
 		}
 	}
 
-	static class Customers implements CustomerLookup {
+	static class Customers implements CustomerRegistry {
 
 		final Map<String, CustomerInfo> byDocument = new HashMap<>();
 		final Map<String, VehicleInfo> byPlate = new HashMap<>();
+		final Set<UUID> inactiveCustomers = new HashSet<>();
+		final Set<UUID> inactiveVehicles = new HashSet<>();
 
 		@Override
-		public Optional<CustomerInfo> findCustomerByDocument(String document) {
-			return Optional.ofNullable(byDocument.get(document));
+		public CustomerInfo ensureCustomer(CustomerDetails details) {
+			CustomerInfo customer = byDocument.computeIfAbsent(details.document(),
+					document -> new CustomerInfo(UUID.randomUUID(), details.name(), document, details.email()));
+			if (inactiveCustomers.contains(customer.id())) {
+				throw new DomainException("Customer " + customer.id() + " is deactivated");
+			}
+			return customer;
 		}
 
 		@Override
-		public Optional<VehicleInfo> findVehicleByPlate(String plate) {
-			return Optional.ofNullable(byPlate.get(plate));
+		public VehicleInfo ensureVehicle(UUID customerId, VehicleDetails details) {
+			VehicleInfo vehicle = byPlate.computeIfAbsent(details.plate(),
+					plate -> new VehicleInfo(UUID.randomUUID(), customerId, plate, details.brand(), details.model(), details.year()));
+			if (!vehicle.customerId().equals(customerId)) {
+				throw new DomainException("The vehicle does not belong to this customer");
+			}
+			if (inactiveVehicles.contains(vehicle.id())) {
+				throw new DomainException("Vehicle " + vehicle.id() + " is deactivated");
+			}
+			return vehicle;
 		}
 	}
 

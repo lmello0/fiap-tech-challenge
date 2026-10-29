@@ -81,7 +81,7 @@ class NotificationFlowTest {
 				.formatted(UUID.randomUUID().toString().substring(0, 12)), "ADMIN"), "$.id");
 		send("/api/v1/parts/%s/stock-entries".formatted(part), "{\"quantity\":8}", "ATTENDANT");
 
-		String workOrder = JsonPath.read(send("/api/v1/work-orders", "{\"document\":\"%s\",\"plate\":\"%s\",\"items\":[{\"type\":\"SERVICE\",\"referenceId\":\"%s\",\"quantity\":1},{\"type\":\"PART\",\"referenceId\":\"%s\",\"quantity\":4}]}"
+		String workOrder = JsonPath.read(send("/api/v1/work-orders", "{\"customer\":{\"document\":\"%s\",\"name\":\"Ana Souza\",\"email\":\"ana@example.com\"},\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2022},\"items\":[{\"type\":\"SERVICE\",\"referenceId\":\"%s\",\"quantity\":1},{\"type\":\"PART\",\"referenceId\":\"%s\",\"quantity\":4}]}"
 				.formatted(document, plate, service, part), "ATTENDANT"), "$.id");
 		send("/api/v1/work-orders/%s/diagnosis/start".formatted(workOrder), "", "MECHANIC");
 		String body = send("/api/v1/work-orders/%s/diagnosis/complete".formatted(workOrder), "", "MECHANIC");

@@ -41,6 +41,8 @@ class WorkOrderApiTest {
 	MockMvc mvc;
 	@Autowired
 	ApplicationEvents events;
+	@Autowired
+	RecordingIdentityConfig.RecordingIdentityProvider identity;
 
 	private static RequestPostProcessor as(String role) {
 		return jwt().authorities(new SimpleGrantedAuthority("ROLE_" + role)).jwt(j -> j.subject("user-" + role));
@@ -77,7 +79,7 @@ class WorkOrderApiTest {
 	}
 
 	private String openBody(Fixture f, String items) {
-		return "{\"document\":\"%s\",\"plate\":\"%s\",\"complaint\":\"noise\",\"items\":[%s]}".formatted(f.document(), f.plate(), items);
+		return "{\"customer\":{\"document\":\"%s\",\"name\":\"Ana Souza\",\"email\":\"ana@example.com\"},\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2022},\"complaint\":\"noise\",\"items\":[%s]}".formatted(f.document(), f.plate(), items);
 	}
 
 	private static String item(String type, String id, int quantity) {
@@ -280,13 +282,80 @@ class WorkOrderApiTest {
 	void validatesTheOpeningRequest() throws Exception {
 		Fixture f = fixture();
 		Fixture someoneElse = fixture();
+		String vehicle = "\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2022}";
+		String customer = "\"customer\":{\"document\":\"%s\",\"name\":\"Ana\",\"email\":\"ana@example.com\"}";
 
-		send("/api/v1/work-orders", "{\"plate\":\"%s\"}".formatted(f.plate()), "ATTENDANT", 400);
+		send("/api/v1/work-orders", "{" + vehicle.formatted(f.plate()) + "}", "ATTENDANT", 400);
+		send("/api/v1/work-orders", "{" + customer.formatted(f.document()) + "}", "ATTENDANT", 400);
+		send("/api/v1/work-orders", "{\"customer\":{\"document\":\"%s\",\"name\":\"\",\"email\":\"x\"},".formatted(cpf()) + vehicle.formatted(plate()) + "}", "ATTENDANT", 400);
 		send("/api/v1/work-orders", openBody(f, item("SERVICE", f.serviceId(), 0)), "ATTENDANT", 400);
 		send("/api/v1/work-orders", openBody(f, item("SERVICE", UUID.randomUUID().toString(), 1)), "ATTENDANT", 404);
-		send("/api/v1/work-orders", "{\"document\":\"%s\",\"plate\":\"%s\"}".formatted(cpf(), f.plate()), "ATTENDANT", 404);
-		send("/api/v1/work-orders", "{\"document\":\"%s\",\"plate\":\"%s\"}".formatted(f.document(), someoneElse.plate()), "ATTENDANT", 422);
+		send("/api/v1/work-orders", "{" + customer.formatted("123") + "," + vehicle.formatted(plate()) + "}", "ATTENDANT", 422);
+		send("/api/v1/work-orders", "{" + customer.formatted(cpf()) + "," + vehicle.formatted("12") + "}", "ATTENDANT", 422);
+		send("/api/v1/work-orders", "{" + customer.formatted(f.document()) + "," + vehicle.formatted(someoneElse.plate()) + "}", "ATTENDANT", 422);
 		send("/api/v1/work-orders", openBody(f, ""), "ATTENDANT", 201);
+	}
+
+	@Test
+	void opensWithANewCustomerAndVehicleRegisteringBothAndProvisioningTheAccount() throws Exception {
+		String document = cpf();
+		String plate = plate();
+		String email = email();
+		Fixture f = new Fixture(null, document, plate, fixture().serviceId(), null);
+		String body = "{\"customer\":{\"document\":\"%s\",\"name\":\"Bruno Lima\",\"email\":\"%s\",\"phone\":\"11999\"},".formatted(document, email)
+				+ "\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Chevrolet\",\"model\":\"Onix\",\"year\":2020},".formatted(plate)
+				+ "\"items\":[%s]}".formatted(item("SERVICE", f.serviceId(), 1));
+
+		String response = send("/api/v1/work-orders", body, "ATTENDANT", 201);
+
+		String customerId = JsonPath.read(response, "$.customer.id");
+		assertThat((String) JsonPath.read(response, "$.number")).matches("OS-\\d{4}-\\d{6}");
+		assertThat((String) JsonPath.read(response, "$.status")).isEqualTo("RECEIVED");
+		assertThat((String) JsonPath.read(response, "$.vehicle.model")).isEqualTo("Onix");
+		mvc.perform(get("/api/v1/customers/{id}", customerId).with(as("ADMIN")))
+				.andExpect(jsonPath("$.name").value("Bruno Lima")).andExpect(jsonPath("$.email").value(email));
+		mvc.perform(get("/api/v1/customers/{id}/vehicles", customerId).with(as("ADMIN")))
+				.andExpect(jsonPath("$.totalElements").value(1));
+		await().untilAsserted(() -> assertThat(identity.provisioned).anyMatch(a -> a.email().equals(email)));
+	}
+
+	@Test
+	void anExistingCustomerAndVehicleAreReusedWithoutOverwritingTheirData() throws Exception {
+		Fixture f = fixture();
+		String body = "{\"customer\":{\"document\":\"%s\",\"name\":\"Totally Different\",\"email\":\"different@example.com\"},".formatted(f.document())
+				+ "\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Ford\",\"model\":\"Ka\",\"year\":2010}}".formatted(f.plate());
+
+		String response = send("/api/v1/work-orders", body, "ATTENDANT", 201);
+
+		assertThat((String) JsonPath.read(response, "$.customer.id")).isEqualTo(f.customerId());
+		assertThat((String) JsonPath.read(response, "$.customer.name")).isEqualTo("Ana Souza");
+		assertThat((String) JsonPath.read(response, "$.vehicle.model")).isEqualTo("Argo");
+	}
+
+	@Test
+	void aNewVehicleCanBeAddedToAnExistingCustomerInTheSameRequest() throws Exception {
+		Fixture f = fixture();
+		String newPlate = plate();
+		String body = "{\"customer\":{\"document\":\"%s\",\"name\":\"Ana\",\"email\":\"ana@example.com\"},".formatted(f.document())
+				+ "\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Honda\",\"model\":\"Fit\",\"year\":2019}}".formatted(newPlate);
+
+		String response = send("/api/v1/work-orders", body, "ATTENDANT", 201);
+
+		assertThat((String) JsonPath.read(response, "$.customer.id")).isEqualTo(f.customerId());
+		mvc.perform(get("/api/v1/customers/{id}/vehicles", f.customerId()).with(as("ADMIN"))).andExpect(jsonPath("$.totalElements").value(2));
+	}
+
+	@Test
+	void aFailedOpeningLeavesNoCustomerOrVehicleBehind() throws Exception {
+		String document = cpf();
+		String plate = plate();
+		String body = "{\"customer\":{\"document\":\"%s\",\"name\":\"Ghost\",\"email\":\"%s\"},".formatted(document, email())
+				+ "\"vehicle\":{\"plate\":\"%s\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2022},".formatted(plate)
+				+ "\"items\":[%s]}".formatted(item("SERVICE", UUID.randomUUID().toString(), 1));
+
+		send("/api/v1/work-orders", body, "ATTENDANT", 404);
+
+		mvc.perform(get("/api/v1/customers").with(as("ADMIN")).param("document", document)).andExpect(jsonPath("$.totalElements").value(0));
 	}
 
 	@Test

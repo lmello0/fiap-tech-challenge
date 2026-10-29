@@ -85,8 +85,8 @@ class WorkOrderController {
 	@PostMapping
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<WorkOrderResponse> openWorkOrder(@Valid @RequestBody WorkOrderRequests.Open request) {
-		WorkOrderResponse body = WorkOrderResponse.forStaff(open.execute(new OpenWorkOrderUseCase.Command(request.document(),
-				request.plate(), request.complaint(), request.itemRequests(), currentActor.actor())));
+		WorkOrderResponse body = WorkOrderResponse.forStaff(open.execute(new OpenWorkOrderUseCase.Command(request.customer().toDetails(),
+				request.vehicle().toDetails(), request.complaint(), request.itemRequests(), currentActor.actor())));
 		return ResponseEntity.created(URI.create("/api/v1/work-orders/" + body.id())).body(body);
 	}
 
