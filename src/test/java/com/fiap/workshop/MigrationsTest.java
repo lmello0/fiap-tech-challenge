@@ -9,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Needs Docker (Testcontainers). Verifies one schema and one Flyway history per module. */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class MigrationsTest {

@@ -3,7 +3,6 @@ package com.fiap.workshop.shared.domain;
 import java.security.SecureRandom;
 import java.util.UUID;
 
-/** Generates time-ordered UUIDs (version 7, RFC 9562) so primary keys stay index-friendly. */
 public final class UuidV7 {
 
 	private static final SecureRandom RANDOM = new SecureRandom();

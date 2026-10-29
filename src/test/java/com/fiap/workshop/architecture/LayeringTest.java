@@ -20,7 +20,7 @@ class LayeringTest {
 	static final ArchRule applicationDoesNotDependOnAdapters = noClasses().that().resideInAPackage("..application..")
 			.should().dependOnClassesThat().resideInAPackage("..adapter..")
 			.because("dependencies point inwards: adapters depend on the application, never the reverse")
-			.allowEmptyShould(true); // no module has an application layer yet
+			.allowEmptyShould(true);
 
 	@ArchTest
 	static final ArchRule domainDoesNotDependOnOuterLayers = noClasses().that().resideInAPackage("..domain..")

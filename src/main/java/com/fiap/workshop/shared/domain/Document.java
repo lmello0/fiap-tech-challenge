@@ -1,6 +1,5 @@
 package com.fiap.workshop.shared.domain;
 
-/** Brazilian taxpayer document: a CPF (11 digits) or a CNPJ (14 digits), stored as digits only. */
 public record Document(String value) {
 
 	public enum Type { CPF, CNPJ }

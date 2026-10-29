@@ -10,7 +10,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
-/** Maps the Keycloak {@code realm_access.roles} claim to {@code ROLE_*} authorities. */
 public class KeycloakRealmRolesConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
 	@Override

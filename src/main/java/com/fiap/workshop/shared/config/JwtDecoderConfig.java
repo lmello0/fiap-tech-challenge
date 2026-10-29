@@ -10,10 +10,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
-/**
- * Keys are fetched from Keycloak over the internal network ({@code jwk-set-uri}) while the {@code iss} claim
- * carries the public hostname, so the issuer is validated against an explicit value instead of being discovered.
- */
+// jwk-set-uri is the internal Keycloak address while the token issuer is the public one, so the issuer is set explicitly
 @Configuration
 class JwtDecoderConfig {
 

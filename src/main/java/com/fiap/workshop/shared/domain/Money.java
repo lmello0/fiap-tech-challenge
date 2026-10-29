@@ -3,7 +3,6 @@ package com.fiap.workshop.shared.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/** Monetary amount in BRL, always held with two decimal places. */
 public record Money(BigDecimal amount) implements Comparable<Money> {
 
 	public static final Money ZERO = new Money(BigDecimal.ZERO);

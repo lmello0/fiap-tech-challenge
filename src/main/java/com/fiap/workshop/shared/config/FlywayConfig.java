@@ -14,7 +14,7 @@ class FlywayConfig {
 		return new ModuleMigrations(dataSource, environment);
 	}
 
-	/** Entity manager (and Hibernate schema validation) must start only after every module is migrated. */
+	// Hibernate schema validation needs every module migrated first
 	@Bean
 	static EntityManagerFactoryDependsOnPostProcessor moduleMigrationsDependency() {
 		return new EntityManagerFactoryDependsOnPostProcessor("moduleMigrations");

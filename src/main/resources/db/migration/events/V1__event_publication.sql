@@ -1,4 +1,3 @@
--- Spring Modulith event publication registry (transactional outbox), see ADR on event-driven design.
 CREATE TABLE event_publication (
     id                     UUID                     NOT NULL,
     listener_id            TEXT                     NOT NULL,

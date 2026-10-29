@@ -10,7 +10,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-/** Who is calling: the JWT subject, its roles and, for customers, the linked {@code customer_id} claim. */
 @Component
 public class CurrentActor {
 

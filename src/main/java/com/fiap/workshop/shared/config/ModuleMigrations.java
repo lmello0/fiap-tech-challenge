@@ -7,15 +7,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 
-/**
- * Runs one Flyway instance per module. Each module owns a schema, its migrations under
- * {@code db/migration/<module>} and its own {@code flyway_schema_history} table inside that schema, so a module
- * can be extracted with its data. Demo seed data lives under {@code db/demo/<module>} and is only applied with
- * the {@code demo} profile.
- */
 class ModuleMigrations implements InitializingBean {
 
-	/** Schemas that carry migrations, in dependency-free order (modules never reference each other's tables). */
 	static final List<String> SCHEMAS = List.of("events", "customer", "catalog", "inventory", "workorder", "notification");
 
 	private final DataSource dataSource;
