@@ -73,6 +73,7 @@ services:
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/workshop/protocol/openid-connect/certs
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-workshop-admin-secret}
       LOG_FORMAT: ecs
+      BUDGET_WEBHOOK_SECRET: ${BUDGET_WEBHOOK_SECRET:-demo-webhook-secret}
     ports:
       - "8080:8080"
     depends_on:

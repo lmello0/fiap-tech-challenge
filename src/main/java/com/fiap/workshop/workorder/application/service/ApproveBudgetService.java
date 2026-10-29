@@ -22,7 +22,7 @@ class ApproveBudgetService implements ApproveBudgetUseCase {
 	@Transactional
 	public WorkOrder execute(Command command) {
 		WorkOrder workOrder = support.loadOwned(command.workOrderId(), command.customerScope());
-		DecisionChannel channel = DecisionChannels.resolve(command.customerScope(), command.channel());
+		DecisionChannel channel = DecisionChannels.resolve(command.customerScope(), command.actor(), command.channel());
 		int before = workOrder.history().size();
 		Instant now = support.clock().instant();
 		Budget budget = workOrder.approveBudget(command.budgetId(), new Decision(command.actor(), channel, null, now), now);

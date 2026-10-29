@@ -49,6 +49,11 @@ class WorkOrderRepositoryAdapter implements WorkOrderRepository {
 	}
 
 	@Override
+	public Optional<WorkOrder> findByNumber(String number) {
+		return jpa.findByNumber(number).map(WorkOrderMapper::toDomain);
+	}
+
+	@Override
 	public Optional<WorkOrder> findByIdForUpdate(UUID id) {
 		jpa.lockById(id);
 		return findById(id);

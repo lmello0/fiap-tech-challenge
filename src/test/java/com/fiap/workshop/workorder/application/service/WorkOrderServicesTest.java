@@ -20,6 +20,7 @@ import com.fiap.workshop.workorder.api.events.WorkOrderStatusChanged;
 import com.fiap.workshop.workorder.application.port.in.AddItemUseCase;
 import com.fiap.workshop.workorder.application.port.in.ApproveBudgetUseCase;
 import com.fiap.workshop.workorder.application.port.in.ChangeItemQuantityUseCase;
+import com.fiap.workshop.workorder.application.port.in.DecideBudgetExternallyUseCase;
 import com.fiap.workshop.workorder.application.port.in.ItemRequest;
 import com.fiap.workshop.workorder.application.port.in.OpenWorkOrderUseCase;
 import com.fiap.workshop.workorder.application.port.in.ProposeAdditionalBudgetUseCase;
@@ -71,6 +72,8 @@ class WorkOrderServicesTest {
 	private final CompleteWorkOrderService complete = new CompleteWorkOrderService(support);
 	private final DeliverWorkOrderService deliver = new DeliverWorkOrderService(support);
 	private final CancelWorkOrderService cancel = new CancelWorkOrderService(support);
+	private final java.util.Set<UUID> receivedEvents = new java.util.HashSet<>();
+	private final DecideBudgetExternallyService decideExternally = new DecideBudgetExternallyService(receivedEvents::add, support, approve, reject);
 	private final StartExecutionService startExecution = new StartExecutionService(support);
 	private final WaitForPartsService waitForParts = new WaitForPartsService(support);
 
@@ -464,5 +467,72 @@ class WorkOrderServicesTest {
 
 		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.WAITING_APPROVAL);
 		assertThatThrownBy(() -> startExecution.execute(UUID.randomUUID(), UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+	}
+
+	private DecideBudgetExternallyUseCase.Command external(UUID eventId, WorkOrder wo, DecideBudgetExternallyUseCase.Decision decision, String reason) {
+		return new DecideBudgetExternallyUseCase.Command(eventId, wo.number(), budgetId(wo), decision, reason);
+	}
+
+	@Test
+	void anExternalApprovalIsRecordedWithTheExternalChannelAndActor() {
+		WorkOrder wo = waitingApproval(service(1));
+
+		var result = decideExternally.execute(external(UUID.randomUUID(), wo, DecideBudgetExternallyUseCase.Decision.APPROVED, null));
+
+		assertThat(result).isEqualTo(DecideBudgetExternallyUseCase.Result.APPLIED);
+		WorkOrder stored = repository.store.get(wo.id());
+		assertThat(stored.status()).isEqualTo(WorkOrderStatus.IN_EXECUTION);
+		assertThat(stored.budgets().getFirst().decision().channel()).isEqualTo(DecisionChannel.EXTERNAL);
+		assertThat(stored.budgets().getFirst().decision().actor()).isEqualTo(Actor.EXTERNAL);
+		assertThat(events.of(BudgetApproved.class)).singleElement().extracting(BudgetApproved::channel).isEqualTo("EXTERNAL");
+	}
+
+	@Test
+	void anExternalRejectionReturnsToDiagnosisKeepingTheReason() {
+		WorkOrder wo = waitingApproval(service(1));
+
+		decideExternally.execute(external(UUID.randomUUID(), wo, DecideBudgetExternallyUseCase.Decision.REJECTED, "too expensive"));
+
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.IN_DIAGNOSIS);
+		assertThat(events.of(BudgetRejected.class)).singleElement().satisfies(e -> {
+			assertThat(e.reason()).isEqualTo("too expensive");
+			assertThat(e.channel()).isEqualTo("EXTERNAL");
+		});
+	}
+
+	@Test
+	void theSameExternalEventIsAppliedOnlyOnce() {
+		WorkOrder wo = waitingApproval(service(1));
+		UUID eventId = UUID.randomUUID();
+
+		decideExternally.execute(external(eventId, wo, DecideBudgetExternallyUseCase.Decision.APPROVED, null));
+		var again = decideExternally.execute(external(eventId, wo, DecideBudgetExternallyUseCase.Decision.APPROVED, null));
+
+		assertThat(again).isEqualTo(DecideBudgetExternallyUseCase.Result.DUPLICATE);
+		assertThat(events.of(BudgetApproved.class)).hasSize(1);
+	}
+
+	@Test
+	void anExternalDecisionOnAnAlreadyDecidedBudgetOrUnknownOrderFails() {
+		WorkOrder wo = waitingApproval(service(1));
+		decideExternally.execute(external(UUID.randomUUID(), wo, DecideBudgetExternallyUseCase.Decision.APPROVED, null));
+
+		assertThatThrownBy(() -> decideExternally.execute(external(UUID.randomUUID(), wo, DecideBudgetExternallyUseCase.Decision.REJECTED, null)))
+				.isInstanceOf(WorkOrderStateException.class);
+		assertThatThrownBy(() -> decideExternally.execute(new DecideBudgetExternallyUseCase.Command(UUID.randomUUID(), "OS-NOPE", UUID.randomUUID(),
+				DecideBudgetExternallyUseCase.Decision.APPROVED, null))).isInstanceOf(NotFoundException.class);
+		assertThatThrownBy(() -> decideExternally.execute(new DecideBudgetExternallyUseCase.Command(UUID.randomUUID(), wo.number(), UUID.randomUUID(),
+				DecideBudgetExternallyUseCase.Decision.APPROVED, null))).isInstanceOf(WorkOrderStateException.class);
+	}
+
+	@Test
+	void staffCannotForgeTheExternalChannel() {
+		WorkOrder wo = waitingApproval(service(1));
+
+		assertThatThrownBy(() -> approve.execute(new ApproveBudgetUseCase.Command(wo.id(), budgetId(wo), ATTENDANT, DecisionChannel.EXTERNAL, null)))
+				.isInstanceOf(DomainException.class);
+		assertThatThrownBy(() -> reject.execute(new RejectBudgetUseCase.Command(wo.id(), budgetId(wo), MECHANIC, DecisionChannel.EXTERNAL, "x", null)))
+				.isInstanceOf(DomainException.class);
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.WAITING_APPROVAL);
 	}
 }

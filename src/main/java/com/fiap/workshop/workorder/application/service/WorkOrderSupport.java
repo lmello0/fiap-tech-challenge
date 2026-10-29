@@ -25,6 +25,10 @@ class WorkOrderSupport {
 		return workOrders.findById(id).orElseThrow(() -> new NotFoundException("Work order " + id + " not found"));
 	}
 
+	WorkOrder loadByNumber(String number) {
+		return workOrders.findByNumber(number).orElseThrow(() -> new NotFoundException("Work order " + number + " not found"));
+	}
+
 	WorkOrder loadForUpdate(UUID id) {
 		return workOrders.findByIdForUpdate(id).orElseThrow(() -> new NotFoundException("Work order " + id + " not found"));
 	}

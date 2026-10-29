@@ -22,7 +22,7 @@ class RejectBudgetService implements RejectBudgetUseCase {
 	@Transactional
 	public WorkOrder execute(Command command) {
 		WorkOrder workOrder = support.loadOwned(command.workOrderId(), command.customerScope());
-		DecisionChannel channel = DecisionChannels.resolve(command.customerScope(), command.channel());
+		DecisionChannel channel = DecisionChannels.resolve(command.customerScope(), command.actor(), command.channel());
 		int before = workOrder.history().size();
 		Instant now = support.clock().instant();
 		String reason = command.reason() == null || command.reason().isBlank() ? null : command.reason().trim();

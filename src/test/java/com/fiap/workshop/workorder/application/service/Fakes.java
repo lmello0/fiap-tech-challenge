@@ -43,6 +43,11 @@ final class Fakes {
 		}
 
 		@Override
+		public Optional<WorkOrder> findByNumber(String number) {
+			return store.values().stream().filter(w -> w.number().equals(number)).findFirst();
+		}
+
+		@Override
 		public Optional<WorkOrder> findByIdForUpdate(UUID id) {
 			return findById(id);
 		}

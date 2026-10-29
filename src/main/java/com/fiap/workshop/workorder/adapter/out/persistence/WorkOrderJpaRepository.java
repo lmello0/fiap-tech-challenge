@@ -15,6 +15,8 @@ import org.springframework.data.repository.query.Param;
 
 interface WorkOrderJpaRepository extends JpaRepository<WorkOrderEntity, UUID>, JpaSpecificationExecutor<WorkOrderEntity> {
 
+	Optional<WorkOrderEntity> findByNumber(String number);
+
 	boolean existsByVehicleIdAndStatusNotIn(UUID vehicleId, Collection<WorkOrderStatus> statuses);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
