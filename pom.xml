@@ -195,7 +195,7 @@
 				<directory>src/test/resources</directory>
 			</testResource>
 			<testResource>
-				<directory>infra/keycloak</directory>
+				<directory>config/keycloak</directory>
 				<includes>
 					<include>realm-workshop.json</include>
 				</includes>

@@ -36,6 +36,7 @@ class KeycloakIdentityProviderTest {
 		mailpit.start();
 		keycloak = new KeycloakContainer("quay.io/keycloak/keycloak:26.4")
 				.withRealmImportFile("realm-workshop.json")
+			.withEnv("KEYCLOAK_ADMIN_CLIENT_SECRET", "workshop-admin-secret")
 				.withNetwork(NETWORK);
 		keycloak.start();
 		provider = new KeycloakIdentityProvider(

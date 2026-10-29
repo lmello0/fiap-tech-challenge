@@ -103,7 +103,7 @@
       "name": "Application admin (service account)",
       "enabled": true,
       "publicClient": false,
-      "secret": "workshop-admin-secret",
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,

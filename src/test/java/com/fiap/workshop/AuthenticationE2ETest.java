@@ -31,7 +31,8 @@ class AuthenticationE2ETest {
 
 	@Container
 	static KeycloakContainer keycloak = new KeycloakContainer("quay.io/keycloak/keycloak:26.4")
-			.withRealmImportFile("realm-workshop.json");
+			.withRealmImportFile("realm-workshop.json")
+			.withEnv("KEYCLOAK_ADMIN_CLIENT_SECRET", "workshop-admin-secret");
 
 	@DynamicPropertySource
 	static void keycloakProperties(DynamicPropertyRegistry registry) {
