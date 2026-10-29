@@ -5,6 +5,7 @@ import com.fiap.workshop.shared.domain.DomainException;
 import com.fiap.workshop.shared.domain.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,6 +28,11 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ProblemDetail integrity(DataIntegrityViolationException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "The resource conflicts with an existing one");
+	}
+
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ProblemDetail concurrentModification(OptimisticLockingFailureException e) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "The resource was modified concurrently, retry the request");
 	}
 
 	@ExceptionHandler(DomainException.class)
