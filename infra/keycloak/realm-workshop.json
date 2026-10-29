@@ -1,0 +1,226 @@
+{
+  "realm": "workshop",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en"
+  ],
+  "defaultLocale": "en",
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@workshop.local",
+    "fromDisplayName": "Workshop"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN",
+        "description": "Admin role"
+      },
+      {
+        "name": "ATTENDANT",
+        "description": "Attendant role"
+      },
+      {
+        "name": "MECHANIC",
+        "description": "Mechanic role"
+      },
+      {
+        "name": "CUSTOMER",
+        "description": "Customer role"
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "customer-id",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "customer_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "customer_id",
+            "claim.name": "customer_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "workshop-swagger",
+      "name": "Swagger UI",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/swagger-ui/oauth2-redirect.html"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email",
+        "customer-id"
+      ]
+    },
+    {
+      "clientId": "workshop-cli",
+      "name": "CLI / Postman",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email",
+        "customer-id"
+      ]
+    },
+    {
+      "clientId": "workshop-admin",
+      "name": "Application admin (service account)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "workshop-admin-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "clientAuthenticatorType": "client-secret"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@workshop.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Alice",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
+    },
+    {
+      "username": "attendant",
+      "email": "attendant@workshop.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Andre",
+      "lastName": "Attendant",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "attendant",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ATTENDANT"
+      ]
+    },
+    {
+      "username": "mechanic",
+      "email": "mechanic@workshop.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Maria",
+      "lastName": "Mechanic",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "mechanic",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "MECHANIC"
+      ]
+    },
+    {
+      "username": "customer",
+      "email": "customer@workshop.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Carlos",
+      "lastName": "Customer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CUSTOMER"
+      ],
+      "attributes": {
+        "customer_id": [
+          "0198a000-0000-7000-8000-000000000001"
+        ]
+      }
+    },
+    {
+      "username": "service-account-workshop-admin",
+      "enabled": true,
+      "serviceAccountClientId": "workshop-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"username-prohibited-characters\": {}, \"up-username-not-idn-homograph\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}}, {\"name\": \"email\", \"displayName\": \"${email}\", \"required\": {\"roles\": [\"user\"]}, \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"required\": {\"roles\": [\"user\"]}, \"validations\": {\"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"required\": {\"roles\": [\"user\"]}, \"validations\": {\"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}}, {\"name\": \"customer_id\", \"displayName\": \"Customer id\", \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}}]}"
+          ]
+        }
+      }
+    ]
+  }
+}
