@@ -28,7 +28,7 @@ final class WorkOrderEvents {
 
 	static WorkOrderStatusChanged statusChanged(WorkOrder wo, StatusChange change) {
 		return new WorkOrderStatusChanged(UuidV7.generate(), change.occurredAt(), wo.id(), wo.number(), wo.customer().id(),
-				change.from() == null ? null : change.from().name(), change.to().name(), change.actor().subject(), change.actor().role());
+				change.from() == null ? null : change.from().name(), change.to().name(), change.actor().subject(), change.actor().role(), wo.customer().name(), wo.customer().email());
 	}
 
 	static BudgetIssued budgetIssued(WorkOrder wo, Budget budget, Instant now) {

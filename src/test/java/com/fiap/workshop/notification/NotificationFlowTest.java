@@ -89,7 +89,9 @@ class NotificationFlowTest {
 		List<String> budgets = JsonPath.read(body, "$.budgets[*].id");
 
 		await().untilAsserted(() -> assertThat(inbox()).contains(email).contains("awaits your approval").contains(number));
-		List<String> ids = JsonPath.read(inbox(), "$.messages[?(@.To[0].Address=='%s')].ID".formatted(email));
+		await().untilAsserted(() -> assertThat(inbox()).contains("Work order " + number + ": received").contains("Work order " + number + ": diagnosis started"));
+		List<String> ids = JsonPath.read(inbox(),
+				"$.messages[?(@.To[0].Address=='%s' && @.Subject =~ /.*awaits your approval.*/)].ID".formatted(email));
 		String budgetId = ids.getFirst();
 		assertThat(message(budgetId)).contains("Flow filter").contains("BRL 290.00").contains("Ana Souza");
 
@@ -104,6 +106,7 @@ class NotificationFlowTest {
 				.with(as("ADMIN"))).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value("IN_EXECUTION")));
 		send("/api/v1/work-orders/%s/complete".formatted(workOrder), "", "MECHANIC");
 
+		await().untilAsserted(() -> assertThat(inbox()).contains("Work order " + number + ": service in progress"));
 		await().untilAsserted(() -> assertThat(inbox()).contains("Your vehicle is ready: work order " + number));
 	}
 }

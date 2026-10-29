@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fiap.workshop.notification.application.port.in.NotifyBudgetIssuedUseCase;
 import com.fiap.workshop.notification.application.port.in.NotifyLowStockUseCase;
+import com.fiap.workshop.notification.application.port.in.NotifyStatusChangedUseCase;
 import com.fiap.workshop.notification.application.port.in.NotifyWorkOrderCompletedUseCase;
 import com.fiap.workshop.notification.application.port.out.MailSender;
 import com.fiap.workshop.notification.application.port.out.ProcessedEvents;
@@ -103,5 +104,52 @@ class NotificationServicesTest {
 				.execute(new NotifyWorkOrderCompletedUseCase.Command(UUID.randomUUID(), "Ana", "a@b.co", "OS-1")))
 				.isInstanceOf(IllegalStateException.class);
 		assertThat(sent).isEmpty();
+	}
+
+	private NotifyStatusChangedUseCase.Command status(UUID eventId, String status) {
+		return new NotifyStatusChangedUseCase.Command(eventId, "Ana", "ana@example.com", "OS-2026-000001", status);
+	}
+
+	@Test
+	void everyStatusWithoutADedicatedEmailNotifiesTheCustomer() {
+		var service = new NotifyStatusChangedService(processed, mail);
+
+		for (String status : List.of("RECEIVED", "IN_DIAGNOSIS", "WAITING_PARTS", "IN_EXECUTION", "DELIVERED", "CANCELLED")) {
+			service.execute(status(UUID.randomUUID(), status));
+		}
+
+		assertThat(sent).extracting(Sent::subject).containsExactly(
+				"Work order OS-2026-000001: received",
+				"Work order OS-2026-000001: diagnosis started",
+				"Work order OS-2026-000001: waiting for parts",
+				"Work order OS-2026-000001: service in progress",
+				"Work order OS-2026-000001: vehicle delivered",
+				"Work order OS-2026-000001: cancelled");
+		assertThat(sent).allSatisfy(s -> {
+			assertThat(s.to()).isEqualTo("ana@example.com");
+			assertThat(s.template()).isEqualTo("status-changed");
+		});
+	}
+
+	@Test
+	void statusesThatHaveTheirOwnEmailAreNotSentTwice() {
+		var service = new NotifyStatusChangedService(processed, mail);
+
+		service.execute(status(UUID.randomUUID(), "WAITING_APPROVAL"));
+		service.execute(status(UUID.randomUUID(), "COMPLETED"));
+		service.execute(status(UUID.randomUUID(), "UNKNOWN"));
+
+		assertThat(sent).isEmpty();
+	}
+
+	@Test
+	void aStatusEventIsEmailedOnlyOnce() {
+		UUID eventId = UUID.randomUUID();
+		var service = new NotifyStatusChangedService(processed, mail);
+
+		service.execute(status(eventId, "IN_EXECUTION"));
+		service.execute(status(eventId, "IN_EXECUTION"));
+
+		assertThat(sent).hasSize(1);
 	}
 }
