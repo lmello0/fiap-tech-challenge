@@ -2,9 +2,7 @@
 
 Resumo textual dos dois fluxos exigidos pelo desafio, no formato usado no quadro (Miro): **eventos de domínio** (laranja), **comandos** (azul),
 **atores** (amarelo), **agregados** (amarelo-claro), **políticas** (lilás) e **sistemas externos** (rosa).
-O quadro completo deve ser vinculado ao documento de entrega.
-
-> Link do quadro no Miro: _a preencher pelo grupo_
+O quadro completo está no Miro: [Event Storming — Workshop](https://miro.com/app/board/uXjVH9wTsBg=/?share_link_id=625997029412).
 
 ## 1. Criação e acompanhamento da OS
 

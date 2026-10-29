@@ -119,7 +119,7 @@ Cada módulo segue o mesmo formato: `domain` (Java puro), `application` (casos d
 
 - [Arquitetura](docs/arquitetura.md) — módulos, camadas, eventos e saga de estoque
 - [Linguagem ubíqua](docs/linguagem-ubiqua.md)
-- [Event Storming](docs/event-storming.md)
+- [Event Storming](docs/event-storming.md) — resumo dos fluxos e [quadro no Miro](https://miro.com/app/board/uXjVH9wTsBg=/?share_link_id=625997029412)
 - [Justificativa do banco de dados](docs/justificativa-banco.md)
 - [Decisões de arquitetura (ADRs)](docs/adr)
 - [Relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md)
