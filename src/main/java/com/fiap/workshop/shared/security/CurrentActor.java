@@ -13,14 +13,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class CurrentActor {
 
-	public record Actor(String subject, Set<Role> roles, UUID customerId) {
+	public record Caller(String subject, Set<Role> roles, UUID customerId) {
 
 		public boolean has(Role role) {
 			return roles.contains(role);
 		}
 	}
 
-	public Actor get() {
+	public Caller get() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
 			throw new IllegalStateException("No authenticated JWT in the security context");
@@ -31,7 +31,13 @@ public class CurrentActor {
 				.flatMap(Optional::stream)
 				.collect(Collectors.toSet());
 		String customerId = jwt.getClaimAsString("customer_id");
-		return new Actor(jwt.getSubject(), roles, customerId == null ? null : UUID.fromString(customerId));
+		return new Caller(jwt.getSubject(), roles, customerId == null ? null : UUID.fromString(customerId));
+	}
+
+	public com.fiap.workshop.shared.domain.Actor actor() {
+		Caller caller = get();
+		String role = java.util.Arrays.stream(Role.values()).filter(caller::has).map(Role::name).findFirst().orElse("UNKNOWN");
+		return new com.fiap.workshop.shared.domain.Actor(caller.subject(), role);
 	}
 
 	private static Optional<Role> toRole(String authority) {
