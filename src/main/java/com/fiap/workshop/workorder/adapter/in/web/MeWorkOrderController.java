@@ -47,8 +47,8 @@ class MeWorkOrderController {
 
 	@GetMapping
 	PageResponse<WorkOrderSummaryResponse> mine(@RequestParam(required = false) WorkOrderStatus status,
-			@RequestParam(defaultValue = "0") @Min(0) int page, @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
-		return PageResponse.of(list.execute(new WorkOrderFilter(customerId(), status, null, null), new PageQuery(page, size)),
+			@RequestParam(defaultValue = "false") boolean includeFinished, @RequestParam(defaultValue = "0") @Min(0) int page, @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
+		return PageResponse.of(list.execute(new WorkOrderFilter(customerId(), status, null, null, includeFinished), new PageQuery(page, size)),
 				WorkOrderSummaryResponse::from);
 	}
 

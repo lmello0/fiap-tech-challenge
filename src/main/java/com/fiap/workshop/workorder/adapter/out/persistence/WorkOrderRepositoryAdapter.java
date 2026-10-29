@@ -7,15 +7,19 @@ import com.fiap.workshop.workorder.application.port.out.WorkOrderSummary;
 import com.fiap.workshop.workorder.domain.ItemType;
 import com.fiap.workshop.workorder.domain.WorkOrder;
 import com.fiap.workshop.workorder.domain.WorkOrderStatus;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -23,6 +27,8 @@ import org.springframework.stereotype.Repository;
 class WorkOrderRepositoryAdapter implements WorkOrderRepository {
 
 	private static final Set<WorkOrderStatus> FINISHED = Set.of(WorkOrderStatus.DELIVERED, WorkOrderStatus.CANCELLED);
+	private static final Set<WorkOrderStatus> OUT_OF_QUEUE = EnumSet.copyOf(
+			Arrays.stream(WorkOrderStatus.values()).filter(status -> !status.inQueue()).toList());
 
 	private final WorkOrderJpaRepository jpa;
 
@@ -77,6 +83,8 @@ class WorkOrderRepositoryAdapter implements WorkOrderRepository {
 			}
 			if (filter.status() != null) {
 				predicates.add(cb.equal(root.get("status"), filter.status()));
+			} else if (!filter.includeFinished()) {
+				predicates.add(cb.not(root.get("status").in(OUT_OF_QUEUE)));
 			}
 			if (filter.number() != null && !filter.number().isBlank()) {
 				predicates.add(cb.like(cb.upper(root.get("number")), "%" + filter.number().trim().toUpperCase() + "%"));
@@ -84,12 +92,22 @@ class WorkOrderRepositoryAdapter implements WorkOrderRepository {
 			if (filter.plate() != null && !filter.plate().isBlank()) {
 				predicates.add(cb.like(root.get("vehiclePlate"), "%" + filter.plate().replaceAll("[\\s-]", "").toUpperCase() + "%"));
 			}
+			if (!Long.class.equals(query.getResultType())) {
+				query.orderBy(queueRank(root, cb), cb.asc(root.get("createdAt")), cb.asc(root.get("id")));
+			}
 			return cb.and(predicates.toArray(Predicate[]::new));
 		};
-		Page<WorkOrderEntity> result = jpa.findAll(spec,
-				PageRequest.of(page.page(), page.size(), Sort.by(Sort.Direction.DESC, "createdAt", "id")));
+		Page<WorkOrderEntity> result = jpa.findAll(spec, PageRequest.of(page.page(), page.size()));
 		return new PageResult<>(result.map(WorkOrderRepositoryAdapter::summary).getContent(), page.page(), page.size(),
 				result.getTotalElements());
+	}
+
+	private static Order queueRank(Root<WorkOrderEntity> root, CriteriaBuilder cb) {
+		CriteriaBuilder.Case<Integer> rank = cb.selectCase();
+		for (WorkOrderStatus status : WorkOrderStatus.values()) {
+			rank = rank.when(cb.equal(root.get("status"), status), status.queueRank());
+		}
+		return cb.asc(rank.otherwise(Integer.MAX_VALUE));
 	}
 
 	private static WorkOrderSummary summary(WorkOrderEntity e) {

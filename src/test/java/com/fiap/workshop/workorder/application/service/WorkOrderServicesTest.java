@@ -373,10 +373,10 @@ class WorkOrderServicesTest {
 		WorkOrder wo = openOrder(service(1));
 		var list = new ListWorkOrdersService(repository);
 
-		assertThat(list.execute(new WorkOrderFilter(ana.id(), null, null, null), new PageQuery(0, 10)).content())
+		assertThat(list.execute(new WorkOrderFilter(ana.id(), null, null, null, false), new PageQuery(0, 10)).content())
 				.singleElement().extracting("number").isEqualTo(wo.number());
-		assertThat(list.execute(new WorkOrderFilter(UUID.randomUUID(), null, null, null), new PageQuery(0, 10)).content()).isEmpty();
-		assertThat(list.execute(new WorkOrderFilter(null, WorkOrderStatus.DELIVERED, null, null), new PageQuery(0, 10)).totalElements()).isZero();
+		assertThat(list.execute(new WorkOrderFilter(UUID.randomUUID(), null, null, null, false), new PageQuery(0, 10)).content()).isEmpty();
+		assertThat(list.execute(new WorkOrderFilter(null, WorkOrderStatus.DELIVERED, null, null, false), new PageQuery(0, 10)).totalElements()).isZero();
 	}
 
 	@Test

@@ -380,4 +380,16 @@ class WorkOrderTest {
 		assertThat(WorkOrderStatus.COMPLETED.canTransitionTo(WorkOrderStatus.CANCELLED)).isFalse();
 		assertThat(WorkOrderStatus.DELIVERED.terminal()).isTrue();
 	}
+
+	@Test
+	void queueRanksFollowThePriorityOfTheShopFloor() {
+		assertThat(java.util.Arrays.stream(WorkOrderStatus.values()).filter(WorkOrderStatus::inQueue)
+				.sorted(java.util.Comparator.comparingInt(WorkOrderStatus::queueRank)).toList())
+				.containsExactly(WorkOrderStatus.IN_EXECUTION, WorkOrderStatus.WAITING_PARTS, WorkOrderStatus.WAITING_APPROVAL,
+						WorkOrderStatus.IN_DIAGNOSIS, WorkOrderStatus.RECEIVED);
+		assertThat(java.util.Arrays.stream(WorkOrderStatus.values()).filter(s -> !s.inQueue()).toList())
+				.containsExactlyInAnyOrder(WorkOrderStatus.COMPLETED, WorkOrderStatus.DELIVERED, WorkOrderStatus.CANCELLED);
+		assertThat(java.util.Arrays.stream(WorkOrderStatus.values()).map(WorkOrderStatus::queueRank).distinct().count())
+				.isEqualTo(WorkOrderStatus.values().length);
+	}
 }

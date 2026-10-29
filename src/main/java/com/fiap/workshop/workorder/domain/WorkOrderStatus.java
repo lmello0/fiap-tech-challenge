@@ -15,6 +15,23 @@ public enum WorkOrderStatus {
 		};
 	}
 
+	public int queueRank() {
+		return switch (this) {
+			case IN_EXECUTION -> 0;
+			case WAITING_PARTS -> 1;
+			case WAITING_APPROVAL -> 2;
+			case IN_DIAGNOSIS -> 3;
+			case RECEIVED -> 4;
+			case COMPLETED -> 5;
+			case DELIVERED -> 6;
+			case CANCELLED -> 7;
+		};
+	}
+
+	public boolean inQueue() {
+		return queueRank() <= RECEIVED.queueRank();
+	}
+
 	public boolean itemsEditable() {
 		return this == RECEIVED || this == IN_DIAGNOSIS;
 	}

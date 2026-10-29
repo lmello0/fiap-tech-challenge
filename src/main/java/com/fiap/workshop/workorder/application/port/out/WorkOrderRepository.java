@@ -27,6 +27,6 @@ public interface WorkOrderRepository {
 
 	PageResult<WorkOrderSummary> search(WorkOrderFilter filter, PageQuery page);
 
-	record WorkOrderFilter(UUID customerId, WorkOrderStatus status, String number, String plate) {
+	record WorkOrderFilter(UUID customerId, WorkOrderStatus status, String number, String plate, boolean includeFinished) {
 	}
 }

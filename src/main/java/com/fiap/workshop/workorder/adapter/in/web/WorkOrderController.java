@@ -94,9 +94,10 @@ class WorkOrderController {
 	@PreAuthorize(Access.STAFF_READ)
 	PageResponse<WorkOrderSummaryResponse> search(@RequestParam(required = false) UUID customerId,
 			@RequestParam(required = false) WorkOrderStatus status, @RequestParam(required = false) String number,
-			@RequestParam(required = false) String plate, @RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(required = false) String plate, @RequestParam(defaultValue = "false") boolean includeFinished,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
-		return PageResponse.of(list.execute(new WorkOrderFilter(customerId, status, number, plate), new PageQuery(page, size)),
+		return PageResponse.of(list.execute(new WorkOrderFilter(customerId, status, number, plate, includeFinished), new PageQuery(page, size)),
 				WorkOrderSummaryResponse::from);
 	}
 
