@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: sans-serif">
+<p>Hello <span th:text="${customerName}">Customer</span>,</p>
+<p th:if="${!additional}">The budget for work order <strong th:text="${workOrderNumber}">OS-0</strong> is ready and awaits your approval.</p>
+<p th:if="${additional}">The mechanic found additional work on work order <strong th:text="${workOrderNumber}">OS-0</strong>. Additional budget <span th:text="${budgetNumber}">2</span> awaits your approval.</p>
+<table style="border-collapse: collapse">
+  <tr><th align="left">Item</th><th>Qty</th><th align="right">Unit</th><th align="right">Subtotal</th></tr>
+  <tr th:each="line : ${lines}">
+    <td th:text="${line.name}">Item</td>
+    <td align="center" th:text="${line.quantity}">1</td>
+    <td align="right" th:text="${line.unitPrice}">BRL 0.00</td>
+    <td align="right" th:text="${line.subtotal}">BRL 0.00</td>
+  </tr>
+</table>
+<p><strong>Total: <span th:text="${total}">BRL 0.00</span></strong></p>
+<p>Sign in to the app to approve or refuse this budget. The work only starts after your approval.</p>
+</body>
+</html>

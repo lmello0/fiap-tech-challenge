@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: sans-serif">
+<p>Part <strong th:text="${partName}">Part</strong> (<span th:text="${sku}">SKU</span>) is running low.</p>
+<p>Available: <span th:text="${available}">0</span> &middot; Minimum: <span th:text="${minimumQuantity}">0</span></p>
+</body>
+</html>

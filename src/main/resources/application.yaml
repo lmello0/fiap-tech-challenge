@@ -62,3 +62,6 @@ workshop:
     realm: workshop
     admin-client-id: workshop-admin
     admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:workshop-admin-secret}
+  notification:
+    from: ${MAIL_FROM:no-reply@workshop.local}
+    admin-email: ${ADMIN_EMAIL:admin@workshop.local}
