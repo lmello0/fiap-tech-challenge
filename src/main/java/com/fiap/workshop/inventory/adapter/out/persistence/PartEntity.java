@@ -30,6 +30,7 @@ class PartEntity {
 	private int minimumQuantity;
 	@Column(name = "on_hand")
 	private int onHand;
+	private int reserved;
 	private boolean active;
 	@Column(name = "created_at")
 	private Instant createdAt;

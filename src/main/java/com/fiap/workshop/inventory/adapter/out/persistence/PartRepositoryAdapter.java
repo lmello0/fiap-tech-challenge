@@ -7,6 +7,8 @@ import com.fiap.workshop.shared.application.PageResult;
 import com.fiap.workshop.shared.domain.Money;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -34,6 +36,7 @@ class PartRepositoryAdapter implements PartRepository {
 		entity.setUnitPrice(part.unitPrice().amount());
 		entity.setMinimumQuantity(part.minimumQuantity());
 		entity.setOnHand(part.onHand());
+		entity.setReserved(part.reserved());
 		entity.setActive(part.active());
 		entity.setCreatedAt(part.createdAt());
 		entity.setUpdatedAt(part.updatedAt());
@@ -43,6 +46,11 @@ class PartRepositoryAdapter implements PartRepository {
 	@Override
 	public Optional<Part> findById(UUID id) {
 		return jpa.findById(id).map(PartRepositoryAdapter::toDomain);
+	}
+
+	@Override
+	public List<Part> findAllForUpdate(Collection<UUID> ids) {
+		return jpa.findAllForUpdate(ids).stream().map(PartRepositoryAdapter::toDomain).toList();
 	}
 
 	@Override
@@ -58,7 +66,7 @@ class PartRepositoryAdapter implements PartRepository {
 				predicates.add(cb.isTrue(root.get("active")));
 			}
 			if (filter.lowStockOnly()) {
-				predicates.add(cb.lessThanOrEqualTo(root.<Integer>get("onHand"), root.<Integer>get("minimumQuantity")));
+				predicates.add(cb.lessThanOrEqualTo(cb.diff(root.<Integer>get("onHand"), root.<Integer>get("reserved")), root.<Integer>get("minimumQuantity")));
 			}
 			if (filter.text() != null && !filter.text().isBlank()) {
 				String like = "%" + filter.text().trim().toLowerCase() + "%";
@@ -73,6 +81,6 @@ class PartRepositoryAdapter implements PartRepository {
 
 	private static Part toDomain(PartEntity e) {
 		return Part.restore(e.getId(), e.getSku(), e.getName(), e.getDescription(), new Money(e.getUnitPrice()),
-				e.getMinimumQuantity(), e.getOnHand(), e.isActive(), e.getCreatedAt(), e.getUpdatedAt());
+				e.getMinimumQuantity(), e.getOnHand(), e.getReserved(), e.isActive(), e.getCreatedAt(), e.getUpdatedAt());
 	}
 }

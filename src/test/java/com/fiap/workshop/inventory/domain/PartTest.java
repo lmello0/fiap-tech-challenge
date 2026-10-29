@@ -79,11 +79,11 @@ class PartTest {
 		Part part = filter();
 		part.receive(10, null, "u", NOW);
 
-		int before = part.onHand();
+		int before = part.available();
 		part.adjust(-5, "sold", "u", LATER);
 		assertThat(part.crossedLowStockFrom(before)).isTrue();
 
-		before = part.onHand();
+		before = part.available();
 		part.adjust(-1, "sold", "u", LATER);
 		assertThat(part.crossedLowStockFrom(before)).isFalse();
 		assertThat(part.lowStock()).isTrue();
@@ -111,5 +111,82 @@ class PartTest {
 		assertThatThrownBy(() -> part.receive(1, null, "u", LATER)).isInstanceOf(DomainException.class);
 		assertThatThrownBy(() -> part.adjust(1, "x", "u", LATER)).isInstanceOf(DomainException.class);
 		assertThatThrownBy(() -> part.deactivate(LATER)).isInstanceOf(DomainException.class);
+	}
+
+	@Test
+	void reservingHoldsStockWithoutMovingIt() {
+		Part part = filter();
+		part.receive(10, null, "u", NOW);
+
+		part.reserve(4, LATER);
+
+		assertThat(part.onHand()).isEqualTo(10);
+		assertThat(part.reserved()).isEqualTo(4);
+		assertThat(part.available()).isEqualTo(6);
+	}
+
+	@Test
+	void cannotReserveMoreThanAvailable() {
+		Part part = filter();
+		part.receive(10, null, "u", NOW);
+		part.reserve(8, NOW);
+
+		assertThatThrownBy(() -> part.reserve(3, LATER)).isInstanceOf(DomainException.class).hasMessageContaining("Insufficient available");
+		assertThatThrownBy(() -> part.reserve(0, LATER)).isInstanceOf(DomainException.class);
+		assertThat(part.reserved()).isEqualTo(8);
+	}
+
+	@Test
+	void releasingGivesTheStockBack() {
+		Part part = filter();
+		part.receive(10, null, "u", NOW);
+		part.reserve(6, NOW);
+
+		part.release(6, LATER);
+
+		assertThat(part.available()).isEqualTo(10);
+		assertThatThrownBy(() -> part.release(1, LATER)).isInstanceOf(DomainException.class);
+	}
+
+	@Test
+	void consumingRemovesReservedStockAndRecordsAMovement() {
+		Part part = filter();
+		part.receive(10, null, "u", NOW);
+		part.reserve(4, NOW);
+
+		StockMovement movement = part.consume(4, "Work order OS-1", "system", LATER);
+
+		assertThat(part.onHand()).isEqualTo(6);
+		assertThat(part.reserved()).isZero();
+		assertThat(movement.type()).isEqualTo(MovementType.CONSUMPTION);
+		assertThat(movement.quantity()).isEqualTo(-4);
+		assertThat(movement.balanceAfter()).isEqualTo(6);
+		assertThatThrownBy(() -> part.consume(1, "x", "system", LATER)).isInstanceOf(DomainException.class);
+	}
+
+	@Test
+	void adjustmentsCannotEatIntoReservedStock() {
+		Part part = filter();
+		part.receive(10, null, "u", NOW);
+		part.reserve(8, NOW);
+
+		assertThatThrownBy(() -> part.adjust(-3, "lost", "u", LATER)).isInstanceOf(DomainException.class).hasMessageContaining("available");
+		part.adjust(-2, "lost", "u", LATER);
+
+		assertThat(part.onHand()).isEqualTo(8);
+		assertThat(part.available()).isZero();
+	}
+
+	@Test
+	void lowStockLooksAtAvailableStockNotOnHand() {
+		Part part = Part.create("S", "A", null, Money.of("1"), 5, NOW);
+		part.receive(10, null, "u", NOW);
+		assertThat(part.lowStock()).isFalse();
+
+		int before = part.available();
+		part.reserve(6, LATER);
+
+		assertThat(part.lowStock()).isTrue();
+		assertThat(part.crossedLowStockFrom(before)).isTrue();
 	}
 }

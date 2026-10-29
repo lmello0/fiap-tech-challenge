@@ -17,12 +17,15 @@ class AdjustStockService implements AdjustStockUseCase {
 	private final PartRepository parts;
 	private final StockMovementRepository movements;
 	private final EventPublisher events;
+	private final StockReservations reservations;
 	private final Clock clock;
 
-	AdjustStockService(PartRepository parts, StockMovementRepository movements, EventPublisher events, Clock clock) {
+	AdjustStockService(PartRepository parts, StockMovementRepository movements, EventPublisher events, StockReservations reservations,
+			Clock clock) {
 		this.parts = parts;
 		this.movements = movements;
 		this.events = events;
+		this.reservations = reservations;
 		this.clock = clock;
 	}
 
@@ -31,12 +34,15 @@ class AdjustStockService implements AdjustStockUseCase {
 	public StockMovement execute(Command command) {
 		Part part = parts.findById(command.partId())
 				.orElseThrow(() -> new NotFoundException("Part " + command.partId() + " not found"));
-		int previousOnHand = part.onHand();
+		int previousAvailable = part.available();
 		StockMovement movement = part.adjust(command.delta(), command.reason(), command.performedBy(), clock.instant());
 		parts.save(part);
 		movements.save(movement);
-		if (part.crossedLowStockFrom(previousOnHand)) {
+		if (part.crossedLowStockFrom(previousAvailable)) {
 			events.publish(InventoryEvents.lowStock(part, clock.instant()));
+		}
+		if (command.delta() > 0) {
+			reservations.retryWaiting(java.util.Set.of(part.id()));
 		}
 		return movement;
 	}

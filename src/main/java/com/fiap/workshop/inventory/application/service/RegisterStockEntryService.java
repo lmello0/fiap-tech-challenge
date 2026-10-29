@@ -15,11 +15,13 @@ class RegisterStockEntryService implements RegisterStockEntryUseCase {
 
 	private final PartRepository parts;
 	private final StockMovementRepository movements;
+	private final StockReservations reservations;
 	private final Clock clock;
 
-	RegisterStockEntryService(PartRepository parts, StockMovementRepository movements, Clock clock) {
+	RegisterStockEntryService(PartRepository parts, StockMovementRepository movements, StockReservations reservations, Clock clock) {
 		this.parts = parts;
 		this.movements = movements;
+		this.reservations = reservations;
 		this.clock = clock;
 	}
 
@@ -30,6 +32,8 @@ class RegisterStockEntryService implements RegisterStockEntryUseCase {
 				.orElseThrow(() -> new NotFoundException("Part " + command.partId() + " not found"));
 		StockMovement movement = part.receive(command.quantity(), command.note(), command.performedBy(), clock.instant());
 		parts.save(part);
-		return movements.save(movement);
+		StockMovement saved = movements.save(movement);
+		reservations.retryWaiting(java.util.Set.of(part.id()));
+		return saved;
 	}
 }

@@ -35,8 +35,10 @@ class InventoryServicesTest {
 	private final CreatePartService create = new CreatePartService(parts, events, clock);
 	private final UpdatePartService update = new UpdatePartService(parts, events, clock);
 	private final DeactivatePartService deactivate = new DeactivatePartService(parts, events, clock);
-	private final RegisterStockEntryService stockEntry = new RegisterStockEntryService(parts, movements, clock);
-	private final AdjustStockService adjust = new AdjustStockService(parts, movements, events, clock);
+	private final InMemoryRepositories.Reservations reservationStore = new InMemoryRepositories.Reservations();
+	private final StockReservations reservations = new StockReservations(parts, reservationStore, movements, events, clock);
+	private final RegisterStockEntryService stockEntry = new RegisterStockEntryService(parts, movements, reservations, clock);
+	private final AdjustStockService adjust = new AdjustStockService(parts, movements, events, reservations, clock);
 
 	private Part filter(int minimum) {
 		return create.execute(new CreatePartUseCase.Command("flt-001", "Oil filter", null, new BigDecimal("35"), minimum));
@@ -88,7 +90,7 @@ class InventoryServicesTest {
 		adjust.execute(new AdjustStockUseCase.Command(part.id(), -1, "damaged", "u"));
 
 		assertThat(events.of(LowStockDetected.class)).singleElement().satisfies(e -> {
-			assertThat(e.onHand()).isEqualTo(4);
+			assertThat(e.available()).isEqualTo(4);
 			assertThat(e.minimumQuantity()).isEqualTo(5);
 		});
 		assertThat(movements.store).hasSize(3);

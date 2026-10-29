@@ -6,5 +6,5 @@ import java.util.UUID;
 import org.springframework.modulith.events.Externalized;
 
 @Externalized("workshop.inventory::low-stock-detected")
-public record LowStockDetected(UUID eventId, Instant occurredAt, UUID partId, String sku, String name, int onHand, int minimumQuantity) {
+public record LowStockDetected(UUID eventId, Instant occurredAt, UUID partId, String sku, String name, int available, int minimumQuantity) {
 }

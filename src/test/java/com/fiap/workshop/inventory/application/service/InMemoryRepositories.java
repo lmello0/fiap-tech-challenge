@@ -2,11 +2,17 @@ package com.fiap.workshop.inventory.application.service;
 
 import com.fiap.workshop.inventory.application.port.out.PartRepository;
 import com.fiap.workshop.inventory.application.port.out.StockMovementRepository;
+import com.fiap.workshop.inventory.application.port.out.StockReservationRepository;
 import com.fiap.workshop.inventory.domain.Part;
+import com.fiap.workshop.inventory.domain.ReservationLine;
+import com.fiap.workshop.inventory.domain.ReservationStatus;
 import com.fiap.workshop.inventory.domain.StockMovement;
+import com.fiap.workshop.inventory.domain.StockReservation;
 import com.fiap.workshop.shared.application.PageQuery;
 import com.fiap.workshop.shared.application.PageResult;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +37,11 @@ final class InMemoryRepositories {
 		@Override
 		public Optional<Part> findById(UUID id) {
 			return Optional.ofNullable(store.get(id));
+		}
+
+		@Override
+		public List<Part> findAllForUpdate(Collection<UUID> ids) {
+			return ids.stream().sorted().map(store::get).filter(java.util.Objects::nonNull).toList();
 		}
 
 		@Override
@@ -65,6 +76,34 @@ final class InMemoryRepositories {
 			List<StockMovement> all = store.stream().filter(m -> m.partId().equals(partId)).toList();
 			return new PageResult<>(all.stream().skip((long) page.page() * page.size()).limit(page.size()).toList(), page.page(),
 					page.size(), all.size());
+		}
+	}
+
+	static class Reservations implements StockReservationRepository {
+
+		final Map<UUID, StockReservation> store = new LinkedHashMap<>();
+
+		@Override
+		public StockReservation save(StockReservation reservation) {
+			store.put(reservation.id(), reservation);
+			return reservation;
+		}
+
+		@Override
+		public Optional<StockReservation> findByBudgetId(UUID budgetId) {
+			return store.values().stream().filter(r -> r.budgetId().equals(budgetId)).findFirst();
+		}
+
+		@Override
+		public List<StockReservation> findByWorkOrderId(UUID workOrderId) {
+			return store.values().stream().filter(r -> r.workOrderId().equals(workOrderId)).toList();
+		}
+
+		@Override
+		public List<StockReservation> findWaitingForParts(Collection<UUID> partIds) {
+			return store.values().stream().filter(r -> r.status() == ReservationStatus.WAITING)
+					.filter(r -> r.lines().stream().map(ReservationLine::partId).anyMatch(partIds::contains))
+					.sorted(Comparator.comparing(StockReservation::createdAt)).toList();
 		}
 	}
 }

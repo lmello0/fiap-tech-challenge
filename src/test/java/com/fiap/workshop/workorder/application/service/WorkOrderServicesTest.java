@@ -69,6 +69,8 @@ class WorkOrderServicesTest {
 	private final CompleteWorkOrderService complete = new CompleteWorkOrderService(support);
 	private final DeliverWorkOrderService deliver = new DeliverWorkOrderService(support);
 	private final CancelWorkOrderService cancel = new CancelWorkOrderService(support);
+	private final StartExecutionService startExecution = new StartExecutionService(support);
+	private final WaitForPartsService waitForParts = new WaitForPartsService(support);
 
 	private CustomerInfo ana;
 	private VehicleInfo argo;
@@ -379,5 +381,60 @@ class WorkOrderServicesTest {
 		new RefreshSnapshotsService(repository).refreshService(oilChange.id(), "Oil change gold", new BigDecimal("999"));
 
 		assertThat(repository.store.get(wo.id()).budgets().getFirst().lines().getFirst().unitPrice().amount()).isEqualByComparingTo("150");
+	}
+
+	private WorkOrder approvedWithParts() {
+		WorkOrder wo = waitingApproval(service(1), part(2));
+		return approve.execute(new ApproveBudgetUseCase.Command(wo.id(), budgetId(wo), ATTENDANT, DecisionChannel.PHONE, null));
+	}
+
+	@Test
+	void reservedPartsStartTheExecution() {
+		WorkOrder wo = approvedWithParts();
+
+		startExecution.execute(wo.id(), budgetId(wo));
+
+		WorkOrder stored = repository.store.get(wo.id());
+		assertThat(stored.status()).isEqualTo(WorkOrderStatus.IN_EXECUTION);
+		assertThat(stored.history().getLast().actor()).isEqualTo(Actor.SYSTEM);
+		assertThat(events.of(WorkOrderStatusChanged.class).getLast().toStatus()).isEqualTo("IN_EXECUTION");
+	}
+
+	@Test
+	void aShortagePausesTheOrderAndALaterReservationResumesIt() {
+		WorkOrder wo = approvedWithParts();
+
+		waitForParts.execute(wo.id(), budgetId(wo));
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.WAITING_PARTS);
+
+		startExecution.execute(wo.id(), budgetId(wo));
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.IN_EXECUTION);
+	}
+
+	@Test
+	void staleOrOutOfOrderStockOutcomesAreIgnored() {
+		WorkOrder wo = approvedWithParts();
+		UUID budget = budgetId(wo);
+		startExecution.execute(wo.id(), budget);
+		int published = events.events().size();
+
+		waitForParts.execute(wo.id(), budget);
+		startExecution.execute(wo.id(), budget);
+		startExecution.execute(wo.id(), UUID.randomUUID());
+		waitForParts.execute(wo.id(), UUID.randomUUID());
+
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.IN_EXECUTION);
+		assertThat(events.events()).hasSize(published);
+	}
+
+	@Test
+	void stockOutcomeBeforeApprovalDoesNothing() {
+		WorkOrder wo = waitingApproval(service(1), part(1));
+
+		startExecution.execute(wo.id(), budgetId(wo));
+		waitForParts.execute(wo.id(), budgetId(wo));
+
+		assertThat(repository.store.get(wo.id()).status()).isEqualTo(WorkOrderStatus.WAITING_APPROVAL);
+		assertThatThrownBy(() -> startExecution.execute(UUID.randomUUID(), UUID.randomUUID())).isInstanceOf(NotFoundException.class);
 	}
 }

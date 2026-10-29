@@ -26,6 +26,6 @@ final class InventoryEvents {
 	}
 
 	static LowStockDetected lowStock(Part p, Instant now) {
-		return new LowStockDetected(UuidV7.generate(), now, p.id(), p.sku(), p.name(), p.onHand(), p.minimumQuantity());
+		return new LowStockDetected(UuidV7.generate(), now, p.id(), p.sku(), p.name(), p.available(), p.minimumQuantity());
 	}
 }

@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 record PartResponse(UUID id, String sku, String name, String description, BigDecimal unitPrice, int minimumQuantity, int onHand,
-		boolean lowStock, boolean active, Instant createdAt, Instant updatedAt) {
+		int reserved, int available, boolean lowStock, boolean active, Instant createdAt, Instant updatedAt) {
 
 	static PartResponse from(Part p) {
 		return new PartResponse(p.id(), p.sku(), p.name(), p.description(), p.unitPrice().amount(), p.minimumQuantity(), p.onHand(),
-				p.lowStock(), p.active(), p.createdAt(), p.updatedAt());
+				p.reserved(), p.available(), p.lowStock(), p.active(), p.createdAt(), p.updatedAt());
 	}
 }

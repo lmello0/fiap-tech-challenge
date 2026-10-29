@@ -152,6 +152,10 @@ public class WorkOrder {
 		return budget;
 	}
 
+	public boolean isLastBudget(UUID budgetId) {
+		return !budgets.isEmpty() && budgets.getLast().id().equals(budgetId);
+	}
+
 	public boolean awaitingStock() {
 		return status == WorkOrderStatus.WAITING_APPROVAL && !budgets.isEmpty()
 				&& budgets.getLast().status() == BudgetStatus.APPROVED;

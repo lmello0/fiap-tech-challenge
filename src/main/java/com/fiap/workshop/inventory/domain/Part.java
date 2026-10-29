@@ -16,11 +16,12 @@ public class Part {
 	private Money unitPrice;
 	private int minimumQuantity;
 	private int onHand;
+	private int reserved;
 	private boolean active;
 	private Instant updatedAt;
 
 	private Part(UUID id, String sku, String name, String description, Money unitPrice, int minimumQuantity, int onHand,
-			boolean active, Instant createdAt, Instant updatedAt) {
+			int reserved, boolean active, Instant createdAt, Instant updatedAt) {
 		this.id = id;
 		this.sku = requireSku(sku);
 		this.name = requireName(name);
@@ -28,18 +29,19 @@ public class Part {
 		this.unitPrice = requirePrice(unitPrice);
 		this.minimumQuantity = requireNotNegative(minimumQuantity, "Minimum quantity");
 		this.onHand = requireNotNegative(onHand, "Stock");
+		this.reserved = requireNotNegative(reserved, "Reserved stock");
 		this.active = active;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
 	}
 
 	public static Part create(String sku, String name, String description, Money unitPrice, int minimumQuantity, Instant now) {
-		return new Part(UuidV7.generate(), sku, name, description, unitPrice, minimumQuantity, 0, true, now, now);
+		return new Part(UuidV7.generate(), sku, name, description, unitPrice, minimumQuantity, 0, 0, true, now, now);
 	}
 
 	public static Part restore(UUID id, String sku, String name, String description, Money unitPrice, int minimumQuantity,
-			int onHand, boolean active, Instant createdAt, Instant updatedAt) {
-		return new Part(id, sku, name, description, unitPrice, minimumQuantity, onHand, active, createdAt, updatedAt);
+			int onHand, int reserved, boolean active, Instant createdAt, Instant updatedAt) {
+		return new Part(id, sku, name, description, unitPrice, minimumQuantity, onHand, reserved, active, createdAt, updatedAt);
 	}
 
 	public void update(String name, String description, Money unitPrice, int minimumQuantity, Instant now) {
@@ -68,12 +70,45 @@ public class Part {
 		return move(MovementType.ADJUSTMENT, delta, reason, performedBy, now);
 	}
 
-	public boolean crossedLowStockFrom(int previousOnHand) {
-		return previousOnHand > minimumQuantity && onHand <= minimumQuantity;
+	public void reserve(int quantity, Instant now) {
+		requirePositive(quantity);
+		if (available() < quantity) {
+			throw new DomainException("Insufficient available stock: " + available() + " available, " + quantity + " requested");
+		}
+		reserved += quantity;
+		updatedAt = now;
+	}
+
+	public void release(int quantity, Instant now) {
+		requirePositive(quantity);
+		if (reserved < quantity) {
+			throw new DomainException("Cannot release " + quantity + ", only " + reserved + " reserved");
+		}
+		reserved -= quantity;
+		updatedAt = now;
+	}
+
+	public StockMovement consume(int quantity, String reason, String performedBy, Instant now) {
+		requirePositive(quantity);
+		if (reserved < quantity) {
+			throw new DomainException("Cannot consume " + quantity + ", only " + reserved + " reserved");
+		}
+		reserved -= quantity;
+		onHand -= quantity;
+		updatedAt = now;
+		return StockMovement.record(id, MovementType.CONSUMPTION, -quantity, onHand, reason, performedBy, now);
+	}
+
+	public int available() {
+		return onHand - reserved;
+	}
+
+	public boolean crossedLowStockFrom(int previousAvailable) {
+		return previousAvailable > minimumQuantity && available() <= minimumQuantity;
 	}
 
 	public boolean lowStock() {
-		return onHand <= minimumQuantity;
+		return available() <= minimumQuantity;
 	}
 
 	public void deactivate(Instant now) {
@@ -90,8 +125,8 @@ public class Part {
 
 	private StockMovement move(MovementType type, int delta, String reason, String performedBy, Instant now) {
 		requireActive();
-		if (onHand + delta < 0) {
-			throw new DomainException("Insufficient stock: " + onHand + " on hand, change of " + delta);
+		if (available() + delta < 0) {
+			throw new DomainException("Insufficient available stock: " + available() + " available, change of " + delta);
 		}
 		onHand += delta;
 		updatedAt = now;
@@ -121,6 +156,12 @@ public class Part {
 			throw new DomainException("Part price must not be negative");
 		}
 		return price;
+	}
+
+	private static void requirePositive(int quantity) {
+		if (quantity <= 0) {
+			throw new DomainException("Quantity must be positive");
+		}
 	}
 
 	private static int requireNotNegative(int value, String field) {
@@ -156,6 +197,10 @@ public class Part {
 
 	public int onHand() {
 		return onHand;
+	}
+
+	public int reserved() {
+		return reserved;
 	}
 
 	public boolean active() {
