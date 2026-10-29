@@ -42,3 +42,10 @@ dist/
 ### Impeccable ###
 # Screenshot evidence from design review rounds — transient, regenerated on demand.
 .impeccable/review/
+
+### Terraform ###
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
