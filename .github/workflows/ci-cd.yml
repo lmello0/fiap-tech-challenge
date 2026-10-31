@@ -107,6 +107,13 @@ jobs:
         run: ./infra/up.sh
       - name: Smoke test
         run: ./scripts/smoke-test.sh
+      - name: Upload smoke summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-summary
+          path: smoke-summary.json
+          if-no-files-found: ignore
       - name: Collect diagnostics
         if: failure()
         run: |

@@ -1,22 +1,104 @@
 #!/usr/bin/env bash
 # End-to-end check of a deployed environment: real tokens, work order opening with
 # customer and vehicle data, prioritized listing, signed webhook and status e-mail.
-set -euo pipefail
+set -Eeuo pipefail
 
 CONTEXT="${KUBE_CONTEXT:-workshop}"
 NAMESPACE="${NAMESPACE:-workshop}"
 APP="${APP_URL:-http://localhost:8080}"
 KEYCLOAK="${KEYCLOAK_URL:-http://localhost:8081}"
 MAILPIT="${MAILPIT_URL:-http://localhost:8025}"
+SUMMARY_JSON="${SMOKE_SUMMARY_JSON:-./smoke-summary.json}"
 SERVICE_ID="0198a000-0000-7000-8000-000000000201"
 SEED_CUSTOMER_WITH_DELIVERED_ORDER="0198a000-0000-7000-8000-000000000002"
 
+STEPS=(
+  "Opening port-forwards"
+  "Waiting for the services"
+  "Getting tokens from Keycloak"
+  "Opening a work order with the customer and vehicle data in the body"
+  "Issuing the budget"
+  "Checking the prioritized listing"
+  "Approving through the signed webhook"
+  "Checking the new status"
+  "Checking the status e-mail"
+)
+declare -A STEP_STATUS=() STEP_SECS=()
+CURRENT_STEP=""
+CURRENT_START=0
+FAIL_MSG=""
+NUMBER=""
+SECONDS=0
+
 forwards=()
 cleanup() { for pid in "${forwards[@]:-}"; do kill "$pid" 2>/dev/null || true; done; }
-trap cleanup EXIT
 
-step() { printf '\n==> %s\n' "$1"; }
-fail() { printf 'FAILED: %s\n' "$1" >&2; exit 1; }
+close_step() {
+  [[ -n "$CURRENT_STEP" ]] || return 0
+  STEP_STATUS[$CURRENT_STEP]="$1"
+  STEP_SECS[$CURRENT_STEP]=$((SECONDS - CURRENT_START))
+  CURRENT_STEP=""
+}
+
+step() {
+  close_step PASS
+  CURRENT_STEP="$1"
+  CURRENT_START=$SECONDS
+  printf '\n==> %s\n' "$1"
+}
+
+fail() { FAIL_MSG="$1"; printf 'FAILED: %s\n' "$1" >&2; exit 1; }
+
+write_summary() {
+  local code="$1" overall=PASSED name status secs rows="" icon
+  [[ $code -eq 0 ]] || overall=FAILED
+
+  printf '\n== Smoke test summary: %s (%ss)%s ==\n' "$overall" "$SECONDS" "${NUMBER:+ work order $NUMBER}"
+  for name in "${STEPS[@]}"; do
+    printf '  %-8s %4ss  %s\n' "${STEP_STATUS[$name]}" "${STEP_SECS[$name]}" "$name"
+    rows+="$name"$'\t'"${STEP_STATUS[$name]}"$'\t'"${STEP_SECS[$name]}"$'\n'
+  done
+  [[ -z "$FAIL_MSG" ]] || printf '  failure: %s\n' "$FAIL_MSG"
+
+  if command -v jq >/dev/null; then
+    printf '%s' "$rows" | jq -Rn --arg status "$overall" --arg wo "$NUMBER" --arg failure "$FAIL_MSG" --argjson secs "$SECONDS" \
+      '{status:$status, workOrder:($wo | if . == "" then null else . end), durationSeconds:$secs, failure:($failure | if . == "" then null else . end),
+        steps:[inputs | split("\t") | {name:.[0], status:.[1], seconds:(.[2] | tonumber)}]}' >"$SUMMARY_JSON" || true
+  fi
+
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    {
+      [[ $code -eq 0 ]] && echo "## ✅ Smoke test PASSED" || echo "## ❌ Smoke test FAILED"
+      echo
+      echo "Total time: **${SECONDS}s**${NUMBER:+ · Work order: **$NUMBER**}"
+      [[ -z "$FAIL_MSG" ]] || { echo; echo "> **Failure:** $FAIL_MSG"; }
+      echo
+      echo "| Step | Result | Duration |"
+      echo "|---|---|---|"
+      for name in "${STEPS[@]}"; do
+        case "${STEP_STATUS[$name]}" in PASS) icon="✅ PASS" ;; FAIL) icon="❌ FAIL" ;; *) icon="⏭️ SKIPPED" ;; esac
+        echo "| $name | $icon | ${STEP_SECS[$name]}s |"
+      done
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
+}
+
+finish() {
+  local code=$?
+  trap - EXIT ERR
+  set +e
+  cleanup
+  close_step "$([[ $code -eq 0 ]] && echo PASS || echo FAIL)"
+  for name in "${STEPS[@]}"; do
+    [[ -n "${STEP_STATUS[$name]:-}" ]] || { STEP_STATUS[$name]=SKIPPED; STEP_SECS[$name]=0; }
+  done
+  write_summary "$code"
+  exit "$code"
+}
+on_error() { [[ -n "$FAIL_MSG" ]] || FAIL_MSG="unexpected error at line $1"; }
+trap finish EXIT
+trap 'FAIL_MSG="${FAIL_MSG:-interrupted}"; exit 143' TERM INT
+trap 'on_error $LINENO' ERR
 
 if [[ "${START_PORT_FORWARD:-1}" == "1" ]]; then
   step "Opening port-forwards"
@@ -131,7 +213,6 @@ step "Checking the status e-mail"
 for _ in $(seq 1 30); do
   if curl -fs "$MAILPIT/api/v1/messages?limit=200" | jq -e --arg e "$EMAIL" --arg n "$NUMBER" \
     'any(.messages[]; .To[0].Address == $e and (.Subject | contains($n)))' >/dev/null; then
-    printf '\nSMOKE TEST PASSED (%s)\n' "$NUMBER"
     exit 0
   fi
   sleep 2

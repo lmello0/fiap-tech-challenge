@@ -49,3 +49,5 @@ dist/
 *.tfstate.*
 crash.log
 *.tfvars
+
+smoke-summary.json
