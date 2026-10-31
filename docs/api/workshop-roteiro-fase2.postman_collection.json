@@ -1,0 +1,1133 @@
+{
+  "info": {
+    "name": "Workshop - Roteiro do video (Fase 2)",
+    "description": "Requisicoes do passo 5 do roteiro-video-fase2.md, na ordem de gravacao, com testes automatizados.\n\nPre-requisitos: ambiente de pe (infra/up.sh) e port-forwards 8080 (workshop), 8081 (keycloak) e 8025 (mailpit).\n\nAntes do passo 7, preencha a variavel webhookSecret:\n  terraform -chdir=infra/03-platform output -raw budget_webhook_secret\n(ou: kubectl -n workshop get secret budget-webhook -o jsonpath='{.data.BUDGET_WEBHOOK_SECRET}' | base64 -d)\n\nExecucao completa: Collection Runner na ordem, ou 'newman run docs/api/workshop-roteiro-fase2.postman_collection.json --env-var webhookSecret=...'. Contrato completo em docs/api/openapi.json.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Pre-voo (ambiente de pe)",
+      "item": [
+        {
+          "name": "0.1 API pronta (readiness)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health/readiness",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.2 Keycloak: realm workshop",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('realm ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.3 Mailpit pronto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mailpitUrl}}/readyz",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mailpit ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.4 (opcional) Limpar a caixa do Mailpit",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{mailpitUrl}}/api/v1/messages",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Deixa a caixa vazia para que, no passo 9, so aparecam os e-mails desta gravacao."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('caixa limpa', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Roda uma vez antes de gravar."
+    },
+    {
+      "name": "1. Autenticacao (passo 1 do fluxo)",
+      "item": [
+        {
+          "name": "Token (attendant)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "workshop-cli"
+                },
+                {
+                  "key": "username",
+                  "value": "attendant"
+                },
+                {
+                  "key": "password",
+                  "value": "attendant"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token issued', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('attendantToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token (mechanic)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "workshop-cli"
+                },
+                {
+                  "key": "username",
+                  "value": "mechanic"
+                },
+                {
+                  "key": "password",
+                  "value": "mechanic"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token issued', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('mechanicToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token (customer)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "workshop-cli"
+                },
+                {
+                  "key": "username",
+                  "value": "customer"
+                },
+                {
+                  "key": "password",
+                  "value": "customer"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token issued', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('customerToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Abrir OS com cliente e veiculo NOVOS (passo 2)",
+      "item": [
+        {
+          "name": "2.1 Abrir OS - cliente e veiculo novos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"document\": \"{{customerDocument}}\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"{{customerEmail}}\",\n    \"phone\": \"11999990000\"\n  },\n  \"vehicle\": {\n    \"plate\": \"{{vehiclePlate1}}\",\n    \"brand\": \"Fiat\",\n    \"model\": \"Argo\",\n    \"year\": 2022\n  },\n  \"complaint\": \"Barulho ao frear\",\n  \"items\": [\n    {\n      \"type\": \"SERVICE\",\n      \"referenceId\": \"{{serviceId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Gera CPF valido, placa e e-mail NOVOS a cada execucao do passo 2.",
+                  "function cpf(){const d=[];for(let i=0;i<9;i++)d.push(Math.floor(Math.random()*10));",
+                  "const dv=(n,w)=>{let s=0;for(let i=0;i<n;i++)s+=d[i]*(w-i);const r=(s*10)%11;return r===10?0:r;};",
+                  "d.push(dv(9,10));d.push(dv(10,11));return d.join('');}",
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];",
+                  "const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "const doc=cpf();",
+                  "pm.collectionVariables.set('customerDocument',doc);",
+                  "pm.collectionVariables.set('customerEmail','roteiro-'+doc+'@example.com');",
+                  "pm.collectionVariables.set('vehiclePlate1',plate());",
+                  "pm.collectionVariables.set('vehiclePlate2',plate());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const wo = pm.response.json();",
+                  "pm.test('status RECEIVED', () => pm.expect(wo.status).to.eql('RECEIVED'));",
+                  "pm.collectionVariables.set('workOrderId1', wo.id);",
+                  "pm.collectionVariables.set('workOrderNumber1', wo.number);",
+                  "pm.collectionVariables.set('customerId', wo.customer.id);",
+                  "pm.collectionVariables.set('vehicleId1', wo.vehicle.id);",
+                  "pm.collectionVariables.unset('webhookEventId');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Mostrar o cliente que foi criado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{customerId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cliente criado', () => { pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().document).to.eql(pm.collectionVariables.get('customerDocument')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Reaproveitar o cliente (passo 3)",
+      "item": [
+        {
+          "name": "3.1 Abrir 2a OS - mesmo cliente, OUTRO veiculo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"document\": \"{{customerDocument}}\",\n    \"name\": \"Nome Diferente (ignorado)\",\n    \"email\": \"outro-email@example.com\",\n    \"phone\": \"11999990000\"\n  },\n  \"vehicle\": {\n    \"plate\": \"{{vehiclePlate2}}\",\n    \"brand\": \"Fiat\",\n    \"model\": \"Argo\",\n    \"year\": 2022\n  },\n  \"complaint\": \"Barulho ao frear\",\n  \"items\": [\n    {\n      \"type\": \"SERVICE\",\n      \"referenceId\": \"{{serviceId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mesmo documento, mas nome e e-mail diferentes no corpo: o cliente existente e reaproveitado e NAO e sobrescrito."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const wo = pm.response.json();",
+                  "pm.test('mesmo cliente reaproveitado', () => pm.expect(wo.customer.id).to.eql(pm.collectionVariables.get('customerId')));",
+                  "pm.test('dados do cliente nao sobrescritos', () => pm.expect(wo.customer.name).to.eql('Ana Souza'));",
+                  "pm.test('veiculo novo', () => pm.expect(wo.vehicle.id).to.not.eql(pm.collectionVariables.get('vehicleId1')));",
+                  "pm.collectionVariables.set('workOrderId2', wo.id);",
+                  "pm.collectionVariables.set('vehicleId2', wo.vehicle.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Regra: mesmo veiculo com OS ativa -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"document\": \"{{customerDocument}}\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"{{customerEmail}}\",\n    \"phone\": \"11999990000\"\n  },\n  \"vehicle\": {\n    \"plate\": \"{{vehiclePlate2}}\",\n    \"brand\": \"Fiat\",\n    \"model\": \"Argo\",\n    \"year\": 2022\n  },\n  \"complaint\": \"Barulho ao frear\",\n  \"items\": [\n    {\n      \"type\": \"SERVICE\",\n      \"referenceId\": \"{{serviceId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "O roteiro original pedia 'mesmo cliente e veiculo' direto, mas um veiculo so pode ter uma OS ativa."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict (veiculo ja tem OS ativa)', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 Cancelar a 2a OS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId2}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Cliente desistiu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cancelada', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('CANCELLED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 Reabrir com o MESMO cliente e o MESMO veiculo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"document\": \"{{customerDocument}}\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"{{customerEmail}}\",\n    \"phone\": \"11999990000\"\n  },\n  \"vehicle\": {\n    \"plate\": \"{{vehiclePlate2}}\",\n    \"brand\": \"Fiat\",\n    \"model\": \"Argo\",\n    \"year\": 2022\n  },\n  \"complaint\": \"Barulho ao frear\",\n  \"items\": [\n    {\n      \"type\": \"SERVICE\",\n      \"referenceId\": \"{{serviceId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const wo = pm.response.json();",
+                  "pm.test('cliente reaproveitado', () => pm.expect(wo.customer.id).to.eql(pm.collectionVariables.get('customerId')));",
+                  "pm.test('veiculo reaproveitado', () => pm.expect(wo.vehicle.id).to.eql(pm.collectionVariables.get('vehicleId2')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 Veiculos do cliente (1 cliente, 2 veiculos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{customerId}}/vehicles",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(); const list = Array.isArray(b) ? b : b.content;",
+                  "pm.test('2 veiculos, sem duplicar', () => pm.expect(list.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "O passo 3 do roteiro, como escrito, nao funciona (409). Use 3.1 para mostrar o cliente reaproveitado; 3.2-3.5 sao opcionais e mostram o veiculo reaproveitado."
+    },
+    {
+      "name": "4. Listagem priorizada (passo 4)",
+      "item": [
+        {
+          "name": "4.1 Fila priorizada (sem finalizadas)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders?size=100",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rank = {IN_EXECUTION:0, WAITING_PARTS:1, WAITING_APPROVAL:2, IN_DIAGNOSIS:3, RECEIVED:4};",
+                  "",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const st = pm.response.json().content.map(w => w.status);",
+                  "pm.test('sem COMPLETED/DELIVERED/CANCELLED', () => pm.expect(st.filter(s => ['COMPLETED','DELIVERED','CANCELLED'].includes(s))).to.eql([]));",
+                  "const r = st.map(s => rank[s]);",
+                  "pm.test('ordenada por prioridade de status', () => pm.expect(r).to.eql([...r].sort((a,b) => a-b)));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. includeFinished e status (passo 5)",
+      "item": [
+        {
+          "name": "5.1 includeFinished=true",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders?includeFinished=true&size=100",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const st = pm.response.json().content.map(w => w.status);",
+                  "pm.test('mostra entregues', () => pm.expect(st).to.include('DELIVERED'));",
+                  "pm.test('mostra canceladas', () => pm.expect(st).to.include('CANCELLED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 status=DELIVERED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders?status=DELIVERED",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().content;",
+                  "pm.test('so entregues', () => { pm.expect(c.length).to.be.above(0); pm.expect(c.every(w => w.status === 'DELIVERED')).to.be.true; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Diagnostico e orcamento - mechanic (passo 6)",
+      "item": [
+        {
+          "name": "6.1 Iniciar diagnostico",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId1}}/diagnosis/start",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('em diagnostico', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('IN_DIAGNOSIS'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Concluir diagnostico (emite o orcamento)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId1}}/diagnosis/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('aguardando aprovacao', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'); });",
+                  "const b = pm.response.json().budgets;",
+                  "pm.collectionVariables.set('budgetId', b[b.length-1].id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Webhook de decisao (passo 7)",
+      "item": [
+        {
+          "name": "7.1 Assinatura INVALIDA -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('webhookSecret');",
+                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now()/1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
+                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.raw = body;",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + 'bad' + hex});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Assinatura VALIDA -> 200 APPLIED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('webhookSecret');",
+                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now()/1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
+                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.raw = body;",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('APPLIED', () => pm.expect(pm.response.json().result).to.eql('APPLIED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Repetir o mesmo eventId -> DUPLICATE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('webhookSecret');",
+                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now()/1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
+                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.raw = body;",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('DUPLICATE', () => pm.expect(pm.response.json().result).to.eql('DUPLICATE'));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Exige a variavel webhookSecret preenchida. Rode 7.1, 7.2 e 7.3 em sequencia: elas compartilham o mesmo eventId."
+    },
+    {
+      "name": "8. Consultar a OS (passo 8)",
+      "item": [
+        {
+          "name": "8.1 Detalhe da OS - IN_EXECUTION, canal EXTERNAL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId1}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const wo = pm.response.json();",
+                  "pm.test('IN_EXECUTION', () => pm.expect(wo.status).to.eql('IN_EXECUTION'));",
+                  "pm.test('canal EXTERNAL', () => pm.expect(wo.budgets[0].decision.channel).to.eql('EXTERNAL'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. E-mails (passo 9)",
+      "item": [
+        {
+          "name": "9.1 E-mails do cliente no Mailpit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mailpitUrl}}/api/v1/messages?limit=200",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function(){}, 3000); // o envio e assincrono (evento + Mailpit)"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const email = pm.collectionVariables.get('customerEmail'), number = pm.collectionVariables.get('workOrderNumber1');",
+                  "const subjects = pm.response.json().messages.filter(m => m.To[0].Address === email && m.Subject.includes(number)).map(m => m.Subject);",
+                  "console.log(subjects.join(' | '));",
+                  "pm.test('e-mail de recebimento', () => pm.expect(subjects.some(s => /received/i.test(s))).to.be.true);",
+                  "pm.test('e-mail da mudanca apos a aprovacao', () => pm.expect(subjects.length).to.be.above(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Alternativa visual: abrir http://localhost:8025 no navegador."
+    },
+    {
+      "name": "10. Area do cliente (passo 10)",
+      "item": [
+        {
+          "name": "10.1 Meu perfil (customer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.2 Minhas OS (so as do customer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/work-orders",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().content;",
+                  "pm.test('tem OS dele', () => pm.expect(c.length).to.be.above(0));",
+                  "pm.test('uma unica pessoa em todas as OS', () => pm.expect(new Set(c.map(w => w.customerId)).size).to.eql(1));",
+                  "pm.test('nao ve a OS da Ana', () => pm.expect(c.map(w => w.id)).to.not.include(pm.collectionVariables.get('workOrderId1')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.3 Tentar abrir a OS da Ana -> negado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/work-orders/{{workOrderId1}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403/404 (nao e dele)', () => pm.expect([403, 404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "keycloakUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "mailpitUrl",
+      "value": "http://localhost:8025"
+    },
+    {
+      "key": "webhookSecret",
+      "value": ""
+    },
+    {
+      "key": "serviceId",
+      "value": "0198a000-0000-7000-8000-000000000201"
+    }
+  ]
+}
