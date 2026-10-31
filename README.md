@@ -171,7 +171,7 @@ kubectl apply -k k8s/load                      # teste de carga (k6) para ver o 
 kubectl -n workshop get hpa workshop -w
 ```
 
-O **HPA** (`k8s/base/app-hpa.yaml`) escala de 2 a 6 réplicas por CPU (70%) e memória (85%). Medido no minikube com 4 CPUs, o teste de
+O **HPA** (`k8s/base/app-hpa.yaml`) escala de 2 a 6 réplicas por CPU (70%). A memória não entra: o heap da JVM não é devolvido, e a métrica mantinha as réplicas altas depois da carga. Medido no minikube com 4 CPUs, o teste de
 carga levou a aplicação de 2 para 6 réplicas em cerca de 1,5 minuto (103 mil requisições, nenhuma falha, p95 de 142 ms) e ela voltou para 2 depois.
 
 Para desfazer tudo: `infra/down.sh`.

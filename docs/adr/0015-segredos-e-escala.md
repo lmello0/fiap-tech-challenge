@@ -8,7 +8,7 @@
 - ConfigMaps só têm valores não sensíveis. O ConfigMap é gerado pelo Kustomize com sufixo de hash, de modo que qualquer mudança de configuração reinicia os pods.
 
 ## Escala
-- HPA com 2 a 6 réplicas, CPU alvo de 70% e memória de 85%. Os *requests* de CPU são baixos (250m) porque a utilização é medida sobre o request.
+- HPA com 2 a 6 réplicas, CPU alvo de 70%, sem métrica de memória (o heap da JVM não é devolvido ao sistema e mantinha as réplicas altas depois da carga). Os *requests* de CPU são baixos (250m) porque a utilização é medida sobre o request.
 - Medido no minikube com 4 CPUs: de 2 para 6 réplicas em cerca de 1,5 minuto sob carga (103 mil requisições, nenhuma falha, p95 de 142 ms), e de volta para 2 após a carga.
 - **Conexões do banco são o limite real:** o Postgres aceita 100. Com 6 réplicas e o pool padrão do Hikari (10), mais as do Keycloak, o total chegava a 98. Os pools foram limitados (aplicação em 8, Keycloak em 20), totalizando no pior caso 68.
 - Várias réplicas são seguras porque os consumidores de eventos são idempotentes ([ADR 0011](0011-idempotencia-dos-consumidores.md)) e as atualizações disparadas por eventos usam lock pessimista ([ADR 0010](0010-estrategia-de-locks.md)). Ao reiniciar, cada réplica reenvia publicações pendentes, o que pode repetir uma entrega, tolerada pela idempotência.
