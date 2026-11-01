@@ -4,9 +4,6 @@ Back-end de uma oficina mecânica de médio porte (Tech Challenge FIAP). Gerenci
 estoque de peças e **ordens de serviço (OS)** — da abertura ao orçamento, aprovação, execução, finalização e entrega — com
 acompanhamento em tempo real pelo próprio cliente.
 
-- **Fase 1:** o MVP — monólito modular com Clean Architecture, eventos, PostgreSQL, Keycloak e testes.
-- **Fase 2 (esta entrega):** evolução das APIs e infraestrutura escalável e automatizada — Kubernetes com HPA, Terraform e CI/CD.
-
 ## Objetivos da Fase 2
 
 - Evoluir as APIs: abertura de OS com os dados do cliente e do veículo, aprovação por notificação externa, listagem priorizada e e-mail a cada mudança de status.
@@ -65,15 +62,15 @@ flowchart TB
     kc --> rds
 ```
 
-| Recurso | Criado por | Descrição |
-|---|---|---|
-| Container MiniStack (`workshop-ministack`) | `infra/01-foundation` | Emulador de AWS (RDS, Secrets Manager) na porta 4566 |
-| Cluster minikube (`workshop`) | `infra/01-foundation` | Driver `docker`, com `metrics-server` para o HPA; CPUs e memória configuráveis |
-| RDS PostgreSQL 18 (`workshop`) | `infra/02-database` | Instância emulada pelo MiniStack (container Postgres real) |
-| Roles e databases `workshop_app`/`workshop` e `keycloak`/`keycloak` | `infra/02-database` | Criados dentro da instância; a aplicação usa um único usuário de banco |
-| Secrets Manager `workshop/db/app` e `workshop/db/keycloak` | `infra/02-database` | Credenciais geradas pelo Terraform |
-| Namespace `workshop` e Secrets (`workshop-db`, `keycloak-db`, `keycloak-bootstrap-admin`, `keycloak-admin-client`, `budget-webhook`, `keycloak-realm`) | `infra/03-platform` | Nenhuma senha é versionada |
-| Deployments, Services, ConfigMap e HPA | `k8s/` (Kustomize) | Aplicação, Keycloak e Mailpit |
+| Recurso                                                                                                                                                | Criado por            | Descrição                                                                      |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|--------------------------------------------------------------------------------|
+| Container MiniStack (`workshop-ministack`)                                                                                                             | `infra/01-foundation` | Emulador de AWS (RDS, Secrets Manager) na porta 4566                           |
+| Cluster minikube (`workshop`)                                                                                                                          | `infra/01-foundation` | Driver `docker`, com `metrics-server` para o HPA; CPUs e memória configuráveis |
+| RDS PostgreSQL 18 (`workshop`)                                                                                                                         | `infra/02-database`   | Instância emulada pelo MiniStack (container Postgres real)                     |
+| Roles e databases `workshop_app`/`workshop` e `keycloak`/`keycloak`                                                                                    | `infra/02-database`   | Criados dentro da instância; a aplicação usa um único usuário de banco         |
+| Secrets Manager `workshop/db/app` e `workshop/db/keycloak`                                                                                             | `infra/02-database`   | Credenciais geradas pelo Terraform                                             |
+| Namespace `workshop` e Secrets (`workshop-db`, `keycloak-db`, `keycloak-bootstrap-admin`, `keycloak-admin-client`, `budget-webhook`, `keycloak-realm`) | `infra/03-platform`   | Nenhuma senha é versionada                                                     |
+| Deployments, Services, ConfigMap e HPA                                                                                                                 | `k8s/` (Kustomize)    | Aplicação, Keycloak e Mailpit                                                  |
 
 Decisões em [ADR 0014](docs/adr/0014-topologia-kubernetes-ministack-terraform.md) e [ADR 0015](docs/adr/0015-segredos-e-escala.md).
 
@@ -96,15 +93,15 @@ flowchart LR
 
 ## Evolução da aplicação (Fase 2)
 
-| Requisito | Entrega |
-|---|---|
-| Abertura de OS | `POST /api/v1/work-orders` recebe `customer`, `vehicle`, `items` e `complaint`; devolve a OS com `id` e `number`. Cliente (por documento) e veículo (por placa) existentes são reaproveitados **sem sobrescrever**; os inexistentes são cadastrados na mesma transação ([ADR 0012](docs/adr/0012-cadastro-sincrono-na-abertura-da-os.md)). |
-| Consulta de status | `GET /api/v1/work-orders?status=…` e `GET /api/v1/me/work-orders?status=…`; o detalhe da OS traz o status e o histórico. |
-| Aprovação por notificação externa | `POST /api/v1/webhooks/budget-decisions`, assinado com HMAC-SHA256, com janela de tempo e idempotência ([ADR 0013](docs/adr/0013-webhook-de-decisao-com-hmac.md)). |
-| Listagem de OS | Padrão: `Em execução > Aguardando peças > Aguardando aprovação > Diagnóstico > Recebida`, mais antigas primeiro, **sem** finalizadas, entregues e canceladas. `includeFinished=true` ou um `status` explícito mostram as demais. |
-| Atualização de status por e-mail | O cliente recebe um e-mail a cada mudança de status (orçamento e "veículo pronto" têm e-mails próprios). |
-| Clean Code e Clean Architecture | Hexagonal por módulo, verificada em todo build (ArchUnit e Spring Modulith). |
-| Testes automatizados | Mais de 300 testes (unitários, de API e de integração com Testcontainers); cobertura de domínio e aplicação acima de 99%, com mínimo de 80% exigido pelo build. |
+| Requisito                         | Entrega                                                                                                                                                                                                                                                                                                                                    |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Abertura de OS                    | `POST /api/v1/work-orders` recebe `customer`, `vehicle`, `items` e `complaint`; devolve a OS com `id` e `number`. Cliente (por documento) e veículo (por placa) existentes são reaproveitados **sem sobrescrever**; os inexistentes são cadastrados na mesma transação ([ADR 0012](docs/adr/0012-cadastro-sincrono-na-abertura-da-os.md)). |
+| Consulta de status                | `GET /api/v1/work-orders?status=…` e `GET /api/v1/me/work-orders?status=…`; o detalhe da OS traz o status e o histórico.                                                                                                                                                                                                                   |
+| Aprovação por notificação externa | `POST /api/v1/webhooks/budget-decisions`, assinado com HMAC-SHA256, com janela de tempo e idempotência ([ADR 0013](docs/adr/0013-webhook-de-decisao-com-hmac.md)).                                                                                                                                                                         |
+| Listagem de OS                    | Padrão: `Em execução > Aguardando peças > Aguardando aprovação > Diagnóstico > Recebida`, mais antigas primeiro, **sem** finalizadas, entregues e canceladas. `includeFinished=true` ou um `status` explícito mostram as demais.                                                                                                           |
+| Atualização de status por e-mail  | O cliente recebe um e-mail a cada mudança de status (orçamento e "veículo pronto" têm e-mails próprios).                                                                                                                                                                                                                                   |
+| Clean Code e Clean Architecture   | Hexagonal por módulo, verificada em todo build (ArchUnit e Spring Modulith).                                                                                                                                                                                                                                                               |
+| Testes automatizados              | Mais de 300 testes (unitários, de API e de integração com Testcontainers); cobertura de domínio e aplicação acima de 99%, com mínimo de 80% exigido pelo build.                                                                                                                                                                            |
 
 Status da OS: `RECEIVED` (Recebida) → `IN_DIAGNOSIS` (Diagnóstico) → `WAITING_APPROVAL` (Aguardando aprovação) → `IN_EXECUTION` (Execução) → `COMPLETED` (Finalizada) → `DELIVERED` (Entregue), mais `WAITING_PARTS` (Aguardando peças) e `CANCELLED` (Cancelada).
 
@@ -117,11 +114,11 @@ cp .env.example .env        # valores de demonstração
 docker compose up --build   # postgres, keycloak, mailpit e a aplicação
 ```
 
-| Serviço | URL |
-|---|---|
-| API / Swagger UI | http://localhost:8080/swagger-ui.html |
-| Keycloak (console `admin` / `admin`) | http://localhost:8081 |
-| Mailpit (e-mails enviados) | http://localhost:8025 |
+| Serviço                              | URL                                   |
+|--------------------------------------|---------------------------------------|
+| API / Swagger UI                     | http://localhost:8080/swagger-ui.html |
+| Keycloak (console `admin` / `admin`) | http://localhost:8081                 |
+| Mailpit (e-mails enviados)           | http://localhost:8025                 |
 
 O perfil `demo` vem ativo e carrega clientes, veículos, serviços, peças e três OS de exemplo.
 
@@ -129,12 +126,12 @@ O perfil `demo` vem ativo e carrega clientes, veículos, serviços, peças e tr�
 
 A senha de cada usuário é igual ao seu nome de usuário.
 
-| Usuário | Papel | O que pode fazer |
-|---|---|---|
-| `admin` | `ADMIN` | Tudo |
+| Usuário     | Papel       | O que pode fazer                                                            |
+|-------------|-------------|-----------------------------------------------------------------------------|
+| `admin`     | `ADMIN`     | Tudo                                                                        |
 | `attendant` | `ATTENDANT` | Cadastros, abrir/entregar/cancelar OS, aprovar orçamento em nome do cliente |
-| `mechanic` | `MECHANIC` | Itens, diagnóstico, reparo adicional, finalizar execução |
-| `customer` | `CUSTOMER` | Somente a própria área (`/api/v1/me/...`) |
+| `mechanic`  | `MECHANIC`  | Itens, diagnóstico, reparo adicional, finalizar execução                    |
+| `customer`  | `CUSTOMER`  | Somente a própria área (`/api/v1/me/...`)                                   |
 
 ```bash
 TOKEN=$(curl -s -d grant_type=password -d client_id=workshop-cli -d username=attendant -d password=attendant \
@@ -180,11 +177,11 @@ Para desfazer tudo: `infra/down.sh`.
 
 As raízes ficam em `/infra` e são aplicadas em ordem, porque os providers de cada uma dependem da anterior. O estado é local (`.tfstate` ignorado pelo Git).
 
-| Raiz | Recursos |
-|---|---|
-| `01-foundation` | Container MiniStack e cluster minikube com `metrics-server` |
-| `02-database` | RDS PostgreSQL 18, roles e databases, segredos no Secrets Manager |
-| `03-platform` | Namespace `workshop` e os Secrets do Kubernetes |
+| Raiz            | Recursos                                                          |
+|-----------------|-------------------------------------------------------------------|
+| `01-foundation` | Container MiniStack e cluster minikube com `metrics-server`       |
+| `02-database`   | RDS PostgreSQL 18, roles e databases, segredos no Secrets Manager |
+| `03-platform`   | Namespace `workshop` e os Secrets do Kubernetes                   |
 
 ```bash
 terraform -chdir=infra/01-foundation init && terraform -chdir=infra/01-foundation apply
@@ -210,11 +207,10 @@ O Terraform só usa recursos AWS por meio do MiniStack (`http://localhost:4566`)
 - **Swagger UI:** http://localhost:8080/swagger-ui.html (em produção, desligue com `SWAGGER_UI_ENABLED=false`)
 - **OpenAPI:** [docs/api/openapi.json](docs/api/openapi.json) — um teste falha se o arquivo ficar diferente da API real
   (para regenerar: `./mvnw test -Dtest=OpenApiDocumentTest -Dopenapi.update=true`)
-- **Collection Postman:** [docs/api/workshop.postman_collection.json](docs/api/workshop.postman_collection.json) — fluxo completo, com tokens e a assinatura HMAC do webhook
-
-## Vídeo demonstrativo
-
-_Link a ser preenchido pelo grupo._
+- **Collection Postman:** [docs/api/workshop.postman_collection.json](docs/api/workshop.postman_collection.json) — todos os endpoints da API,
+  numa ordem que roda de ponta a ponta com testes (tokens, controle de acesso, cadastros, estoque, ciclo da OS, área do cliente e webhook
+  assinado com HMAC). Gera os próprios dados a cada execução: `newman run docs/api/workshop.postman_collection.json --env-var webhookSecret=...`
+- **Roteiro do vídeo:** [docs/api/workshop-roteiro-fase2.postman_collection.json](docs/api/workshop-roteiro-fase2.postman_collection.json) — as requisições do roteiro da fase 2, na ordem de gravação
 
 ## Testes e qualidade
 
@@ -240,5 +236,3 @@ docs/                             arquitetura, ADRs, linguagem ubíqua, Event St
 
 - [Arquitetura](docs/arquitetura.md) · [Linguagem ubíqua](docs/linguagem-ubiqua.md) · [Event Storming](docs/event-storming.md) (resumo e [quadro no Miro](https://miro.com/app/board/uXjVH9wTsBg=/?share_link_id=625997029412))
 - [Justificativa do banco de dados](docs/justificativa-banco.md) · [Decisões de arquitetura (ADRs)](docs/adr) · [Relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md)
-
-Código, API, logs e e-mails em inglês; documentação em português.

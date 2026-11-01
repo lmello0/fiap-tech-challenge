@@ -14,6 +14,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -46,6 +48,7 @@ class VehicleController {
 	}
 
 	@PostMapping("/customers/{customerId}/vehicles")
+	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<VehicleResponse> create(@PathVariable UUID customerId, @Valid @RequestBody VehicleRequests.Create request) {
 		VehicleResponse body = VehicleResponse.from(register.execute(
@@ -84,6 +87,7 @@ class VehicleController {
 	}
 
 	@DeleteMapping("/vehicles/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<Void> remove(@PathVariable UUID id) {
 		deactivate.execute(id);

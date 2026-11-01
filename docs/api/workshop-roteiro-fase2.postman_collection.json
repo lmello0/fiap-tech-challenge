@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Workshop - Roteiro do video (Fase 2)",
-    "description": "Requisicoes do passo 5 do roteiro-video-fase2.md, na ordem de gravacao, com testes automatizados.\n\nPre-requisitos: ambiente de pe (infra/up.sh) e port-forwards 8080 (workshop), 8081 (keycloak) e 8025 (mailpit).\n\nAntes do passo 7, preencha a variavel webhookSecret:\n  terraform -chdir=infra/03-platform output -raw budget_webhook_secret\n(ou: kubectl -n workshop get secret budget-webhook -o jsonpath='{.data.BUDGET_WEBHOOK_SECRET}' | base64 -d)\n\nExecucao completa: Collection Runner na ordem, ou 'newman run docs/api/workshop-roteiro-fase2.postman_collection.json --env-var webhookSecret=...'. Contrato completo em docs/api/openapi.json.",
+    "description": "Requisicoes do passo 5 do roteiro-video-fase2.md, na ordem de gravacao, com testes automatizados.\n\nPre-requisitos: ambiente de pe (infra/up.sh) e port-forwards 8080 (workshop), 8081 (keycloak) e 8025 (mailpit).\n\nAntes do passo 7, preencha a variavel webhookSecret:\n  terraform -chdir=infra/03-platform output -raw budget_webhook_secret; echo\n(ou: kubectl -n workshop get secret budget-webhook -o jsonpath='{.data.BUDGET_WEBHOOK_SECRET}' | base64 -d; echo)\nNo Postman, cole os 40 caracteres no CURRENT value (sem o '%' que o zsh mostra no fim da saida).\n\nExecucao completa: Collection Runner na ordem, ou 'newman run docs/api/workshop-roteiro-fase2.postman_collection.json --env-var webhookSecret=...'. Contrato completo em docs/api/openapi.json.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -776,17 +776,28 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const secret = pm.variables.get('webhookSecret');",
-                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "// Se este script falhar, o Postman envia a requisicao mesmo assim, sem assinatura (-> 401).",
+                  "// O erro fica em webhookPrereqError e vira um teste falhando, para nao passar despercebido.",
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// O segredo e alfanumerico (40 chars). Remove espacos, quebras de linha e o '%' que o zsh",
+                  "// mostra ao fim de uma saida sem newline, comuns ao copiar do terminal.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail(\"webhookSecret vazio: preencha o CURRENT value da variavel (veja a descricao da collection).\"); }",
+                  "if (!/^[A-Za-z0-9]{40}$/.test(secret)) { fail('webhookSecret invalido (' + secret.length + ' chars): esperado 40 caracteres alfanumericos.'); }",
+                  "const budgetId = pm.collectionVariables.get('budgetId'), number = pm.collectionVariables.get('workOrderNumber1');",
+                  "if (!budgetId || !number) { fail('budgetId/workOrderNumber1 vazios: rode antes os passos 2 e 6.'); }",
                   "let eventId = pm.collectionVariables.get('webhookEventId');",
                   "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
                   "const ts = Math.floor(Date.now()/1000).toString();",
-                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
-                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
-                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
-                  "pm.request.body.raw = body;",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
                   "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
-                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + 'bad' + hex});"
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + 'bad' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
                 ]
               }
             },
@@ -795,6 +806,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test('pre-request assinou a requisicao', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
                   "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
                 ]
               }
@@ -839,17 +851,28 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const secret = pm.variables.get('webhookSecret');",
-                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "// Se este script falhar, o Postman envia a requisicao mesmo assim, sem assinatura (-> 401).",
+                  "// O erro fica em webhookPrereqError e vira um teste falhando, para nao passar despercebido.",
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// O segredo e alfanumerico (40 chars). Remove espacos, quebras de linha e o '%' que o zsh",
+                  "// mostra ao fim de uma saida sem newline, comuns ao copiar do terminal.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail(\"webhookSecret vazio: preencha o CURRENT value da variavel (veja a descricao da collection).\"); }",
+                  "if (!/^[A-Za-z0-9]{40}$/.test(secret)) { fail('webhookSecret invalido (' + secret.length + ' chars): esperado 40 caracteres alfanumericos.'); }",
+                  "const budgetId = pm.collectionVariables.get('budgetId'), number = pm.collectionVariables.get('workOrderNumber1');",
+                  "if (!budgetId || !number) { fail('budgetId/workOrderNumber1 vazios: rode antes os passos 2 e 6.'); }",
                   "let eventId = pm.collectionVariables.get('webhookEventId');",
                   "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
                   "const ts = Math.floor(Date.now()/1000).toString();",
-                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
-                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
-                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
-                  "pm.request.body.raw = body;",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
                   "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
-                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});"
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
                 ]
               }
             },
@@ -858,6 +881,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test('pre-request assinou a requisicao', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
                   "pm.test('APPLIED', () => pm.expect(pm.response.json().result).to.eql('APPLIED'));"
                 ]
@@ -903,17 +927,28 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const secret = pm.variables.get('webhookSecret');",
-                  "if (!secret) { throw new Error('Defina a variavel webhookSecret (veja a descricao da collection).'); }",
+                  "// Se este script falhar, o Postman envia a requisicao mesmo assim, sem assinatura (-> 401).",
+                  "// O erro fica em webhookPrereqError e vira um teste falhando, para nao passar despercebido.",
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// O segredo e alfanumerico (40 chars). Remove espacos, quebras de linha e o '%' que o zsh",
+                  "// mostra ao fim de uma saida sem newline, comuns ao copiar do terminal.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail(\"webhookSecret vazio: preencha o CURRENT value da variavel (veja a descricao da collection).\"); }",
+                  "if (!/^[A-Za-z0-9]{40}$/.test(secret)) { fail('webhookSecret invalido (' + secret.length + ' chars): esperado 40 caracteres alfanumericos.'); }",
+                  "const budgetId = pm.collectionVariables.get('budgetId'), number = pm.collectionVariables.get('workOrderNumber1');",
+                  "if (!budgetId || !number) { fail('budgetId/workOrderNumber1 vazios: rode antes os passos 2 e 6.'); }",
                   "let eventId = pm.collectionVariables.get('webhookEventId');",
                   "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
                   "const ts = Math.floor(Date.now()/1000).toString();",
-                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: pm.collectionVariables.get('workOrderNumber1'),",
-                  "  budgetId: pm.collectionVariables.get('budgetId'), decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
-                  "const hex = CryptoJS.HmacSHA256(ts + '.' + body, secret).toString();",
-                  "pm.request.body.raw = body;",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: 'APPROVED', reason: 'decidido pelo sistema parceiro'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
                   "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
-                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});"
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
                 ]
               }
             },
@@ -922,6 +957,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test('pre-request assinou a requisicao', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
                   "pm.test('DUPLICATE', () => pm.expect(pm.response.json().result).to.eql('DUPLICATE'));"
                 ]
@@ -930,7 +966,7 @@
           ]
         }
       ],
-      "description": "Exige a variavel webhookSecret preenchida. Rode 7.1, 7.2 e 7.3 em sequencia: elas compartilham o mesmo eventId."
+      "description": "Exige a variavel webhookSecret preenchida (current value). Rode 7.1, 7.2 e 7.3 em sequencia: elas compartilham o mesmo eventId. Se tudo der 401, abra o Console do Postman: o pre-request provavelmente falhou e a requisicao saiu sem assinatura."
     },
     {
       "name": "8. Consultar a OS (passo 8)",

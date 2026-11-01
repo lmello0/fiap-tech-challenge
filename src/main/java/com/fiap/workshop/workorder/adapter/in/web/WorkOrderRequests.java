@@ -5,6 +5,7 @@ import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.Custome
 import com.fiap.workshop.workorder.application.port.out.CustomerRegistry.VehicleDetails;
 import com.fiap.workshop.workorder.domain.DecisionChannel;
 import com.fiap.workshop.workorder.domain.ItemType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
@@ -28,6 +29,7 @@ final class WorkOrderRequests {
 		}
 	}
 
+	@Schema(name = "WorkOrderCustomerRequest")
 	record CustomerData(@NotBlank String document, @NotBlank @Size(max = 150) String name, @NotBlank @Email String email,
 			@Size(max = 20) String phone) {
 
@@ -36,6 +38,7 @@ final class WorkOrderRequests {
 		}
 	}
 
+	@Schema(name = "WorkOrderVehicleRequest")
 	record VehicleData(@NotBlank String plate, @NotBlank @Size(max = 60) String brand, @NotBlank @Size(max = 60) String model,
 			@Min(1900) int year) {
 

@@ -6,8 +6,8 @@
     "version" : "v1"
   },
   "servers" : [ {
-    "url" : "http://localhost",
-    "description" : "Generated server url"
+    "url" : "/",
+    "description" : "The host serving this document"
   } ],
   "security" : [ {
     "keycloak" : [ ]
@@ -16,6 +16,7 @@
     "/api/v1/work-orders/{id}/items/{itemId}" : {
       "put" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "changeQuantity",
         "parameters" : [ {
           "name" : "id",
@@ -54,11 +55,72 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "delete" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "removeItem",
         "parameters" : [ {
           "name" : "id",
@@ -87,6 +149,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -94,6 +216,7 @@
     "/api/v1/vehicles/{id}" : {
       "get" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "find",
         "parameters" : [ {
           "name" : "id",
@@ -114,11 +237,52 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "put" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "edit",
         "parameters" : [ {
           "name" : "id",
@@ -133,7 +297,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Update"
+                "$ref" : "#/components/schemas/VehicleUpdateRequest"
               }
             }
           },
@@ -149,11 +313,72 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "delete" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "remove",
         "parameters" : [ {
           "name" : "id",
@@ -165,8 +390,68 @@
           }
         } ],
         "responses" : {
-          "200" : {
-            "description" : "OK"
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -174,6 +459,7 @@
     "/api/v1/services/{id}" : {
       "get" : {
         "tags" : [ "service-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "find_1",
         "parameters" : [ {
           "name" : "id",
@@ -194,11 +480,52 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "put" : {
         "tags" : [ "service-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "edit_1",
         "parameters" : [ {
           "name" : "id",
@@ -229,11 +556,72 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "delete" : {
         "tags" : [ "service-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "remove_1",
         "parameters" : [ {
           "name" : "id",
@@ -245,8 +633,68 @@
           }
         } ],
         "responses" : {
-          "200" : {
-            "description" : "OK"
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -254,6 +702,7 @@
     "/api/v1/parts/{id}" : {
       "get" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "find_2",
         "parameters" : [ {
           "name" : "id",
@@ -274,11 +723,52 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "put" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "edit_2",
         "parameters" : [ {
           "name" : "id",
@@ -293,7 +783,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Update"
+                "$ref" : "#/components/schemas/PartUpdateRequest"
               }
             }
           },
@@ -309,11 +799,72 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "delete" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "remove_2",
         "parameters" : [ {
           "name" : "id",
@@ -325,8 +876,68 @@
           }
         } ],
         "responses" : {
-          "200" : {
-            "description" : "OK"
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -334,6 +945,7 @@
     "/api/v1/customers/{id}" : {
       "get" : {
         "tags" : [ "customer-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "find_3",
         "parameters" : [ {
           "name" : "id",
@@ -354,11 +966,52 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "put" : {
         "tags" : [ "customer-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "edit_3",
         "parameters" : [ {
           "name" : "id",
@@ -373,7 +1026,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Update"
+                "$ref" : "#/components/schemas/CustomerUpdateRequest"
               }
             }
           },
@@ -389,11 +1042,72 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "delete" : {
         "tags" : [ "customer-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "remove_3",
         "parameters" : [ {
           "name" : "id",
@@ -405,8 +1119,68 @@
           }
         } ],
         "responses" : {
-          "200" : {
-            "description" : "OK"
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -414,6 +1188,7 @@
     "/api/v1/work-orders" : {
       "get" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "search",
         "parameters" : [ {
           "name" : "customerId",
@@ -485,11 +1260,42 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "openWorkOrder",
         "requestBody" : {
           "content" : {
@@ -502,12 +1308,72 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -518,6 +1384,7 @@
     "/api/v1/work-orders/{id}/items" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "addItem",
         "parameters" : [ {
           "name" : "id",
@@ -548,6 +1415,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -555,6 +1482,7 @@
     "/api/v1/work-orders/{id}/diagnosis/start" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or MECHANIC.",
         "operationId" : "startDiagnosis",
         "parameters" : [ {
           "name" : "id",
@@ -575,6 +1503,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -582,6 +1570,7 @@
     "/api/v1/work-orders/{id}/diagnosis/complete" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or MECHANIC.",
         "operationId" : "completeDiagnosis",
         "parameters" : [ {
           "name" : "id",
@@ -602,6 +1591,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -609,6 +1658,7 @@
     "/api/v1/work-orders/{id}/deliver" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "deliver",
         "parameters" : [ {
           "name" : "id",
@@ -629,6 +1679,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -636,6 +1746,7 @@
     "/api/v1/work-orders/{id}/complete" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or MECHANIC.",
         "operationId" : "complete",
         "parameters" : [ {
           "name" : "id",
@@ -656,6 +1767,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -663,6 +1834,7 @@
     "/api/v1/work-orders/{id}/cancel" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "cancel",
         "parameters" : [ {
           "name" : "id",
@@ -692,6 +1864,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -699,6 +1931,7 @@
     "/api/v1/work-orders/{id}/budgets/{budgetId}/reject" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "reject",
         "parameters" : [ {
           "name" : "id",
@@ -737,6 +1970,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -744,6 +2037,7 @@
     "/api/v1/work-orders/{id}/budgets/{budgetId}/approve" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "approve",
         "parameters" : [ {
           "name" : "id",
@@ -782,6 +2076,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -789,6 +2143,7 @@
     "/api/v1/work-orders/{id}/additional-budget" : {
       "post" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or MECHANIC.",
         "operationId" : "additionalBudget",
         "parameters" : [ {
           "name" : "id",
@@ -819,6 +2174,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -826,17 +2241,22 @@
     "/api/v1/webhooks/budget-decisions" : {
       "post" : {
         "tags" : [ "budget-decision-webhook-controller" ],
+        "summary" : "Receive a budget decision from the partner system",
+        "description" : "No bearer token: the request is authenticated by an HMAC signature of the raw body. X-Signature must be `sha256=` followed by the hex HMAC-SHA256 of `<X-Timestamp>.<body>`, keyed by the shared webhook secret, and X-Timestamp must be within the configured tolerance (5 minutes by default). Delivering the same eventId again is acknowledged as DUPLICATE without applying the decision twice.",
         "operationId" : "receive",
         "parameters" : [ {
           "name" : "X-Timestamp",
           "in" : "header",
+          "description" : "Unix time, in seconds, when the request was signed",
           "required" : false,
           "schema" : {
             "type" : "string"
-          }
+          },
+          "example" : 1761998400
         }, {
           "name" : "X-Signature",
           "in" : "header",
+          "description" : "`sha256=` + hex HMAC-SHA256 of `<X-Timestamp>.<body>`",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -846,7 +2266,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "type" : "string"
+                "$ref" : "#/components/schemas/BudgetDecisionWebhookPayload"
               }
             }
           },
@@ -858,20 +2278,69 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "string"
-                  }
+                  "$ref" : "#/components/schemas/BudgetDecisionWebhookReceipt"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired webhook signature",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
           }
-        }
+        },
+        "security" : [ ]
       }
     },
     "/api/v1/services" : {
       "get" : {
         "tags" : [ "service-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "search_1",
         "parameters" : [ {
           "name" : "name",
@@ -920,11 +2389,42 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "post" : {
         "tags" : [ "service-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "add",
         "requestBody" : {
           "content" : {
@@ -937,12 +2437,62 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ServiceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -953,6 +2503,7 @@
     "/api/v1/parts" : {
       "get" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "search_2",
         "parameters" : [ {
           "name" : "text",
@@ -1009,29 +2560,110 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "post" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "add_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Create"
+                "$ref" : "#/components/schemas/PartCreateRequest"
               }
             }
           },
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PartResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1042,6 +2674,7 @@
     "/api/v1/parts/{id}/stock-entries" : {
       "post" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "receive_1",
         "parameters" : [ {
           "name" : "id",
@@ -1063,12 +2696,72 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/StockMovementResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1079,6 +2772,7 @@
     "/api/v1/parts/{id}/stock-adjustments" : {
       "post" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "adjust",
         "parameters" : [ {
           "name" : "id",
@@ -1100,12 +2794,72 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/StockMovementResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1116,6 +2870,7 @@
     "/api/v1/me/work-orders/{id}/budgets/{budgetId}/reject" : {
       "post" : {
         "tags" : [ "me-work-order-controller" ],
+        "description" : "Required role: CUSTOMER.",
         "operationId" : "reject_1",
         "parameters" : [ {
           "name" : "id",
@@ -1153,6 +2908,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1160,6 +2975,7 @@
     "/api/v1/me/work-orders/{id}/budgets/{budgetId}/approve" : {
       "post" : {
         "tags" : [ "me-work-order-controller" ],
+        "description" : "Required role: CUSTOMER.",
         "operationId" : "approve_1",
         "parameters" : [ {
           "name" : "id",
@@ -1188,6 +3004,66 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1195,6 +3071,7 @@
     "/api/v1/customers" : {
       "get" : {
         "tags" : [ "customer-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "search_3",
         "parameters" : [ {
           "name" : "name",
@@ -1250,29 +3127,110 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "post" : {
         "tags" : [ "customer-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "create",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Create"
+                "$ref" : "#/components/schemas/CustomerCreateRequest"
               }
             }
           },
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CustomerResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1283,6 +3241,7 @@
     "/api/v1/customers/{customerId}/vehicles" : {
       "get" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "ofCustomer",
         "parameters" : [ {
           "name" : "customerId",
@@ -1332,11 +3291,52 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
       "post" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT.",
         "operationId" : "create_1",
         "parameters" : [ {
           "name" : "customerId",
@@ -1351,19 +3351,79 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Create"
+                "$ref" : "#/components/schemas/VehicleCreateRequest"
               }
             }
           },
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "OK",
+          "201" : {
+            "description" : "Created",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/VehicleResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicts with the current state: duplicate, invalid status transition or concurrent update",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Violates a business rule",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1374,6 +3434,7 @@
     "/api/v1/work-orders/{id}" : {
       "get" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "find_4",
         "parameters" : [ {
           "name" : "id",
@@ -1394,6 +3455,46 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1401,6 +3502,7 @@
     "/api/v1/work-orders/metrics" : {
       "get" : {
         "tags" : [ "work-order-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "metrics",
         "parameters" : [ {
           "name" : "from",
@@ -1429,6 +3531,36 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1436,6 +3568,7 @@
     "/api/v1/vehicles" : {
       "get" : {
         "tags" : [ "vehicle-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "search_4",
         "parameters" : [ {
           "name" : "includeInactive",
@@ -1477,6 +3610,36 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1484,6 +3647,7 @@
     "/api/v1/parts/{id}/movements" : {
       "get" : {
         "tags" : [ "part-controller" ],
+        "description" : "Required role: ADMIN or ATTENDANT or MECHANIC.",
         "operationId" : "movements",
         "parameters" : [ {
           "name" : "id",
@@ -1525,6 +3689,46 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1532,6 +3736,7 @@
     "/api/v1/me" : {
       "get" : {
         "tags" : [ "me-controller" ],
+        "description" : "Required role: CUSTOMER.",
         "operationId" : "profile",
         "responses" : {
           "200" : {
@@ -1543,6 +3748,36 @@
                 }
               }
             }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1550,6 +3785,7 @@
     "/api/v1/me/work-orders" : {
       "get" : {
         "tags" : [ "me-work-order-controller" ],
+        "description" : "Required role: CUSTOMER.",
         "operationId" : "mine",
         "parameters" : [ {
           "name" : "status",
@@ -1599,6 +3835,46 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1606,6 +3882,7 @@
     "/api/v1/me/work-orders/{id}" : {
       "get" : {
         "tags" : [ "me-work-order-controller" ],
+        "description" : "Required role: CUSTOMER.",
         "operationId" : "find_5",
         "parameters" : [ {
           "name" : "id",
@@ -1623,6 +3900,46 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request: a field, parameter or path variable failed validation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired bearer token",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "The token does not carry a role allowed to call this operation",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "A referenced resource does not exist (or is not visible to the caller)",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -1862,7 +4179,7 @@
           }
         }
       },
-      "Update" : {
+      "VehicleUpdateRequest" : {
         "type" : "object",
         "properties" : {
           "brand" : {
@@ -1977,6 +4294,31 @@
           }
         }
       },
+      "PartUpdateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "description" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          },
+          "unitPrice" : {
+            "type" : "number",
+            "minimum" : 0.0
+          },
+          "minimumQuantity" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "name", "unitPrice" ]
+      },
       "PartResponse" : {
         "type" : "object",
         "properties" : {
@@ -2027,6 +4369,27 @@
             "format" : "date-time"
           }
         }
+      },
+      "CustomerUpdateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "email", "name" ]
       },
       "CustomerResponse" : {
         "type" : "object",
@@ -2087,10 +4450,10 @@
         "type" : "object",
         "properties" : {
           "customer" : {
-            "$ref" : "#/components/schemas/CustomerData"
+            "$ref" : "#/components/schemas/WorkOrderCustomerRequest"
           },
           "vehicle" : {
-            "$ref" : "#/components/schemas/VehicleData"
+            "$ref" : "#/components/schemas/WorkOrderVehicleRequest"
           },
           "complaint" : {
             "type" : "string",
@@ -2105,6 +4468,56 @@
           }
         },
         "required" : [ "customer", "vehicle" ]
+      },
+      "WorkOrderCustomerRequest" : {
+        "type" : "object",
+        "properties" : {
+          "document" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "document", "email", "name" ]
+      },
+      "WorkOrderVehicleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "plate" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "brand" : {
+            "type" : "string",
+            "maxLength" : 60,
+            "minLength" : 0
+          },
+          "model" : {
+            "type" : "string",
+            "maxLength" : 60,
+            "minLength" : 0
+          },
+          "year" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 1900
+          }
+        },
+        "required" : [ "brand", "model", "plate" ]
       },
       "Cancellation" : {
         "type" : "object",
@@ -2154,7 +4567,43 @@
         },
         "required" : [ "items" ]
       },
-      "Create" : {
+      "BudgetDecisionWebhookPayload" : {
+        "type" : "object",
+        "properties" : {
+          "eventId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workOrderNumber" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "budgetId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decision" : {
+            "type" : "string",
+            "enum" : [ "APPROVED", "REJECTED" ]
+          },
+          "reason" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "budgetId", "decision", "eventId", "workOrderNumber" ]
+      },
+      "BudgetDecisionWebhookReceipt" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "APPLIED", "DUPLICATE" ]
+          }
+        }
+      },
+      "PartCreateRequest" : {
         "type" : "object",
         "properties" : {
           "sku" : {
@@ -2261,6 +4710,55 @@
             "minLength" : 0
           }
         }
+      },
+      "CustomerCreateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          },
+          "document" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "document", "email", "name" ]
+      },
+      "VehicleCreateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "plate" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "brand" : {
+            "type" : "string",
+            "maxLength" : 60,
+            "minLength" : 0
+          },
+          "model" : {
+            "type" : "string",
+            "maxLength" : 60,
+            "minLength" : 0
+          },
+          "year" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "brand", "model", "plate" ]
       },
       "PageResponseWorkOrderSummaryResponse" : {
         "type" : "object",
@@ -2500,6 +4998,30 @@
           "totalPages" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "ProblemDetail" : {
+        "type" : "object",
+        "description" : "RFC 9457 problem details",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
           }
         }
       }

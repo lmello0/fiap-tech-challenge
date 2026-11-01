@@ -1,5 +1,6 @@
 package com.fiap.workshop.inventory.adapter.in.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -14,10 +15,12 @@ final class PartRequests {
 	private PartRequests() {
 	}
 
+	@Schema(name = "PartCreateRequest")
 	record Create(@NotBlank @Size(max = 40) String sku, @NotBlank @Size(max = 120) String name, @Size(max = 500) String description,
 			@NotNull @DecimalMin("0.00") @Digits(integer = 10, fraction = 2) BigDecimal unitPrice, @Min(0) int minimumQuantity) {
 	}
 
+	@Schema(name = "PartUpdateRequest")
 	record Update(@NotBlank @Size(max = 120) String name, @Size(max = 500) String description,
 			@NotNull @DecimalMin("0.00") @Digits(integer = 10, fraction = 2) BigDecimal unitPrice, @Min(0) int minimumQuantity) {
 	}

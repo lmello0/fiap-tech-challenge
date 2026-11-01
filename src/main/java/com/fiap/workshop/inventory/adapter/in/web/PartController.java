@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -59,6 +61,7 @@ class PartController {
 	}
 
 	@PostMapping
+	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<PartResponse> add(@Valid @RequestBody PartRequests.Create request) {
 		PartResponse body = PartResponse.from(create.execute(new CreatePartUseCase.Command(request.sku(), request.name(),
@@ -89,6 +92,7 @@ class PartController {
 	}
 
 	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<Void> remove(@PathVariable UUID id) {
 		deactivate.execute(id);
@@ -96,6 +100,7 @@ class PartController {
 	}
 
 	@PostMapping("/{id}/stock-entries")
+	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<StockMovementResponse> receive(@PathVariable UUID id, @Valid @RequestBody PartRequests.StockEntry request) {
 		var movement = stockEntry.execute(
@@ -104,6 +109,7 @@ class PartController {
 	}
 
 	@PostMapping("/{id}/stock-adjustments")
+	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize(Access.STAFF_WRITE)
 	ResponseEntity<StockMovementResponse> adjust(@PathVariable UUID id, @Valid @RequestBody PartRequests.StockAdjustment request) {
 		var movement = adjustStock.execute(

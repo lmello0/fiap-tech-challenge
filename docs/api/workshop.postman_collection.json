@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Workshop API",
-    "description": "Complete flow of the Workshop API. Run the requests in order: tokens first, then the work order flow. Set webhookSecret (kubectl get secret budget-webhook) before using the webhook request. See docs/api/openapi.json for the full contract.",
+    "description": "Every endpoint of the Workshop API, in an order that runs green end to end (Collection Runner or newman). Each run creates its own data (CPF, plates, SKU, names), so it can be repeated.\n\nPrerequisites: the app on baseUrl and Keycloak on keycloakUrl, either `docker compose up` or the Kubernetes environment with port-forwards 8080/8081.\n\nwebhookSecret: `demo-webhook-secret` works with docker compose. On Kubernetes, paste into the CURRENT value:\n  kubectl -n workshop get secret budget-webhook -o jsonpath='{.data.BUDGET_WEBHOOK_SECRET}' | base64 -d; echo\n(or: terraform -chdir=infra/03-platform output -raw budget_webhook_secret; echo)\nIf the webhook requests answer 401, open the Postman Console: the pre-request script probably failed and the request went out unsigned.\n\nnewman: newman run docs/api/workshop.postman_collection.json --env-var webhookSecret=... . Full contract in docs/api/openapi.json.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -18,39 +18,123 @@
       "value": "demo-webhook-secret"
     },
     {
+      "key": "webhookDecision",
+      "value": "APPROVED"
+    },
+    {
       "key": "serviceId",
-      "value": "0198a000-0000-7000-8000-000000000201"
+      "value": "0198a000-0000-7000-8000-000000000201",
+      "description": "Seeded service: Oil change"
+    },
+    {
+      "key": "extraServiceId",
+      "value": "0198a000-0000-7000-8000-000000000202",
+      "description": "Seeded service: Wheel alignment"
     },
     {
       "key": "partId",
-      "value": "0198a000-0000-7000-8000-000000000301"
+      "value": "0198a000-0000-7000-8000-000000000301",
+      "description": "Seeded part: Oil filter"
     },
     {
       "key": "demoCustomerId",
-      "value": "0198a000-0000-7000-8000-000000000001"
+      "value": "0198a000-0000-7000-8000-000000000001",
+      "description": "Seeded customer linked to the customer user"
     },
     {
-      "key": "webhookDecision",
-      "value": "APPROVED"
+      "key": "otherCustomerWorkOrderId",
+      "value": "0198a000-0000-7000-8000-000000000503",
+      "description": "Seeded work order of another customer"
     }
   ],
   "item": [
     {
+      "name": "0. Health",
+      "description": "Public endpoints, no token.",
+      "item": [
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health/readiness",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health/liveness",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v3/api-docs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('has the work order paths', () => pm.expect(pm.response.json().paths).to.have.property('/api/v1/work-orders'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "1. Authentication",
+      "description": "Password grant on the workshop-cli client for each demo user (attendant, mechanic, customer, admin), plus a refresh.",
       "item": [
         {
           "name": "Token (attendant)",
           "request": {
             "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
             "auth": {
               "type": "noauth"
             },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -70,19 +154,6 @@
                   "key": "password",
                   "value": "attendant"
                 }
-              ]
-            },
-            "url": {
-              "raw": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
-              "host": [
-                "{{keycloakUrl}}"
-              ],
-              "path": [
-                "realms",
-                "workshop",
-                "protocol",
-                "openid-connect",
-                "token"
               ]
             }
           },
@@ -104,15 +175,11 @@
           "name": "Token (mechanic)",
           "request": {
             "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
             "auth": {
               "type": "noauth"
             },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -132,19 +199,6 @@
                   "key": "password",
                   "value": "mechanic"
                 }
-              ]
-            },
-            "url": {
-              "raw": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
-              "host": [
-                "{{keycloakUrl}}"
-              ],
-              "path": [
-                "realms",
-                "workshop",
-                "protocol",
-                "openid-connect",
-                "token"
               ]
             }
           },
@@ -166,15 +220,11 @@
           "name": "Token (customer)",
           "request": {
             "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
             "auth": {
               "type": "noauth"
             },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -194,19 +244,6 @@
                   "key": "password",
                   "value": "customer"
                 }
-              ]
-            },
-            "url": {
-              "raw": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
-              "host": [
-                "{{keycloakUrl}}"
-              ],
-              "path": [
-                "realms",
-                "workshop",
-                "protocol",
-                "openid-connect",
-                "token"
               ]
             }
           },
@@ -228,15 +265,11 @@
           "name": "Token (admin)",
           "request": {
             "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
             "auth": {
               "type": "noauth"
             },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -256,19 +289,6 @@
                   "key": "password",
                   "value": "admin"
                 }
-              ]
-            },
-            "url": {
-              "raw": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
-              "host": [
-                "{{keycloakUrl}}"
-              ],
-              "path": [
-                "realms",
-                "workshop",
-                "protocol",
-                "openid-connect",
-                "token"
               ]
             }
           },
@@ -290,15 +310,11 @@
           "name": "Refresh token (attendant)",
           "request": {
             "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
             "auth": {
               "type": "noauth"
             },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -315,19 +331,6 @@
                   "value": "{{attendantRefresh}}"
                 }
               ]
-            },
-            "url": {
-              "raw": "{{keycloakUrl}}/realms/workshop/protocol/openid-connect/token",
-              "host": [
-                "{{keycloakUrl}}"
-              ],
-              "path": [
-                "realms",
-                "workshop",
-                "protocol",
-                "openid-connect",
-                "token"
-              ]
             }
           },
           "event": [
@@ -336,7 +339,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('renewed', () => pm.response.to.have.status(200));",
+                  "pm.test('token renewed', () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set('attendantToken', pm.response.json().access_token);",
                   "pm.collectionVariables.set('attendantRefresh', pm.response.json().refresh_token);"
                 ]
@@ -347,7 +350,1504 @@
       ]
     },
     {
-      "name": "2. Work order flow (staff)",
+      "name": "2. Access control",
+      "description": "Without a token the API answers 401; with a token from the wrong role, 403.",
+      "item": [
+        {
+          "name": "No token -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer on a staff endpoint -> 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mechanic creating a service -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/services",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should not be created\",\n  \"price\": 10,\n  \"estimatedMinutes\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff on the customer area -> 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Customers and vehicles",
+      "description": "Customer and vehicle registers (attendant/admin write, mechanic reads). DELETE deactivates (soft delete); deactivating a customer also deactivates its vehicles.",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bruno Lima\",\n  \"document\": \"{{newCustomerDocument}}\",\n  \"email\": \"{{newCustomerEmail}}\",\n  \"phone\": \"11988887777\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function cpf(){const d=[];for(let i=0;i<9;i++)d.push(Math.floor(Math.random()*10));",
+                  "const dv=(n,w)=>{let s=0;for(let i=0;i<n;i++)s+=d[i]*(w-i);const r=(s*10)%11;return r===10?0:r;};",
+                  "d.push(dv(9,10));d.push(dv(10,11));return d.join('');}",
+                  "const doc = cpf();",
+                  "pm.collectionVariables.set('newCustomerDocument', doc);",
+                  "pm.collectionVariables.set('newCustomerEmail', 'postman-' + doc + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('newCustomerId', pm.response.json().id);",
+                  "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.include(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register customer with the same document -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bruno Lima\",\n  \"document\": \"{{newCustomerDocument}}\",\n  \"email\": \"other-{{newCustomerEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register customer with an invalid document -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid\",\n  \"document\": \"12345678900\",\n  \"email\": \"invalid-document@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rejected', () => pm.expect([400, 422]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search customers by document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers?document={{newCustomerDocument}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('found', () => pm.expect(list.map(c => c.id)).to.include(pm.collectionVariables.get('newCustomerId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search customers by name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers?name=Bruno&page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('only matching names', () => pm.expect(list.every(c => /bruno/i.test(c.name))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('same document', () => pm.expect(pm.response.json().document).to.eql(pm.collectionVariables.get('newCustomerDocument')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bruno Lima Souza\",\n  \"email\": \"{{newCustomerEmail}}\",\n  \"phone\": \"11977776666\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('renamed', () => pm.expect(pm.response.json().name).to.eql('Bruno Lima Souza'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}/vehicles",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"{{newVehiclePlate}}\",\n  \"brand\": \"Honda\",\n  \"model\": \"Civic\",\n  \"year\": 2019\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "pm.collectionVariables.set('newVehiclePlate', plate());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('newVehicleId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register vehicle with the same plate -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}/vehicles",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"{{newVehiclePlate}}\",\n  \"brand\": \"Honda\",\n  \"model\": \"Civic\",\n  \"year\": 2019\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}/vehicles",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('one vehicle', () => pm.expect(list.length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "All vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vehicles?page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('page', () => pm.expect(list).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get vehicle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{newVehicleId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('same plate', () => pm.expect(pm.response.json().plate).to.eql(pm.collectionVariables.get('newVehiclePlate')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{newVehicleId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Honda\",\n  \"model\": \"Civic Touring\",\n  \"year\": 2020\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('updated', () => pm.expect(pm.response.json().model).to.eql('Civic Touring'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{newVehicleId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer vehicles including inactive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}/vehicles?includeInactive=true",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('inactive vehicle listed', () => pm.expect(list.map(v => v.id)).to.include(pm.collectionVariables.get('newVehicleId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate customer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers/{{newCustomerId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search customers including inactive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers?document={{newCustomerDocument}}&includeInactive=true",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('inactive customer listed', () => pm.expect(list.map(c => c.id)).to.include(pm.collectionVariables.get('newCustomerId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Service catalog",
+      "description": "Repair services offered by the shop. DELETE deactivates.",
+      "item": [
+        {
+          "name": "Create service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/services",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{newServiceName}}\",\n  \"description\": \"Air conditioning cleaning and gas check\",\n  \"price\": 199.90,\n  \"estimatedMinutes\": 75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('newServiceName', 'A/C service ' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('newServiceId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create service with the same name -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/services",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{newServiceName}}\",\n  \"price\": 10.00,\n  \"estimatedMinutes\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/services?name=A/C",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('found', () => pm.expect(list.map(s => s.id)).to.include(pm.collectionVariables.get('newServiceId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/services/{{newServiceId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/services/{{newServiceId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{newServiceName}}\",\n  \"description\": \"Air conditioning cleaning, gas and filter check\",\n  \"price\": 219.90,\n  \"estimatedMinutes\": 90\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('new price', () => pm.expect(Number(pm.response.json().price)).to.eql(219.9));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate service",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/services/{{newServiceId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Services including inactive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/services?includeInactive=true&size=200",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('inactive service listed', () => pm.expect(list.map(s => s.id)).to.include(pm.collectionVariables.get('newServiceId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Parts and stock",
+      "description": "Parts register and stock movements (entry, manual adjustment, history). DELETE deactivates.",
+      "item": [
+        {
+          "name": "Create part",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{newPartSku}}\",\n  \"name\": \"Spark plug\",\n  \"description\": \"Iridium spark plug\",\n  \"unitPrice\": 42.50,\n  \"minimumQuantity\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('newPartSku', 'SPK-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('newPartId', pm.response.json().id);",
+                  "pm.test('starts empty and low', () => { const p = pm.response.json(); pm.expect(p.onHand).to.eql(0); pm.expect(p.lowStock).to.be.true; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create part with the same SKU -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{newPartSku}}\",\n  \"name\": \"Spark plug\",\n  \"unitPrice\": 42.50,\n  \"minimumQuantity\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search parts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts?text={{newPartSku}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('found', () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get('newPartId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Low stock parts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts?lowStockOnly=true&size=200",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('all low', () => pm.expect(list.every(p => p.lowStock)).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get part",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update part",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spark plug (iridium)\",\n  \"description\": \"Iridium spark plug, set of 1\",\n  \"unitPrice\": 45,\n  \"minimumQuantity\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('updated', () => pm.expect(pm.response.json().minimumQuantity).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}/stock-entries",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10,\n  \"note\": \"Supplier invoice 123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('balance 10', () => pm.expect(pm.response.json().balanceAfter).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock adjustment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}/stock-adjustments",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": -3,\n  \"reason\": \"Inventory count\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('balance 7', () => pm.expect(pm.response.json().balanceAfter).to.eql(7));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock adjustment below zero -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}/stock-adjustments",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": -100,\n  \"reason\": \"Would leave negative stock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rejected', () => pm.expect([409, 422]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock movements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}/movements?page=0&size=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('entry and adjustment', () => pm.expect(list.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate part",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts/{{newPartId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parts including inactive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/parts?text={{newPartSku}}&includeInactive=true",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('inactive part listed', () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get('newPartId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Work order flow (staff)",
+      "description": "Full lifecycle: open (creating customer and vehicle from the body), edit items, diagnosis, budget rejected and re-issued, approval with stock reservation, additional budget, completion and delivery. Run in order (the stock wait retries itself in the Collection Runner).",
       "item": [
         {
           "name": "Open work order (customer and vehicle in the body)",
@@ -359,17 +1859,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -399,11 +1889,12 @@
                   "function cpf(){const d=[];for(let i=0;i<9;i++)d.push(Math.floor(Math.random()*10));",
                   "const dv=(n,w)=>{let s=0;for(let i=0;i<n;i++)s+=d[i]*(w-i);const r=(s*10)%11;return r===10?0:r;};",
                   "d.push(dv(9,10));d.push(dv(10,11));return d.join('');}",
-                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];",
-                  "const doc=cpf();",
-                  "pm.collectionVariables.set('customerDocument',doc);",
-                  "pm.collectionVariables.set('customerEmail','postman-'+doc+'@example.com');",
-                  "pm.collectionVariables.set('vehiclePlate',l()+l()+l()+Math.floor(Math.random()*10)+l()+Math.floor(Math.random()*10)+Math.floor(Math.random()*10));"
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "const doc = cpf();",
+                  "pm.collectionVariables.set('customerDocument', doc);",
+                  "pm.collectionVariables.set('customerEmail', 'postman-' + doc + '@example.com');",
+                  "pm.collectionVariables.set('vehiclePlate', plate());"
                 ]
               }
             },
@@ -412,16 +1903,20 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
-                  "const wo=pm.response.json();",
-                  "pm.collectionVariables.set('workOrderId',wo.id);pm.collectionVariables.set('workOrderNumber',wo.number);pm.collectionVariables.set('customerId',wo.customer.id);"
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const wo = pm.response.json();",
+                  "pm.test('status RECEIVED', () => pm.expect(wo.status).to.eql('RECEIVED'));",
+                  "pm.collectionVariables.set('workOrderId', wo.id);",
+                  "pm.collectionVariables.set('workOrderNumber', wo.number);",
+                  "pm.collectionVariables.set('customerId', wo.customer.id);",
+                  "pm.collectionVariables.set('vehicleId', wo.vehicle.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Add an item",
+          "name": "Open again with the same vehicle -> 409",
           "request": {
             "method": "POST",
             "header": [
@@ -430,19 +1925,125 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/items",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "items"
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
               ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\"document\": \"{{customerDocument}}\", \"name\": \"Ana Souza\", \"email\": \"{{customerEmail}}\", \"phone\": \"11999990000\"},\n  \"vehicle\": {\"plate\": \"{{vehiclePlate}}\", \"brand\": \"Fiat\", \"model\": \"Argo\", \"year\": 2022},\n  \"complaint\": \"Noise when braking\",\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{serviceId}}\", \"quantity\": 1}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "A vehicle can only have one active work order."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Work order detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('one draft item', () => pm.expect(pm.response.json().draftItems.length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replenish the part used below",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/parts/{{partId}}/stock-entries",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1,\n  \"note\": \"Replenishes the unit this flow consumes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Keeps the seeded part in stock across repeated runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add an item (part)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/items",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -462,27 +2063,33 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const it = pm.response.json().draftItems.find(i => i.referenceId === pm.collectionVariables.get('partId'));",
+                  "pm.test('part added', () => pm.expect(it).to.exist);",
+                  "pm.collectionVariables.set('partItemId', it.id);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Start diagnosis",
+          "name": "Add an item (service)",
           "request": {
             "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/diagnosis/start",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "diagnosis",
-                "start"
-              ]
-            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/items",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -492,28 +2099,82 @@
                   "type": "string"
                 }
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"SERVICE\",\n  \"referenceId\": \"{{extraServiceId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const it = pm.response.json().draftItems.find(i => i.referenceId === pm.collectionVariables.get('extraServiceId'));",
+                  "pm.test('service added', () => pm.expect(it).to.exist);",
+                  "pm.collectionVariables.set('extraItemId', it.id);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Complete diagnosis (issues the budget)",
+          "name": "Change item quantity",
           "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/diagnosis/complete",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "diagnosis",
-                "complete"
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/items/{{extraItemId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
               ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('quantity 2', () => pm.expect(pm.response.json().draftItems.find(i => i.id === pm.collectionVariables.get('extraItemId')).quantity).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove an item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/items/{{extraItemId}}",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -531,15 +2192,76 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "const b=pm.response.json().budgets;pm.collectionVariables.set('budgetId',b[b.length-1].id);"
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('removed', () => pm.expect(pm.response.json().draftItems.map(i => i.id)).to.not.include(pm.collectionVariables.get('extraItemId')));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Approve on behalf of the customer",
+          "name": "Start diagnosis",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/diagnosis/start",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_DIAGNOSIS', () => pm.expect(pm.response.json().status).to.eql('IN_DIAGNOSIS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete diagnosis (issues the budget)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/diagnosis/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('budgetId', b[b.length - 1].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject the budget on behalf of the customer",
           "request": {
             "method": "POST",
             "header": [
@@ -548,21 +2270,85 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/budgets/{{budgetId}}/approve",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "budgets",
-                "{{budgetId}}",
-                "approve"
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/budgets/{{budgetId}}/reject",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
               ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"IN_PERSON\",\n  \"reason\": \"Customer asked for a cheaper option\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Rejecting the initial budget sends the work order back to diagnosis with the budget lines as draft items."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_DIAGNOSIS', () => pm.expect(pm.response.json().status).to.eql('IN_DIAGNOSIS'));",
+                  "pm.test('items back to draft', () => pm.expect(pm.response.json().draftItems.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete diagnosis again (budget 2)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/diagnosis/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('budgetId', b[b.length - 1].id); }",
+                  "pm.test('second budget', () => pm.expect(pm.response.json().budgets.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve the budget on behalf of the customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/budgets/{{budgetId}}/approve",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -581,8 +2367,68 @@
                   "language": "json"
                 }
               }
+            },
+            "description": "The budget has a part, so the work order waits for the stock reservation (asynchronous) before going to IN_EXECUTION."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('budget approved', () => { const b = pm.response.json().budgets; pm.expect(b[b.length - 1].status).to.eql('APPROVED'); });"
+                ]
+              }
             }
-          }
+          ]
+        },
+        {
+          "name": "Wait for the stock reservation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "In the Collection Runner this request repeats itself (up to 15 times, 1 s apart) until the stock saga finishes. Sent by hand, just send it again."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('pollTries') || 0) > 0) { setTimeout(() => {}, 1000); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const wo = pm.response.json();",
+                  "const tries = Number(pm.collectionVariables.get('pollTries') || 0);",
+                  "if (wo.status === 'WAITING_APPROVAL' && tries < 15) {",
+                  "  pm.collectionVariables.set('pollTries', tries + 1);",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.unset('pollTries');",
+                  "  pm.test('stock reserved, status IN_EXECUTION', () => pm.expect(wo.status, 'WAITING_PARTS means the part is out of stock').to.eql('IN_EXECUTION'));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Propose an additional budget",
@@ -594,19 +2440,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/additional-budget",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "additional-budget"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/additional-budget",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -619,33 +2453,79 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"type\": \"SERVICE\",\n      \"referenceId\": \"{{serviceId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{extraServiceId}}\", \"quantity\": 1}]\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('additionalBudgetId', b[b.length - 1].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject the additional budget",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/budgets/{{additionalBudgetId}}/reject",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"PHONE\",\n  \"reason\": \"Not now\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Rejecting an additional budget keeps the work order in execution with what was already approved."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_EXECUTION', () => pm.expect(pm.response.json().status).to.eql('IN_EXECUTION'));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Complete the service",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/complete",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "complete"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/complete",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -656,26 +2536,26 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Deliver the vehicle",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/deliver",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "deliver"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/deliver",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -686,7 +2566,118 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status DELIVERED', () => pm.expect(pm.response.json().status).to.eql('DELIVERED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel a delivered work order -> rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/cancel",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Too late\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rejected', () => pm.expect([409, 422]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open work order (same customer, another vehicle)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\"document\": \"{{customerDocument}}\", \"name\": \"Ana Souza\", \"email\": \"{{customerEmail}}\", \"phone\": \"11999990000\"},\n  \"vehicle\": {\"plate\": \"{{cancelVehiclePlate}}\", \"brand\": \"Fiat\", \"model\": \"Argo\", \"year\": 2022},\n  \"complaint\": \"Check engine light\",\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{serviceId}}\", \"quantity\": 1}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "pm.collectionVariables.set('cancelVehiclePlate', plate());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('customer reused', () => pm.expect(pm.response.json().customer.id).to.eql(pm.collectionVariables.get('customerId')));",
+                  "pm.collectionVariables.set('cancelWorkOrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Cancel",
@@ -698,19 +2689,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}/cancel",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}",
-                "cancel"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{cancelWorkOrderId}}/cancel",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -730,35 +2709,32 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "3. Queries",
+      "name": "7. Work order queries",
+      "description": "Prioritized queue (IN_EXECUTION > WAITING_PARTS > WAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED, oldest first), filters and metrics.",
       "item": [
         {
           "name": "Queue (prioritized, without finished orders)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders?size=50",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders"
-              ],
-              "query": [
-                {
-                  "key": "size",
-                  "value": "50"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders?size=50",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -769,34 +2745,30 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "const rank = {IN_EXECUTION: 0, WAITING_PARTS: 1, WAITING_APPROVAL: 2, IN_DIAGNOSIS: 3, RECEIVED: 4};",
+                  "pm.test('no finished orders', () => pm.expect(list.every(w => w.status in rank)).to.be.true);",
+                  "const r = list.map(w => rank[w.status]);",
+                  "pm.test('sorted by status priority', () => pm.expect(r).to.eql([...r].sort((a, b) => a - b)));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Queue including finished orders",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders?includeFinished=true&size=50",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders"
-              ],
-              "query": [
-                {
-                  "key": "includeFinished",
-                  "value": "true"
-                },
-                {
-                  "key": "size",
-                  "value": "50"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders?includeFinished=true&size=50",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -807,30 +2779,27 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('page', () => pm.expect(page.totalElements).to.be.above(0));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Work orders by status",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders?status=IN_EXECUTION",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "IN_EXECUTION"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders?status=DELIVERED",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -841,25 +2810,27 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('only DELIVERED', () => pm.expect(list.every(w => w.status === 'DELIVERED')).to.be.true);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Work order detail",
+          "name": "Work order by number",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/{{workOrderId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "{{workOrderId}}"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders?number={{workOrderNumber}}&includeFinished=true",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -870,25 +2841,89 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('exactly that order', () => pm.expect(list.map(w => w.id)).to.eql([pm.collectionVariables.get('workOrderId')]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Work orders by plate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders?plate={{vehiclePlate}}&includeFinished=true",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('found', () => pm.expect(list.map(w => w.id)).to.include(pm.collectionVariables.get('workOrderId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Work orders of a customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders?customerId={{customerId}}&includeFinished=true",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('delivered and cancelled', () => pm.expect(list.map(w => w.status).sort()).to.eql(['CANCELLED', 'DELIVERED']));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Average execution time",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/work-orders/metrics",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "work-orders",
-                "metrics"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/metrics",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -899,29 +2934,72 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('has completed orders', () => pm.expect(pm.response.json().completedWorkOrders).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Average execution time in a period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/metrics?from={{metricsFrom}}&to={{metricsTo}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('metricsFrom', new Date(Date.now() - 30 * 864e5).toISOString());",
+                  "pm.collectionVariables.set('metricsTo', new Date().toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('counts the order delivered in this run', () => pm.expect(pm.response.json().completedWorkOrders).to.be.above(0));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "4. Customer area",
+      "name": "8. Customer area",
+      "description": "The customer user is linked (customer_id claim) to the seeded customer Carlos Customer. The staff opens a work order for him and he decides the budgets in the app. The vehicle created here is deactivated at the end so runs don't pile up vehicles.",
       "item": [
         {
           "name": "My profile",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/me",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -932,25 +3010,147 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const me = pm.response.json();",
+                  "pm.test('linked to the seeded customer', () => pm.expect(me.id).to.eql(pm.collectionVariables.get('demoCustomerId')));",
+                  "pm.collectionVariables.set('myDocument', me.document);",
+                  "pm.collectionVariables.set('myEmail', me.email);",
+                  "pm.collectionVariables.set('myName', me.name);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open a work order for the logged customer (staff)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\"document\": \"{{myDocument}}\", \"name\": \"{{myName}}\", \"email\": \"{{myEmail}}\"},\n  \"vehicle\": {\"plate\": \"{{myVehiclePlate}}\", \"brand\": \"Renault\", \"model\": \"Kwid\", \"year\": 2023},\n  \"complaint\": \"Periodic maintenance\",\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{serviceId}}\", \"quantity\": 1}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "pm.collectionVariables.set('myVehiclePlate', plate());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('myWorkOrderId', pm.response.json().id);",
+                  "pm.collectionVariables.set('myVehicleId', pm.response.json().vehicle.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start diagnosis (mechanic)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{myWorkOrderId}}/diagnosis/start",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_DIAGNOSIS', () => pm.expect(pm.response.json().status).to.eql('IN_DIAGNOSIS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete diagnosis (mechanic)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{myWorkOrderId}}/diagnosis/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('myBudgetId', b[b.length - 1].id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "My work orders",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me/work-orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me",
-                "work-orders"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/me/work-orders",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -961,31 +3161,28 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('only mine', () => pm.expect(list.every(w => w.customerId === pm.collectionVariables.get('demoCustomerId'))).to.be.true);",
+                  "pm.test('includes the new order', () => pm.expect(list.map(w => w.id)).to.include(pm.collectionVariables.get('myWorkOrderId')));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "My work orders by status",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me/work-orders?status=WAITING_APPROVAL",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me",
-                "work-orders"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "WAITING_APPROVAL"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/me/work-orders?status=WAITING_APPROVAL",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -996,29 +3193,116 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json(); const list = page.content;",
+                  "pm.test('only WAITING_APPROVAL', () => pm.expect(list.every(w => w.status === 'WAITING_APPROVAL')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My work orders including finished",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/work-orders?includeFinished=true&page=0&size=50",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My work order detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/work-orders/{{myWorkOrderId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('pending budget', () => { const b = pm.response.json().budgets; pm.expect(b[b.length - 1].status).to.eql('PENDING'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Another customer's work order -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/work-orders/{{otherCustomerWorkOrderId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Seeded work order of Marina Souza: a customer only sees their own orders."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Approve a budget",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me/work-orders/0198a000-0000-7000-8000-000000000502/budgets/0198a000-0000-7000-8000-000000000701/approve",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me",
-                "work-orders",
-                "0198a000-0000-7000-8000-000000000502",
-                "budgets",
-                "0198a000-0000-7000-8000-000000000701",
-                "approve"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/me/work-orders/{{myWorkOrderId}}/budgets/{{myBudgetId}}/approve",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1028,8 +3312,67 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Services only, so the work order goes straight to IN_EXECUTION."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_EXECUTION', () => pm.expect(pm.response.json().status).to.eql('IN_EXECUTION'));",
+                  "pm.test('channel APP', () => pm.expect(pm.response.json().budgets[0].decision.channel).to.eql('APP'));"
+                ]
+              }
             }
-          }
+          ]
+        },
+        {
+          "name": "Propose an additional budget (mechanic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{myWorkOrderId}}/additional-budget",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{extraServiceId}}\", \"quantity\": 1}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('myAdditionalBudgetId', b[b.length - 1].id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Reject a budget",
@@ -1041,22 +3384,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me/work-orders/{{workOrderId}}/budgets/{{budgetId}}/reject",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me",
-                "work-orders",
-                "{{workOrderId}}",
-                "budgets",
-                "{{budgetId}}",
-                "reject"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/me/work-orders/{{myWorkOrderId}}/budgets/{{myAdditionalBudgetId}}/reject",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1076,15 +3404,117 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_EXECUTION', () => pm.expect(pm.response.json().status).to.eql('IN_EXECUTION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete the service (cleanup)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{myWorkOrderId}}/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deliver the vehicle (cleanup)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{myWorkOrderId}}/deliver",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status DELIVERED', () => pm.expect(pm.response.json().status).to.eql('DELIVERED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate the vehicle (cleanup)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{myVehicleId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "5. External budget decision (webhook)",
+      "name": "9. External budget decision (webhook)",
+      "description": "A partner system decides the budget through a webhook signed with HMAC-SHA256 over '<X-Timestamp>.<body>' (5 min window, idempotent per eventId). Requires the webhookSecret variable (CURRENT value). Set webhookDecision to REJECTED to try a rejection.",
       "item": [
         {
-          "name": "Signed webhook (HMAC-SHA256)",
+          "name": "Open work order for the webhook",
           "request": {
             "method": "POST",
             "header": [
@@ -1093,18 +3523,133 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "webhooks",
-                "budget-decisions"
+            "url": "{{baseUrl}}/api/v1/work-orders",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{attendantToken}}",
+                  "type": "string"
+                }
               ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\"document\": \"{{customerDocument}}\", \"name\": \"Ana Souza\", \"email\": \"{{customerEmail}}\", \"phone\": \"11999990000\"},\n  \"vehicle\": {\"plate\": \"{{webhookVehiclePlate}}\", \"brand\": \"Fiat\", \"model\": \"Argo\", \"year\": 2022},\n  \"complaint\": \"Brake check\",\n  \"items\": [{\"type\": \"SERVICE\", \"referenceId\": \"{{serviceId}}\", \"quantity\": 1}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const l=()=>L[Math.floor(Math.random()*26)];const dg=()=>Math.floor(Math.random()*10);",
+                  "const plate=()=>l()+l()+l()+dg()+l()+dg()+dg();",
+                  "pm.collectionVariables.set('webhookVehiclePlate', plate());",
+                  "pm.collectionVariables.unset('webhookEventId');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('webhookWorkOrderId', pm.response.json().id);",
+                  "pm.collectionVariables.set('webhookWorkOrderNumber', pm.response.json().number);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start diagnosis",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{webhookWorkOrderId}}/diagnosis/start",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status IN_DIAGNOSIS', () => pm.expect(pm.response.json().status).to.eql('IN_DIAGNOSIS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete diagnosis",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/work-orders/{{webhookWorkOrderId}}/diagnosis/complete",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{mechanicToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status WAITING_APPROVAL', () => pm.expect(pm.response.json().status).to.eql('WAITING_APPROVAL'));",
+                  "{ const b = pm.response.json().budgets; pm.collectionVariables.set('webhookBudgetId', b[b.length - 1].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid signature -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
             "auth": {
               "type": "noauth"
             },
@@ -1124,13 +3669,24 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const secret=pm.collectionVariables.get('webhookSecret');",
-                  "const ts=Math.floor(Date.now()/1000).toString();",
-                  "const body=JSON.stringify({eventId:crypto.randomUUID?crypto.randomUUID():pm.variables.replaceIn('{{$guid}}'),workOrderNumber:pm.collectionVariables.get('workOrderNumber'),budgetId:pm.collectionVariables.get('budgetId'),decision:pm.collectionVariables.get('webhookDecision')||'APPROVED',reason:'decided by the partner system'});",
-                  "const signature='sha256='+CryptoJS.HmacSHA256(ts+'.'+body,secret).toString();",
-                  "pm.request.body.raw=body;",
-                  "pm.request.headers.upsert({key:'X-Timestamp',value:ts});",
-                  "pm.request.headers.upsert({key:'X-Signature',value:signature});"
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// Trims whitespace, line breaks and the trailing '%' zsh prints after output without a newline.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail('webhookSecret is empty: set its CURRENT value (see the collection description).'); }",
+                  "const number = pm.collectionVariables.get('webhookWorkOrderNumber'), budgetId = pm.collectionVariables.get('webhookBudgetId');",
+                  "if (!number || !budgetId) { fail('webhookWorkOrderNumber/webhookBudgetId are empty: run the requests above in this folder first.'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now() / 1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: pm.collectionVariables.get('webhookDecision') || 'APPROVED', reason: 'decided by the partner system'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + 'bad' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
                 ]
               }
             },
@@ -1139,34 +3695,163 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('accepted', () => pm.response.to.have.status(200));",
-                  "pm.test('applied', () => pm.expect(pm.response.json().result).to.be.oneOf(['APPLIED','DUPLICATE']));"
+                  "pm.test('pre-request signed the request', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
+                  "pm.test('401', () => pm.response.to.have.status(401));"
                 ]
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "6. Registers",
-      "item": [
+        },
         {
-          "name": "Customers",
+          "name": "Signed webhook (HMAC-SHA256) -> APPLIED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// Trims whitespace, line breaks and the trailing '%' zsh prints after output without a newline.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail('webhookSecret is empty: set its CURRENT value (see the collection description).'); }",
+                  "const number = pm.collectionVariables.get('webhookWorkOrderNumber'), budgetId = pm.collectionVariables.get('webhookBudgetId');",
+                  "if (!number || !budgetId) { fail('webhookWorkOrderNumber/webhookBudgetId are empty: run the requests above in this folder first.'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now() / 1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: pm.collectionVariables.get('webhookDecision') || 'APPROVED', reason: 'decided by the partner system'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('pre-request signed the request', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('APPLIED', () => pm.expect(pm.response.json().result).to.eql('APPLIED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay the same eventId -> DUPLICATE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Timestamp",
+                "value": ""
+              },
+              {
+                "key": "X-Signature",
+                "value": ""
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/webhooks/budget-decisions",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('webhookPrereqError', '');",
+                  "const fail = msg => { pm.variables.set('webhookPrereqError', msg); throw new Error(msg); };",
+                  "const hmac = require('crypto-js');",
+                  "// Trims whitespace, line breaks and the trailing '%' zsh prints after output without a newline.",
+                  "const secret = String(pm.variables.get('webhookSecret') || '').trim().replace(/%+$/, '');",
+                  "if (!secret) { fail('webhookSecret is empty: set its CURRENT value (see the collection description).'); }",
+                  "const number = pm.collectionVariables.get('webhookWorkOrderNumber'), budgetId = pm.collectionVariables.get('webhookBudgetId');",
+                  "if (!number || !budgetId) { fail('webhookWorkOrderNumber/webhookBudgetId are empty: run the requests above in this folder first.'); }",
+                  "let eventId = pm.collectionVariables.get('webhookEventId');",
+                  "if (!eventId) { eventId = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('webhookEventId', eventId); }",
+                  "const ts = Math.floor(Date.now() / 1000).toString();",
+                  "const body = JSON.stringify({eventId: eventId, workOrderNumber: number, budgetId: budgetId,",
+                  "  decision: pm.collectionVariables.get('webhookDecision') || 'APPROVED', reason: 'decided by the partner system'});",
+                  "const hex = hmac.HmacSHA256(ts + '.' + body, secret).toString();",
+                  "pm.request.body.update({mode: 'raw', raw: body, options: {raw: {language: 'json'}}});",
+                  "pm.request.headers.upsert({key: 'X-Timestamp', value: ts});",
+                  "pm.request.headers.upsert({key: 'X-Signature', value: 'sha256=' + '' + hex});",
+                  "console.log('webhook', {ts: ts, eventId: eventId, budgetId: budgetId, secretTail: secret.slice(-4)});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('pre-request signed the request', () => pm.expect(pm.variables.get('webhookPrereqError') || '').to.eql(''));",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('DUPLICATE', () => pm.expect(pm.response.json().result).to.eql('DUPLICATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Work order decided by the partner",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/customers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{webhookWorkOrderId}}",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1177,130 +3862,25 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "Customer vehicles",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/{{demoCustomerId}}/vehicles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers",
-                "{{demoCustomerId}}",
-                "vehicles"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{attendantToken}}",
-                  "type": "string"
-                }
-              ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const wo = pm.response.json();",
+                  "const approved = (pm.collectionVariables.get('webhookDecision') || 'APPROVED') === 'APPROVED';",
+                  "pm.test('status follows the decision', () => pm.expect(wo.status).to.eql(approved ? 'IN_EXECUTION' : 'IN_DIAGNOSIS'));",
+                  "pm.test('channel EXTERNAL', () => pm.expect(wo.budgets[0].decision.channel).to.eql('EXTERNAL'));"
+                ]
+              }
             }
-          }
+          ]
         },
         {
-          "name": "Services",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/services",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "services"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{attendantToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Parts",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/parts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "parts"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{attendantToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Low stock parts",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/parts?lowStockOnly=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "parts"
-              ],
-              "query": [
-                {
-                  "key": "lowStockOnly",
-                  "value": "true"
-                }
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{attendantToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Stock entry",
+          "name": "Cancel (cleanup)",
           "request": {
             "method": "POST",
             "header": [
@@ -1309,19 +3889,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/parts/{{partId}}/stock-entries",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "parts",
-                "{{partId}}",
-                "stock-entries"
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/work-orders/{{webhookWorkOrderId}}/cancel",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1334,14 +3902,26 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quantity\": 10,\n  \"note\": \"Supplier invoice\"\n}",
+              "raw": "{\n  \"reason\": \"Postman run cleanup\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
